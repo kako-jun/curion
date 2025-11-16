@@ -39,6 +39,7 @@ impl NounDatabase {
             (Category::Element, "elements.json"),
             (Category::Food, "foods.json"),
             (Category::Phenomenon, "phenomena.json"),
+            (Category::Abstract, "abstracts.json"),
         ];
 
         for (category, filename) in categories {
@@ -156,9 +157,10 @@ impl CurionGenerator {
             Category::Element,
             Category::Food,
             Category::Phenomenon,
+            Category::Abstract,
         ];
 
-        let index = (hash_byte % 8) as usize;
+        let index = (hash_byte % 9) as usize;
         categories[index].clone()
     }
 

@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::player::GameState;
+use crate::synthesis::{RecipeDatabase, SynthesisManager};
 
 /// セーブデータマネージャー
 pub struct SaveManager {
@@ -53,9 +54,12 @@ impl SaveManager {
 
     /// ゲーム状態を読み込み
     pub fn load(&self) -> Result<GameState> {
+        // レシピデータベースをロード
+        let synthesis_manager = Self::create_synthesis_manager()?;
+
         // ファイルが存在しない場合は新規作成
         if !self.save_path.exists() {
-            return Ok(GameState::new());
+            return Ok(GameState::new(synthesis_manager));
         }
 
         // ファイルを読み込み
@@ -67,9 +71,16 @@ impl SaveManager {
             .context("Failed to parse save file")?;
 
         // GameStateに変換
-        let game_state = serializable.into();
+        let game_state = serializable.into_game_state(synthesis_manager);
 
         Ok(game_state)
+    }
+
+    /// 合成マネージャーを作成
+    fn create_synthesis_manager() -> Result<SynthesisManager> {
+        let recipe_db = RecipeDatabase::load_from_file("data/recipes/basic_recipes.json")
+            .context("Failed to load recipe database")?;
+        Ok(SynthesisManager::new(recipe_db))
     }
 
     /// セーブファイルが存在するか確認
@@ -96,6 +107,8 @@ pub struct SerializableGameState {
     // achievement_managerは再構築するので保存しない
     // 進捗だけ保存する
     pub achievement_progress: Vec<crate::achievement::AchievementProgress>,
+    // synthesis_managerの発見済みレシピ
+    pub discovered_recipes: std::collections::HashMap<String, bool>,
 }
 
 impl From<&GameState> for SerializableGameState {
@@ -116,17 +129,19 @@ impl From<&GameState> for SerializableGameState {
         Self {
             player: game_state.player.clone(),
             achievement_progress,
+            discovered_recipes: game_state.synthesis_manager.get_discovered_state(),
         }
     }
 }
 
-impl From<SerializableGameState> for GameState {
-    fn from(serializable: SerializableGameState) -> Self {
-        let mut game_state = GameState::new();
-        game_state.player = serializable.player;
+impl SerializableGameState {
+    /// GameStateに変換
+    fn into_game_state(self, synthesis_manager: SynthesisManager) -> GameState {
+        let mut game_state = GameState::new(synthesis_manager);
+        game_state.player = self.player;
 
         // 実績の進捗を復元
-        for progress in serializable.achievement_progress {
+        for progress in self.achievement_progress {
             if let Some(stored_progress) = game_state
                 .achievement_manager
                 .get_progress_mut(&progress.achievement_id)
@@ -134,6 +149,9 @@ impl From<SerializableGameState> for GameState {
                 *stored_progress = progress;
             }
         }
+
+        // 合成レシピの発見状態を復元
+        game_state.synthesis_manager.set_discovered_state(self.discovered_recipes);
 
         game_state
     }

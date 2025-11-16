@@ -1,0 +1,448 @@
+[
+  {
+    "id": "recipe_001",
+    "name": "蒸気",
+    "description": "水と火を組み合わせると蒸気が生まれる",
+    "ingredients": [
+      {
+        "specific_noun": "水",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "火",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "蒸気",
+      "category": "Phenomenon",
+      "rarity": "Common",
+      "synthesis_only": false,
+      "special_attributes": {}
+    },
+    "discovery_rate": 0.9,
+    "recipe_type": "Intuitive"
+  },
+  {
+    "id": "recipe_002",
+    "name": "泥",
+    "description": "土と水を混ぜると泥になる",
+    "ingredients": [
+      {
+        "specific_noun": "土",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "水",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "泥",
+      "category": "Element",
+      "rarity": "Common",
+      "synthesis_only": false,
+      "special_attributes": {}
+    },
+    "discovery_rate": 0.9,
+    "recipe_type": "Intuitive"
+  },
+  {
+    "id": "recipe_003",
+    "name": "溶岩",
+    "description": "火と土が合わさり溶岩が生まれる",
+    "ingredients": [
+      {
+        "specific_noun": "火",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "土",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "溶岩",
+      "category": "Phenomenon",
+      "rarity": "Rare",
+      "synthesis_only": false,
+      "special_attributes": {
+        "beauty": 0.1
+      }
+    },
+    "discovery_rate": 0.7,
+    "recipe_type": "Intuitive"
+  },
+  {
+    "id": "recipe_004",
+    "name": "紫",
+    "description": "赤と青を混ぜると紫色になる",
+    "ingredients": [
+      {
+        "specific_noun": "赤",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "青",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "紫",
+      "category": "Color",
+      "rarity": "Common",
+      "synthesis_only": false,
+      "special_attributes": {}
+    },
+    "discovery_rate": 0.95,
+    "recipe_type": "Intuitive"
+  },
+  {
+    "id": "recipe_005",
+    "name": "緑",
+    "description": "青と黄を混ぜると緑色になる",
+    "ingredients": [
+      {
+        "specific_noun": "青",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "黄",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "緑",
+      "category": "Color",
+      "rarity": "Common",
+      "synthesis_only": false,
+      "special_attributes": {}
+    },
+    "discovery_rate": 0.95,
+    "recipe_type": "Intuitive"
+  },
+  {
+    "id": "recipe_006",
+    "name": "月光狼",
+    "description": "狼と月が出会うとき、神秘的な月光狼が誕生する",
+    "ingredients": [
+      {
+        "specific_noun": "狼",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "月",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "月光狼",
+      "category": "Animal",
+      "rarity": "Epic",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.2,
+        "beauty": 0.2
+      }
+    },
+    "discovery_rate": 0.3,
+    "recipe_type": "Biological"
+  },
+  {
+    "id": "recipe_007",
+    "name": "炎龍",
+    "description": "龍に火の力を宿すと伝説の炎龍が現れる",
+    "ingredients": [
+      {
+        "specific_noun": "龍",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "火",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "炎龍",
+      "category": "Animal",
+      "rarity": "Legendary",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.2,
+        "beauty": 0.2
+      }
+    },
+    "discovery_rate": 0.1,
+    "recipe_type": "Biological"
+  },
+  {
+    "id": "recipe_008",
+    "name": "氷鳳凰",
+    "description": "鳳凰に氷の力を与えると神秘の氷鳳凰が生まれる",
+    "ingredients": [
+      {
+        "specific_noun": "鳳凰",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "氷",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "氷鳳凰",
+      "category": "Animal",
+      "rarity": "Legendary",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.2,
+        "beauty": 0.2
+      }
+    },
+    "discovery_rate": 0.1,
+    "recipe_type": "Biological"
+  },
+  {
+    "id": "recipe_009",
+    "name": "愛猫",
+    "description": "猫と愛が融合すると愛らしいペットが生まれる",
+    "ingredients": [
+      {
+        "specific_noun": "猫",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "愛",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "愛猫",
+      "category": "Animal",
+      "rarity": "Rare",
+      "synthesis_only": false,
+      "special_attributes": {
+        "interest": 0.1
+      }
+    },
+    "discovery_rate": 0.8,
+    "recipe_type": "ChaosMix"
+  },
+  {
+    "id": "recipe_010",
+    "name": "美愛",
+    "description": "愛と美が溶け合い、至高の概念が誕生する",
+    "ingredients": [
+      {
+        "specific_noun": "愛",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "美",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "美愛",
+      "category": "Abstract",
+      "rarity": "Epic",
+      "synthesis_only": true,
+      "special_attributes": {
+        "beauty": 0.2
+      }
+    },
+    "discovery_rate": 0.5,
+    "recipe_type": "Abstract"
+  },
+  {
+    "id": "recipe_011",
+    "name": "聖剣",
+    "description": "正義の心と剣が一体化し、聖なる剣が完成する",
+    "ingredients": [
+      {
+        "specific_noun": "正義",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "剣",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "聖剣",
+      "category": "Object",
+      "rarity": "Epic",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.15,
+        "beauty": 0.15
+      }
+    },
+    "discovery_rate": 0.4,
+    "recipe_type": "Abstract"
+  },
+  {
+    "id": "recipe_012",
+    "name": "希望",
+    "description": "夢と光が交わるとき、希望が芽生える",
+    "ingredients": [
+      {
+        "specific_noun": "夢",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "光",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "希望",
+      "category": "Abstract",
+      "rarity": "Rare",
+      "synthesis_only": false,
+      "special_attributes": {
+        "interest": 0.1
+      }
+    },
+    "discovery_rate": 0.7,
+    "recipe_type": "Conceptual"
+  },
+  {
+    "id": "recipe_013",
+    "name": "絶望",
+    "description": "影と闇が重なると絶望が生まれる",
+    "ingredients": [
+      {
+        "specific_noun": "影",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "闇",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "絶望",
+      "category": "Abstract",
+      "rarity": "Rare",
+      "synthesis_only": false,
+      "special_attributes": {}
+    },
+    "discovery_rate": 0.6,
+    "recipe_type": "Conceptual"
+  },
+  {
+    "id": "recipe_014",
+    "name": "陰陽",
+    "description": "光と闇、相反する二つの力が調和する",
+    "ingredients": [
+      {
+        "specific_noun": "光",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "闇",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "陰陽",
+      "category": "Abstract",
+      "rarity": "Legendary",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.2,
+        "beauty": 0.2
+      }
+    },
+    "discovery_rate": 0.2,
+    "recipe_type": "Advanced"
+  },
+  {
+    "id": "recipe_015",
+    "name": "宇宙",
+    "description": "時間と空間が融合し、無限の宇宙が広がる",
+    "ingredients": [
+      {
+        "specific_noun": "時間",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "空間",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "宇宙",
+      "category": "Abstract",
+      "rarity": "Epic",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.2,
+        "beauty": 0.15
+      }
+    },
+    "discovery_rate": 0.3,
+    "recipe_type": "ChaosMix"
+  }
+]
