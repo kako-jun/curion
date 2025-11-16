@@ -1,7 +1,7 @@
 use crate::curion::{Category, Curion, Rarity};
 use anyhow::{Context, Result};
-use rand::distributions::WeightedIndex;
-use rand::{Rng, SeedableRng};
+use rand::distributions::{Distribution, WeightedIndex};
+use rand::SeedableRng;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
