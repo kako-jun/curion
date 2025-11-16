@@ -1,0 +1,122 @@
+[
+  {
+    "name": "夢",
+    "reading": "ゆめ",
+    "english": "dream",
+    "weight": 1.0
+  },
+  {
+    "name": "光",
+    "reading": "ひかり",
+    "english": "light",
+    "weight": 1.0
+  },
+  {
+    "name": "影",
+    "reading": "かげ",
+    "english": "shadow",
+    "weight": 1.0
+  },
+  {
+    "name": "風",
+    "reading": "かぜ",
+    "english": "wind",
+    "weight": 1.0
+  },
+  {
+    "name": "雲",
+    "reading": "くも",
+    "english": "cloud",
+    "weight": 1.0
+  },
+  {
+    "name": "雨",
+    "reading": "あめ",
+    "english": "rain",
+    "weight": 1.0
+  },
+  {
+    "name": "雪",
+    "reading": "ゆき",
+    "english": "snow",
+    "weight": 1.0
+  },
+  {
+    "name": "霧",
+    "reading": "きり",
+    "english": "fog",
+    "weight": 1.0
+  },
+  {
+    "name": "虹",
+    "reading": "にじ",
+    "english": "rainbow",
+    "weight": 0.7
+  },
+  {
+    "name": "星",
+    "reading": "ほし",
+    "english": "star",
+    "weight": 1.0
+  },
+  {
+    "name": "月",
+    "reading": "つき",
+    "english": "moon",
+    "weight": 1.0
+  },
+  {
+    "name": "太陽",
+    "reading": "たいよう",
+    "english": "sun",
+    "weight": 1.0
+  },
+  {
+    "name": "空",
+    "reading": "そら",
+    "english": "sky",
+    "weight": 1.0
+  },
+  {
+    "name": "海",
+    "reading": "うみ",
+    "english": "sea",
+    "weight": 1.0
+  },
+  {
+    "name": "山",
+    "reading": "やま",
+    "english": "mountain",
+    "weight": 1.0
+  },
+  {
+    "name": "川",
+    "reading": "かわ",
+    "english": "river",
+    "weight": 1.0
+  },
+  {
+    "name": "森",
+    "reading": "もり",
+    "english": "forest",
+    "weight": 1.0
+  },
+  {
+    "name": "道",
+    "reading": "みち",
+    "english": "road",
+    "weight": 1.0
+  },
+  {
+    "name": "橋",
+    "reading": "はし",
+    "english": "bridge",
+    "weight": 1.0
+  },
+  {
+    "name": "門",
+    "reading": "もん",
+    "english": "gate",
+    "weight": 0.9
+  }
+]

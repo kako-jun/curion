@@ -1,0 +1,122 @@
+[
+  {
+    "name": "米",
+    "reading": "こめ",
+    "english": "rice",
+    "weight": 1.0
+  },
+  {
+    "name": "麦",
+    "reading": "むぎ",
+    "english": "wheat",
+    "weight": 1.0
+  },
+  {
+    "name": "豆",
+    "reading": "まめ",
+    "english": "bean",
+    "weight": 1.0
+  },
+  {
+    "name": "芋",
+    "reading": "いも",
+    "english": "potato",
+    "weight": 1.0
+  },
+  {
+    "name": "魚",
+    "reading": "さかな",
+    "english": "fish",
+    "weight": 1.0
+  },
+  {
+    "name": "肉",
+    "reading": "にく",
+    "english": "meat",
+    "weight": 1.0
+  },
+  {
+    "name": "卵",
+    "reading": "たまご",
+    "english": "egg",
+    "weight": 1.0
+  },
+  {
+    "name": "乳",
+    "reading": "ちち",
+    "english": "milk",
+    "weight": 1.0
+  },
+  {
+    "name": "果",
+    "reading": "み",
+    "english": "fruit",
+    "weight": 1.0
+  },
+  {
+    "name": "菜",
+    "reading": "な",
+    "english": "vegetable",
+    "weight": 1.0
+  },
+  {
+    "name": "茸",
+    "reading": "きのこ",
+    "english": "mushroom",
+    "weight": 1.0
+  },
+  {
+    "name": "海苔",
+    "reading": "のり",
+    "english": "seaweed",
+    "weight": 1.0
+  },
+  {
+    "name": "昆布",
+    "reading": "こんぶ",
+    "english": "kelp",
+    "weight": 0.9
+  },
+  {
+    "name": "鰹",
+    "reading": "かつお",
+    "english": "bonito",
+    "weight": 0.8
+  },
+  {
+    "name": "味噌",
+    "reading": "みそ",
+    "english": "miso",
+    "weight": 1.0
+  },
+  {
+    "name": "醤油",
+    "reading": "しょうゆ",
+    "english": "soy sauce",
+    "weight": 1.0
+  },
+  {
+    "name": "酒",
+    "reading": "さけ",
+    "english": "sake",
+    "weight": 1.0
+  },
+  {
+    "name": "茶",
+    "reading": "ちゃ",
+    "english": "tea",
+    "weight": 1.0
+  },
+  {
+    "name": "塩",
+    "reading": "しお",
+    "english": "salt",
+    "weight": 1.0
+  },
+  {
+    "name": "砂糖",
+    "reading": "さとう",
+    "english": "sugar",
+    "weight": 1.0
+  }
+]

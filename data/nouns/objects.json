@@ -1,0 +1,122 @@
+[
+  {
+    "name": "本",
+    "reading": "ほん",
+    "english": "book",
+    "weight": 1.0
+  },
+  {
+    "name": "剣",
+    "reading": "けん",
+    "english": "sword",
+    "weight": 0.7
+  },
+  {
+    "name": "鏡",
+    "reading": "かがみ",
+    "english": "mirror",
+    "weight": 1.0
+  },
+  {
+    "name": "鍵",
+    "reading": "かぎ",
+    "english": "key",
+    "weight": 1.0
+  },
+  {
+    "name": "時計",
+    "reading": "とけい",
+    "english": "clock",
+    "weight": 1.0
+  },
+  {
+    "name": "灯",
+    "reading": "ひ",
+    "english": "lamp",
+    "weight": 1.0
+  },
+  {
+    "name": "杯",
+    "reading": "さかずき",
+    "english": "cup",
+    "weight": 1.0
+  },
+  {
+    "name": "箱",
+    "reading": "はこ",
+    "english": "box",
+    "weight": 1.0
+  },
+  {
+    "name": "扇",
+    "reading": "おうぎ",
+    "english": "fan",
+    "weight": 0.9
+  },
+  {
+    "name": "琴",
+    "reading": "こと",
+    "english": "koto",
+    "weight": 0.6
+  },
+  {
+    "name": "笛",
+    "reading": "ふえ",
+    "english": "flute",
+    "weight": 0.8
+  },
+  {
+    "name": "太鼓",
+    "reading": "たいこ",
+    "english": "drum",
+    "weight": 0.9
+  },
+  {
+    "name": "筆",
+    "reading": "ふで",
+    "english": "brush",
+    "weight": 1.0
+  },
+  {
+    "name": "硯",
+    "reading": "すずり",
+    "english": "inkstone",
+    "weight": 0.7
+  },
+  {
+    "name": "玉",
+    "reading": "たま",
+    "english": "jewel",
+    "weight": 0.5
+  },
+  {
+    "name": "環",
+    "reading": "わ",
+    "english": "ring",
+    "weight": 0.8
+  },
+  {
+    "name": "冠",
+    "reading": "かんむり",
+    "english": "crown",
+    "weight": 0.3
+  },
+  {
+    "name": "袋",
+    "reading": "ふくろ",
+    "english": "bag",
+    "weight": 1.0
+  },
+  {
+    "name": "糸",
+    "reading": "いと",
+    "english": "thread",
+    "weight": 1.0
+  },
+  {
+    "name": "針",
+    "reading": "はり",
+    "english": "needle",
+    "weight": 1.0
+  }
+]

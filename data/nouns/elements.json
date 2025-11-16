@@ -1,0 +1,122 @@
+[
+  {
+    "name": "火",
+    "reading": "ひ",
+    "english": "fire",
+    "weight": 1.0
+  },
+  {
+    "name": "水",
+    "reading": "みず",
+    "english": "water",
+    "weight": 1.0
+  },
+  {
+    "name": "土",
+    "reading": "つち",
+    "english": "earth",
+    "weight": 1.0
+  },
+  {
+    "name": "風",
+    "reading": "かぜ",
+    "english": "wind",
+    "weight": 1.0
+  },
+  {
+    "name": "雷",
+    "reading": "かみなり",
+    "english": "thunder",
+    "weight": 0.8
+  },
+  {
+    "name": "氷",
+    "reading": "こおり",
+    "english": "ice",
+    "weight": 1.0
+  },
+  {
+    "name": "闇",
+    "reading": "やみ",
+    "english": "darkness",
+    "weight": 0.6
+  },
+  {
+    "name": "聖",
+    "reading": "せい",
+    "english": "holy",
+    "weight": 0.4
+  },
+  {
+    "name": "毒",
+    "reading": "どく",
+    "english": "poison",
+    "weight": 0.7
+  },
+  {
+    "name": "鉄",
+    "reading": "てつ",
+    "english": "iron",
+    "weight": 1.0
+  },
+  {
+    "name": "銅",
+    "reading": "どう",
+    "english": "copper",
+    "weight": 1.0
+  },
+  {
+    "name": "銀",
+    "reading": "ぎん",
+    "english": "silver",
+    "weight": 0.6
+  },
+  {
+    "name": "金",
+    "reading": "きん",
+    "english": "gold",
+    "weight": 0.3
+  },
+  {
+    "name": "鉛",
+    "reading": "なまり",
+    "english": "lead",
+    "weight": 0.9
+  },
+  {
+    "name": "錫",
+    "reading": "すず",
+    "english": "tin",
+    "weight": 0.8
+  },
+  {
+    "name": "水銀",
+    "reading": "すいぎん",
+    "english": "mercury",
+    "weight": 0.5
+  },
+  {
+    "name": "硫黄",
+    "reading": "いおう",
+    "english": "sulfur",
+    "weight": 0.7
+  },
+  {
+    "name": "炭",
+    "reading": "すみ",
+    "english": "charcoal",
+    "weight": 1.0
+  },
+  {
+    "name": "塩",
+    "reading": "しお",
+    "english": "salt",
+    "weight": 1.0
+  },
+  {
+    "name": "砂",
+    "reading": "すな",
+    "english": "sand",
+    "weight": 1.0
+  }
+]
