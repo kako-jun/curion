@@ -1,0 +1,152 @@
+[
+  {
+    "name": "赤",
+    "reading": "あか",
+    "english": "red",
+    "weight": 1.0
+  },
+  {
+    "name": "青",
+    "reading": "あお",
+    "english": "blue",
+    "weight": 1.0
+  },
+  {
+    "name": "緑",
+    "reading": "みどり",
+    "english": "green",
+    "weight": 1.0
+  },
+  {
+    "name": "黄",
+    "reading": "き",
+    "english": "yellow",
+    "weight": 1.0
+  },
+  {
+    "name": "紫",
+    "reading": "むらさき",
+    "english": "purple",
+    "weight": 1.0
+  },
+  {
+    "name": "橙",
+    "reading": "だいだい",
+    "english": "orange",
+    "weight": 1.0
+  },
+  {
+    "name": "桃",
+    "reading": "もも",
+    "english": "pink",
+    "weight": 1.0
+  },
+  {
+    "name": "水",
+    "reading": "みず",
+    "english": "cyan",
+    "weight": 1.0
+  },
+  {
+    "name": "紺",
+    "reading": "こん",
+    "english": "navy",
+    "weight": 1.0
+  },
+  {
+    "name": "茶",
+    "reading": "ちゃ",
+    "english": "brown",
+    "weight": 1.0
+  },
+  {
+    "name": "灰",
+    "reading": "はい",
+    "english": "gray",
+    "weight": 1.0
+  },
+  {
+    "name": "銀",
+    "reading": "ぎん",
+    "english": "silver",
+    "weight": 0.5
+  },
+  {
+    "name": "金",
+    "reading": "きん",
+    "english": "gold",
+    "weight": 0.3
+  },
+  {
+    "name": "白",
+    "reading": "しろ",
+    "english": "white",
+    "weight": 1.0
+  },
+  {
+    "name": "黒",
+    "reading": "くろ",
+    "english": "black",
+    "weight": 1.0
+  },
+  {
+    "name": "藍",
+    "reading": "あい",
+    "english": "indigo",
+    "weight": 0.8
+  },
+  {
+    "name": "朱",
+    "reading": "しゅ",
+    "english": "vermilion",
+    "weight": 0.7
+  },
+  {
+    "name": "翠",
+    "reading": "みどり",
+    "english": "jade green",
+    "weight": 0.6
+  },
+  {
+    "name": "碧",
+    "reading": "へき",
+    "english": "azure",
+    "weight": 0.5
+  },
+  {
+    "name": "琥珀",
+    "reading": "こはく",
+    "english": "amber",
+    "weight": 0.4
+  },
+  {
+    "name": "珊瑚",
+    "reading": "さんご",
+    "english": "coral",
+    "weight": 0.5
+  },
+  {
+    "name": "薄紅",
+    "reading": "うすべに",
+    "english": "light pink",
+    "weight": 0.8
+  },
+  {
+    "name": "深緑",
+    "reading": "ふかみどり",
+    "english": "deep green",
+    "weight": 0.9
+  },
+  {
+    "name": "群青",
+    "reading": "ぐんじょう",
+    "english": "ultramarine",
+    "weight": 0.7
+  },
+  {
+    "name": "牡丹色",
+    "reading": "ぼたんいろ",
+    "english": "peony color",
+    "weight": 0.6
+  }
+]

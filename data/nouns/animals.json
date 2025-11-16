@@ -1,0 +1,182 @@
+[
+  {
+    "name": "魚",
+    "reading": "さかな",
+    "english": "fish",
+    "weight": 1.0
+  },
+  {
+    "name": "猫",
+    "reading": "ねこ",
+    "english": "cat",
+    "weight": 1.0
+  },
+  {
+    "name": "犬",
+    "reading": "いぬ",
+    "english": "dog",
+    "weight": 1.0
+  },
+  {
+    "name": "鳥",
+    "reading": "とり",
+    "english": "bird",
+    "weight": 1.0
+  },
+  {
+    "name": "龍",
+    "reading": "りゅう",
+    "english": "dragon",
+    "weight": 0.1
+  },
+  {
+    "name": "鯨",
+    "reading": "くじら",
+    "english": "whale",
+    "weight": 0.5
+  },
+  {
+    "name": "蝶",
+    "reading": "ちょう",
+    "english": "butterfly",
+    "weight": 1.0
+  },
+  {
+    "name": "蜘蛛",
+    "reading": "くも",
+    "english": "spider",
+    "weight": 1.0
+  },
+  {
+    "name": "狼",
+    "reading": "おおかみ",
+    "english": "wolf",
+    "weight": 0.7
+  },
+  {
+    "name": "熊",
+    "reading": "くま",
+    "english": "bear",
+    "weight": 0.8
+  },
+  {
+    "name": "兎",
+    "reading": "うさぎ",
+    "english": "rabbit",
+    "weight": 1.0
+  },
+  {
+    "name": "鹿",
+    "reading": "しか",
+    "english": "deer",
+    "weight": 0.9
+  },
+  {
+    "name": "虎",
+    "reading": "とら",
+    "english": "tiger",
+    "weight": 0.5
+  },
+  {
+    "name": "象",
+    "reading": "ぞう",
+    "english": "elephant",
+    "weight": 0.6
+  },
+  {
+    "name": "猿",
+    "reading": "さる",
+    "english": "monkey",
+    "weight": 1.0
+  },
+  {
+    "name": "馬",
+    "reading": "うま",
+    "english": "horse",
+    "weight": 1.0
+  },
+  {
+    "name": "蛇",
+    "reading": "へび",
+    "english": "snake",
+    "weight": 1.0
+  },
+  {
+    "name": "亀",
+    "reading": "かめ",
+    "english": "turtle",
+    "weight": 1.0
+  },
+  {
+    "name": "蛙",
+    "reading": "かえる",
+    "english": "frog",
+    "weight": 1.0
+  },
+  {
+    "name": "鷲",
+    "reading": "わし",
+    "english": "eagle",
+    "weight": 0.6
+  },
+  {
+    "name": "鶴",
+    "reading": "つる",
+    "english": "crane",
+    "weight": 0.7
+  },
+  {
+    "name": "亀",
+    "reading": "かめ",
+    "english": "tortoise",
+    "weight": 0.8
+  },
+  {
+    "name": "狐",
+    "reading": "きつね",
+    "english": "fox",
+    "weight": 0.9
+  },
+  {
+    "name": "狸",
+    "reading": "たぬき",
+    "english": "raccoon dog",
+    "weight": 1.0
+  },
+  {
+    "name": "鼠",
+    "reading": "ねずみ",
+    "english": "mouse",
+    "weight": 1.0
+  },
+  {
+    "name": "蝙蝠",
+    "reading": "こうもり",
+    "english": "bat",
+    "weight": 0.8
+  },
+  {
+    "name": "蝸牛",
+    "reading": "かたつむり",
+    "english": "snail",
+    "weight": 1.0
+  },
+  {
+    "name": "蟻",
+    "reading": "あり",
+    "english": "ant",
+    "weight": 1.0
+  },
+  {
+    "name": "蜂",
+    "reading": "はち",
+    "english": "bee",
+    "weight": 1.0
+  },
+  {
+    "name": "蚊",
+    "reading": "か",
+    "english": "mosquito",
+    "weight": 1.0
+  }
+]
