@@ -225,6 +225,7 @@ impl AchievementManager {
             Category::Element,
             Category::Food,
             Category::Phenomenon,
+            Category::Abstract,
         ] {
             self.register_achievement(Achievement::new(
                 format!("complete_{:?}", category).to_lowercase(),

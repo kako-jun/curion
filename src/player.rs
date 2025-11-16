@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::curion::{Curion, Category, Rarity};
 use crate::achievement::{AchievementManager, AchievementProgress};
+use crate::synthesis::SynthesisManager;
 
 /// プレイヤー状態
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -330,18 +331,20 @@ impl Default for Player {
     }
 }
 
-/// ゲーム状態（プレイヤー + 実績）
+/// ゲーム状態（プレイヤー + 実績 + 合成）
 #[derive(Debug)]
 pub struct GameState {
     pub player: Player,
     pub achievement_manager: AchievementManager,
+    pub synthesis_manager: SynthesisManager,
 }
 
 impl GameState {
-    pub fn new() -> Self {
+    pub fn new(synthesis_manager: SynthesisManager) -> Self {
         Self {
             player: Player::new(),
             achievement_manager: AchievementManager::new(),
+            synthesis_manager,
         }
     }
 
@@ -440,11 +443,5 @@ impl GameState {
         list.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
         list.truncate(limit);
         list
-    }
-}
-
-impl Default for GameState {
-    fn default() -> Self {
-        Self::new()
     }
 }

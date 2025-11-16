@@ -3,6 +3,7 @@ mod curion;
 mod generator;
 mod player;
 mod save;
+mod synthesis;
 mod ui;
 
 use anyhow::Result;

@@ -44,6 +44,7 @@ pub enum Category {
     Element,     // 元素
     Food,        // 食べ物
     Phenomenon,  // 現象
+    Abstract,    // 抽象概念
 }
 
 impl Category {
@@ -57,6 +58,7 @@ impl Category {
             Category::Element => "元素",
             Category::Food => "食べ物",
             Category::Phenomenon => "現象",
+            Category::Abstract => "抽象",
         }
     }
 }
