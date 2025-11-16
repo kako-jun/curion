@@ -41,6 +41,7 @@ pub struct App {
     pub guid_timer: Instant,
     pub guid_interval: Duration,
     pub generator: CurionGenerator,
+    pub save_message: Option<(String, Instant)>,
 }
 
 impl App {
@@ -55,6 +56,7 @@ impl App {
             guid_timer: Instant::now(),
             guid_interval: Duration::from_secs(30), // 30秒ごと
             generator,
+            save_message: None,
         }
     }
 
@@ -115,6 +117,17 @@ impl App {
 
         // プレイ時間を更新（0.25秒ごと）
         self.game_state.player.add_play_time(1);
+
+        // セーブメッセージの有効期限チェック（3秒）
+        if let Some((_, timestamp)) = self.save_message {
+            if timestamp.elapsed() > Duration::from_secs(3) {
+                self.save_message = None;
+            }
+        }
+    }
+
+    pub fn show_save_message(&mut self) {
+        self.save_message = Some(("💾 Saved!".to_string(), Instant::now()));
     }
 
     pub fn guid_progress(&self) -> f64 {
@@ -148,6 +161,19 @@ pub fn draw(f: &mut Frame<'_>, app: &App) {
         Tab::Collection => draw_collection(f, app, chunks[1]),
         Tab::Achievements => draw_achievements(f, app, chunks[1]),
         Tab::Stats => draw_stats(f, app, chunks[1]),
+    }
+
+    // セーブメッセージを表示
+    if let Some((message, _)) = &app.save_message {
+        let area = Rect {
+            x: f.area().width.saturating_sub(20),
+            y: 1,
+            width: 18,
+            height: 1,
+        };
+        let save_text = Paragraph::new(message.as_str())
+            .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
+        f.render_widget(save_text, area);
     }
 }
 

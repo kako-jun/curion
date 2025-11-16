@@ -126,12 +126,6 @@
     "weight": 0.7
   },
   {
-    "name": "亀",
-    "reading": "かめ",
-    "english": "tortoise",
-    "weight": 0.8
-  },
-  {
     "name": "狐",
     "reading": "きつね",
     "english": "fox",
@@ -177,6 +171,228 @@
     "name": "蚊",
     "reading": "か",
     "english": "mosquito",
+    "weight": 1.0
+  },
+  {
+    "name": "鳳凰",
+    "reading": "ほうおう",
+    "english": "phoenix",
+    "weight": 0.05
+  },
+  {
+    "name": "麒麟",
+    "reading": "きりん",
+    "english": "kirin",
+    "weight": 0.08
+  },
+  {
+    "name": "鯉",
+    "reading": "こい",
+    "english": "carp",
+    "weight": 0.9
+  },
+  {
+    "name": "鮫",
+    "reading": "さめ",
+    "english": "shark",
+    "weight": 0.6
+  },
+  {
+    "name": "海豚",
+    "reading": "いるか",
+    "english": "dolphin",
+    "weight": 0.7
+  },
+  {
+    "name": "章魚",
+    "reading": "たこ",
+    "english": "octopus",
+    "weight": 0.8
+  },
+  {
+    "name": "烏賊",
+    "reading": "いか",
+    "english": "squid",
+    "weight": 0.8
+  },
+  {
+    "name": "海月",
+    "reading": "くらげ",
+    "english": "jellyfish",
+    "weight": 1.0
+  },
+  {
+    "name": "海星",
+    "reading": "ひとで",
+    "english": "starfish",
+    "weight": 1.0
+  },
+  {
+    "name": "獅子",
+    "reading": "しし",
+    "english": "lion",
+    "weight": 0.5
+  },
+  {
+    "name": "豹",
+    "reading": "ひょう",
+    "english": "leopard",
+    "weight": 0.6
+  },
+  {
+    "name": "豚",
+    "reading": "ぶた",
+    "english": "pig",
+    "weight": 1.0
+  },
+  {
+    "name": "牛",
+    "reading": "うし",
+    "english": "cow",
+    "weight": 1.0
+  },
+  {
+    "name": "羊",
+    "reading": "ひつじ",
+    "english": "sheep",
+    "weight": 1.0
+  },
+  {
+    "name": "山羊",
+    "reading": "やぎ",
+    "english": "goat",
+    "weight": 1.0
+  },
+  {
+    "name": "駱駝",
+    "reading": "らくだ",
+    "english": "camel",
+    "weight": 0.7
+  },
+  {
+    "name": "河馬",
+    "reading": "かば",
+    "english": "hippopotamus",
+    "weight": 0.6
+  },
+  {
+    "name": "犀",
+    "reading": "さい",
+    "english": "rhinoceros",
+    "weight": 0.5
+  },
+  {
+    "name": "鳩",
+    "reading": "はと",
+    "english": "pigeon",
+    "weight": 1.0
+  },
+  {
+    "name": "雀",
+    "reading": "すずめ",
+    "english": "sparrow",
+    "weight": 1.0
+  },
+  {
+    "name": "鴉",
+    "reading": "からす",
+    "english": "crow",
+    "weight": 1.0
+  },
+  {
+    "name": "燕",
+    "reading": "つばめ",
+    "english": "swallow",
+    "weight": 1.0
+  },
+  {
+    "name": "鸚鵡",
+    "reading": "おうむ",
+    "english": "parrot",
+    "weight": 0.7
+  },
+  {
+    "name": "梟",
+    "reading": "ふくろう",
+    "english": "owl",
+    "weight": 0.8
+  },
+  {
+    "name": "孔雀",
+    "reading": "くじゃく",
+    "english": "peacock",
+    "weight": 0.4
+  },
+  {
+    "name": "鴨",
+    "reading": "かも",
+    "english": "duck",
+    "weight": 1.0
+  },
+  {
+    "name": "白鳥",
+    "reading": "はくちょう",
+    "english": "swan",
+    "weight": 0.6
+  },
+  {
+    "name": "蝉",
+    "reading": "せみ",
+    "english": "cicada",
+    "weight": 1.0
+  },
+  {
+    "name": "蜻蛉",
+    "reading": "とんぼ",
+    "english": "dragonfly",
+    "weight": 1.0
+  },
+  {
+    "name": "螢",
+    "reading": "ほたる",
+    "english": "firefly",
+    "weight": 0.7
+  },
+  {
+    "name": "蛾",
+    "reading": "が",
+    "english": "moth",
+    "weight": 1.0
+  },
+  {
+    "name": "甲虫",
+    "reading": "かぶとむし",
+    "english": "beetle",
+    "weight": 0.8
+  },
+  {
+    "name": "蟷螂",
+    "reading": "かまきり",
+    "english": "mantis",
+    "weight": 0.9
+  },
+  {
+    "name": "蝗",
+    "reading": "ばった",
+    "english": "grasshopper",
+    "weight": 1.0
+  },
+  {
+    "name": "蠍",
+    "reading": "さそり",
+    "english": "scorpion",
+    "weight": 0.6
+  },
+  {
+    "name": "蟹",
+    "reading": "かに",
+    "english": "crab",
+    "weight": 1.0
+  },
+  {
+    "name": "海老",
+    "reading": "えび",
+    "english": "shrimp",
     "weight": 1.0
   }
 ]
