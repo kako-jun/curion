@@ -263,6 +263,99 @@ impl SynthesisManager {
     pub fn set_discovered_state(&mut self, state: HashMap<String, bool>) {
         self.discovered_recipes = state;
     }
+
+    /// 1つ目の材料から可能な2つ目の候補を検索
+    pub fn find_possible_second_ingredients(
+        &self,
+        first: &Curion,
+        available_curions: &[Curion],
+    ) -> Vec<PossibleSecondIngredient> {
+        let mut candidates: HashMap<String, PossibleSecondIngredient> = HashMap::new();
+
+        // 全レシピをチェック
+        for recipe in self.recipe_db.all_recipes() {
+            // 2材料のレシピのみ対象
+            if recipe.ingredients.len() != 2 {
+                continue;
+            }
+
+            // 1つ目の材料がマッチするか確認
+            let first_req = &recipe.ingredients[0];
+            let second_req = &recipe.ingredients[1];
+
+            let mut matched_as_first = false;
+            let mut matched_as_second = false;
+            let mut other_req = None;
+
+            // 1つ目の要求として一致
+            if first_req.matches(first) {
+                matched_as_first = true;
+                other_req = Some(second_req);
+            }
+
+            // 2つ目の要求として一致（対称的なレシピの場合）
+            if second_req.matches(first) {
+                matched_as_second = true;
+                other_req = Some(first_req);
+            }
+
+            if !matched_as_first && !matched_as_second {
+                continue;
+            }
+
+            let other_requirement = other_req.unwrap();
+
+            // 利用可能なキュリオンからマッチするものを探す
+            for curion in available_curions {
+                // 自分自身は除外
+                if curion.id == first.id {
+                    continue;
+                }
+
+                if !other_requirement.matches(curion) {
+                    continue;
+                }
+
+                // このキュリオンは候補
+                let key = curion.noun.clone();
+                let is_discovered = self.is_discovered(&recipe.id);
+
+                candidates
+                    .entry(key.clone())
+                    .or_insert_with(|| PossibleSecondIngredient {
+                        noun: key.clone(),
+                        category: curion.category.clone(),
+                        available_count: 0,
+                        result_preview: if is_discovered {
+                            Some(recipe.result.noun.clone())
+                        } else {
+                            None
+                        },
+                        recipe_id: recipe.id.clone(),
+                        is_discovered,
+                    })
+                    .available_count += 1;
+            }
+        }
+
+        candidates.into_values().collect()
+    }
+
+    /// レシピデータベースへの参照を取得
+    pub fn recipe_db(&self) -> &RecipeDatabase {
+        &self.recipe_db
+    }
+}
+
+/// 可能な2つ目の材料候補
+#[derive(Debug, Clone)]
+pub struct PossibleSecondIngredient {
+    pub noun: String,
+    pub category: Category,
+    pub available_count: usize,
+    pub result_preview: Option<String>, // 発見済みなら結果、未発見ならNone
+    pub recipe_id: String,
+    pub is_discovered: bool,
 }
 
 /// 合成試行結果
