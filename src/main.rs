@@ -1,12 +1,14 @@
 mod achievement;
 mod curion;
 mod generator;
+mod nostr_identity;
 mod player;
 mod save;
 mod synthesis;
 mod ui;
 
 use anyhow::Result;
+use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -16,12 +18,34 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::time::{Duration, Instant};
 
+use crate::nostr_identity::ProfileManager;
 use crate::save::SaveManager;
 use crate::ui::App;
 
+/// Curion - A SF collection game where you gather particles of curiosity
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Profile name for multi-player debug testing
+    #[arg(short, long)]
+    profile: Option<String>,
+}
+
 fn main() -> Result<()> {
-    // セーブマネージャーを初期化
-    let save_manager = SaveManager::new()?;
+    // コマンドライン引数をパース
+    let args = Args::parse();
+
+    // プロファイルマネージャーを初期化
+    let profile_manager = ProfileManager::new(args.profile)?;
+
+    // Nostr identityを読み込みまたは生成
+    let identity = profile_manager.load_or_generate_identity()?;
+
+    println!("🎮 Starting Curion with profile: {}", profile_manager.profile_name());
+    println!("🔑 Your public key: {}", identity.public_key);
+
+    // セーブマネージャーを初期化（プロファイル対応）
+    let save_manager = SaveManager::new_with_profile(&profile_manager)?;
 
     // ゲーム状態をロード（存在しない場合は新規作成）
     let game_state = save_manager.load()?;
