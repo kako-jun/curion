@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::nostr_identity::ProfileManager;
 use crate::player::GameState;
 use crate::synthesis::{RecipeDatabase, SynthesisManager};
 
@@ -23,6 +24,21 @@ impl SaveManager {
         }
 
         let save_path = save_dir.join("save.json");
+
+        Ok(Self { save_path })
+    }
+
+    /// プロファイル対応のセーブマネージャーを作成
+    pub fn new_with_profile(profile_manager: &ProfileManager) -> Result<Self> {
+        let save_path = profile_manager.save_path();
+
+        // ディレクトリが存在しない場合は作成
+        if let Some(parent) = save_path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)
+                    .context("Failed to create save directory")?;
+            }
+        }
 
         Ok(Self { save_path })
     }
