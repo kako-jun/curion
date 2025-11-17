@@ -20,6 +20,7 @@ pub enum Tab {
     Collection,
     Achievements,
     Stats,
+    Synthesis,
 }
 
 impl Tab {
@@ -29,8 +30,16 @@ impl Tab {
             Tab::Collection => "Collection",
             Tab::Achievements => "Achievements",
             Tab::Stats => "Stats",
+            Tab::Synthesis => "Synthesis",
         }
     }
+}
+
+/// 合成UI状態
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SynthesisUIState {
+    SelectingFirst,  // 1つ目の材料を選択中
+    SelectingSecond, // 2つ目の材料を選択中
 }
 
 /// アプリケーション状態
@@ -42,6 +51,10 @@ pub struct App {
     pub guid_interval: Duration,
     pub generator: CurionGenerator,
     pub save_message: Option<(String, Instant)>,
+    // 合成UI用
+    pub synthesis_state: SynthesisUIState,
+    pub selected_first_curion: Option<usize>, // コレクションのインデックス
+    pub synthesis_scroll: usize,
 }
 
 impl App {
@@ -57,6 +70,9 @@ impl App {
             guid_interval: Duration::from_secs(30), // 30秒ごと
             generator,
             save_message: None,
+            synthesis_state: SynthesisUIState::SelectingFirst,
+            selected_first_curion: None,
+            synthesis_scroll: 0,
         }
     }
 
@@ -66,6 +82,7 @@ impl App {
             1 => Tab::Collection,
             2 => Tab::Achievements,
             3 => Tab::Stats,
+            4 => Tab::Synthesis,
             _ => self.current_tab,
         };
         self.scroll = 0;
@@ -76,26 +93,132 @@ impl App {
             Tab::Dashboard => Tab::Collection,
             Tab::Collection => Tab::Achievements,
             Tab::Achievements => Tab::Stats,
-            Tab::Stats => Tab::Dashboard,
+            Tab::Stats => Tab::Synthesis,
+            Tab::Synthesis => Tab::Dashboard,
         };
         self.scroll = 0;
     }
 
     pub fn scroll_up(&mut self) {
-        self.scroll = self.scroll.saturating_sub(1);
+        if self.current_tab == Tab::Synthesis && self.synthesis_state == SynthesisUIState::SelectingSecond {
+            self.synthesis_scroll = self.synthesis_scroll.saturating_sub(1);
+        } else {
+            self.scroll = self.scroll.saturating_sub(1);
+        }
     }
 
     pub fn scroll_down(&mut self) {
-        self.scroll = self.scroll.saturating_add(1);
+        if self.current_tab == Tab::Synthesis && self.synthesis_state == SynthesisUIState::SelectingSecond {
+            self.synthesis_scroll = self.synthesis_scroll.saturating_add(1);
+        } else {
+            self.scroll = self.scroll.saturating_add(1);
+        }
     }
 
     pub fn handle_enter(&mut self) -> Result<()> {
-        if self.current_tab == Tab::Achievements {
-            // 報酬受け取り処理
-            let achievable = self.game_state.achievement_manager.get_achievable();
-            if let Some((achievement, _)) = achievable.get(self.scroll) {
-                let achievement_id = achievement.id.clone();
-                self.game_state.claim_achievement_reward(&achievement_id);
+        match self.current_tab {
+            Tab::Achievements => {
+                // 報酬受け取り処理
+                let achievable = self.game_state.achievement_manager.get_achievable();
+                if let Some((achievement, _)) = achievable.get(self.scroll) {
+                    let achievement_id = achievement.id.clone();
+                    self.game_state.claim_achievement_reward(&achievement_id);
+                }
+            }
+            Tab::Synthesis => {
+                self.handle_synthesis_enter()?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    pub fn handle_escape(&mut self) {
+        if self.current_tab == Tab::Synthesis {
+            match self.synthesis_state {
+                SynthesisUIState::SelectingSecond => {
+                    // 2つ目の選択から1つ目に戻る
+                    self.synthesis_state = SynthesisUIState::SelectingFirst;
+                    self.selected_first_curion = None;
+                    self.synthesis_scroll = 0;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn handle_synthesis_enter(&mut self) -> Result<()> {
+        use crate::synthesis::SynthesisAttemptResult;
+
+        match self.synthesis_state {
+            SynthesisUIState::SelectingFirst => {
+                // 1つ目の材料を選択
+                if self.scroll < self.game_state.player.collection.len() {
+                    self.selected_first_curion = Some(self.scroll);
+                    self.synthesis_state = SynthesisUIState::SelectingSecond;
+                    self.synthesis_scroll = 0;
+                }
+            }
+            SynthesisUIState::SelectingSecond => {
+                // 2つ目の材料を選択して合成実行
+                if let Some(first_idx) = self.selected_first_curion {
+                    if let Some(first_curion) = self.game_state.player.collection.get(first_idx).cloned() {
+                        // 候補を検索
+                        let candidates = self.game_state.synthesis_manager.find_possible_second_ingredients(
+                            &first_curion,
+                            &self.game_state.player.collection,
+                        );
+
+                        if let Some(candidate) = candidates.get(self.synthesis_scroll) {
+                            // 2つ目のキュリオンを見つける
+                            if let Some(second_curion) = self.game_state.player.collection
+                                .iter()
+                                .find(|c| c.noun == candidate.noun && c.id != first_curion.id)
+                                .cloned()
+                            {
+                                // 合成実行
+                                let ingredients = vec![first_curion.clone(), second_curion.clone()];
+                                let result = self.game_state.synthesis_manager.try_synthesize(ingredients)?;
+
+                                match result {
+                                    SynthesisAttemptResult::Success {
+                                        curion,
+                                        recipe_name,
+                                        first_discovery,
+                                    } => {
+                                        // 使用した材料を削除
+                                        self.game_state.player.collection.retain(|c| {
+                                            c.id != first_curion.id && c.id != second_curion.id
+                                        });
+
+                                        // 結果を追加
+                                        self.game_state.add_curion(curion.clone());
+
+                                        // メッセージ表示
+                                        let message = if first_discovery {
+                                            format!("✨ Discovered: {}!", recipe_name)
+                                        } else {
+                                            format!("Created: {}", curion.noun)
+                                        };
+                                        self.save_message = Some((message, Instant::now()));
+
+                                        // 状態をリセット
+                                        self.synthesis_state = SynthesisUIState::SelectingFirst;
+                                        self.selected_first_curion = None;
+                                        self.synthesis_scroll = 0;
+                                        self.scroll = 0;
+                                    }
+                                    SynthesisAttemptResult::DiscoveryFailed { hint } => {
+                                        self.save_message = Some((hint, Instant::now()));
+                                    }
+                                    SynthesisAttemptResult::NoRecipe => {
+                                        self.save_message = Some(("No recipe found".to_string(), Instant::now()));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         Ok(())
@@ -161,6 +284,7 @@ pub fn draw(f: &mut Frame<'_>, app: &App) {
         Tab::Collection => draw_collection(f, app, chunks[1]),
         Tab::Achievements => draw_achievements(f, app, chunks[1]),
         Tab::Stats => draw_stats(f, app, chunks[1]),
+        Tab::Synthesis => draw_synthesis(f, app, chunks[1]),
     }
 
     // セーブメッセージを表示
@@ -179,12 +303,13 @@ pub fn draw(f: &mut Frame<'_>, app: &App) {
 
 /// タブバーを描画
 fn draw_tabs(f: &mut Frame<'_>, app: &App, area: Rect) {
-    let tabs = vec!["Dashboard", "Collection", "Achievements", "Stats"];
+    let tabs = vec!["Dashboard", "Collection", "Achievements", "Stats", "Synthesis"];
     let index = match app.current_tab {
         Tab::Dashboard => 0,
         Tab::Collection => 1,
         Tab::Achievements => 2,
         Tab::Stats => 3,
+        Tab::Synthesis => 4,
     };
 
     let tabs_widget = Tabs::new(tabs)
@@ -696,4 +821,174 @@ fn get_rarity_stars(rarity: &Rarity) -> &'static str {
         Rarity::Epic => "★★★",
         Rarity::Legendary => "★★★★",
     }
+}
+
+/// 合成タブを描画
+fn draw_synthesis(f: &mut Frame<'_>, app: &App, area: Rect) {
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),  // ヘッダー
+            Constraint::Percentage(100), // コンテンツ
+        ])
+        .split(area);
+
+    // ヘッダー
+    let header = Paragraph::new(format!(
+        "Synthesis Lab | Discovered: {}/{}",
+        app.game_state.synthesis_manager.discovered_count(),
+        app.game_state.synthesis_manager.total_recipe_count()
+    ))
+    .block(Block::default().borders(Borders::ALL))
+    .style(Style::default().fg(Color::Cyan));
+    f.render_widget(header, chunks[0]);
+
+    // コンテンツエリアを左右に分割
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(50), // 左: 材料選択
+            Constraint::Percentage(50), // 右: レシピ情報
+        ])
+        .split(chunks[1]);
+
+    match app.synthesis_state {
+        SynthesisUIState::SelectingFirst => {
+            // 1つ目の材料を選択中
+            draw_first_ingredient_selection(f, app, content_chunks[0]);
+
+            // 右側にヘルプを表示
+            let help = Paragraph::new("← Select first ingredient\n\nUse ↑↓ to navigate\nPress Enter to select")
+                .block(Block::default().borders(Borders::ALL).title("Help"))
+                .style(Style::default().fg(Color::Gray));
+            f.render_widget(help, content_chunks[1]);
+        }
+        SynthesisUIState::SelectingSecond => {
+            // 1つ目の材料を表示
+            if let Some(first_idx) = app.selected_first_curion {
+                if let Some(first_curion) = app.game_state.player.collection.get(first_idx) {
+                    draw_selected_first(f, first_curion, content_chunks[0]);
+
+                    // 2つ目の候補を表示
+                    draw_second_ingredient_candidates(f, app, first_curion, first_idx, content_chunks[1]);
+                }
+            }
+        }
+    }
+}
+
+/// 1つ目の材料選択画面
+fn draw_first_ingredient_selection(f: &mut Frame<'_>, app: &App, area: Rect) {
+    let collection = &app.game_state.player.collection;
+
+    if collection.is_empty() {
+        let empty = Paragraph::new("No curions in collection")
+            .block(Block::default().borders(Borders::ALL).title("Ingredient 1"))
+            .style(Style::default().fg(Color::Red));
+        f.render_widget(empty, area);
+        return;
+    }
+
+    let items: Vec<ListItem> = collection
+        .iter()
+        .enumerate()
+        .map(|(i, curion)| {
+            let style = if i == app.scroll {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            ListItem::new(format!(
+                "{} {} ({})",
+                get_rarity_stars(&curion.rarity),
+                curion.noun,
+                format!("{:?}", curion.category)
+            ))
+            .style(style)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title("Select Ingredient 1"))
+        .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+
+    f.render_widget(list, area);
+}
+
+/// 選択済みの1つ目の材料を表示
+fn draw_selected_first(f: &mut Frame<'_>, curion: &crate::curion::Curion, area: Rect) {
+    let text = format!(
+        "Ingredient 1:\n\n{} {}\nCategory: {:?}\nRarity: {}",
+        get_rarity_stars(&curion.rarity),
+        curion.noun,
+        curion.category,
+        format!("{:?}", curion.rarity)
+    );
+
+    let widget = Paragraph::new(text)
+        .block(Block::default().borders(Borders::ALL).title("Selected"))
+        .style(Style::default().fg(Color::Green));
+
+    f.render_widget(widget, area);
+}
+
+/// 2つ目の材料候補を表示
+fn draw_second_ingredient_candidates(
+    f: &mut Frame<'_>,
+    app: &App,
+    first_curion: &crate::curion::Curion,
+    _first_idx: usize,
+    area: Rect,
+) {
+    // 候補を検索
+    let candidates = app.game_state.synthesis_manager.find_possible_second_ingredients(
+        first_curion,
+        &app.game_state.player.collection,
+    );
+
+    if candidates.is_empty() {
+        let empty = Paragraph::new("No possible combinations\n\nPress Esc to go back")
+            .block(Block::default().borders(Borders::ALL).title("Ingredient 2"))
+            .style(Style::default().fg(Color::Red));
+        f.render_widget(empty, area);
+        return;
+    }
+
+    let items: Vec<ListItem> = candidates
+        .iter()
+        .enumerate()
+        .map(|(i, candidate)| {
+            let style = if i == app.synthesis_scroll {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            let result_text = if let Some(ref result) = candidate.result_preview {
+                format!("→ {}", result)
+            } else {
+                "→ ???".to_string()
+            };
+
+            let discovered_mark = if candidate.is_discovered { "✓" } else { "?" };
+
+            ListItem::new(format!(
+                "{} {} (×{}) {} {}",
+                discovered_mark,
+                candidate.noun,
+                candidate.available_count,
+                result_text,
+                format!("{:?}", candidate.category)
+            ))
+            .style(style)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title("Select Ingredient 2"))
+        .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+
+    f.render_widget(list, area);
 }

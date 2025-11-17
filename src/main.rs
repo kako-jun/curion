@@ -80,11 +80,19 @@ fn run_app<B: ratatui::backend::Backend>(
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
                 match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                    KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Esc => {
+                        // 合成タブで2つ目選択中なら戻る、そうでなければ終了
+                        app.handle_escape();
+                        if app.current_tab != ui::Tab::Synthesis || app.synthesis_state == ui::SynthesisUIState::SelectingFirst {
+                            return Ok(());
+                        }
+                    }
                     KeyCode::Char('1') => app.set_tab(0),
                     KeyCode::Char('2') => app.set_tab(1),
                     KeyCode::Char('3') => app.set_tab(2),
                     KeyCode::Char('4') => app.set_tab(3),
+                    KeyCode::Char('5') => app.set_tab(4),
                     KeyCode::Tab => app.next_tab(),
                     KeyCode::Char(' ') => app.generate_curion()?,
                     KeyCode::Char('s') => {
