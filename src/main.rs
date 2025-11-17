@@ -1,0 +1,146 @@
+mod achievement;
+mod curion;
+mod generator;
+mod nostr_identity;
+mod player;
+mod save;
+mod synthesis;
+mod ui;
+
+use anyhow::Result;
+use clap::Parser;
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::io;
+use std::time::{Duration, Instant};
+
+use crate::nostr_identity::ProfileManager;
+use crate::save::SaveManager;
+use crate::ui::App;
+
+/// Curion - A SF collection game where you gather particles of curiosity
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Profile name for multi-player debug testing
+    #[arg(short, long)]
+    profile: Option<String>,
+}
+
+fn main() -> Result<()> {
+    // コマンドライン引数をパース
+    let args = Args::parse();
+
+    // プロファイルマネージャーを初期化
+    let profile_manager = ProfileManager::new(args.profile)?;
+
+    // Nostr identityを読み込みまたは生成
+    let identity = profile_manager.load_or_generate_identity()?;
+
+    println!("🎮 Starting Curion with profile: {}", profile_manager.profile_name());
+    println!("🔑 Your public key: {}", identity.public_key);
+
+    // セーブマネージャーを初期化（プロファイル対応）
+    let save_manager = SaveManager::new_with_profile(&profile_manager)?;
+
+    // ゲーム状態をロード（存在しない場合は新規作成）
+    let game_state = save_manager.load()?;
+
+    // ターミナルのセットアップ
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut app = App::new(game_state);
+
+    // メインループ
+    let tick_rate = Duration::from_millis(250);
+    let res = run_app(&mut terminal, &mut app, tick_rate, &save_manager);
+
+    // ターミナルを元に戻す
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    // 終了時にセーブ
+    if let Err(err) = save_manager.save(&app.game_state) {
+        eprintln!("Failed to save game state: {:?}", err);
+    }
+
+    if let Err(err) = res {
+        eprintln!("Error: {:?}", err);
+    }
+
+    Ok(())
+}
+
+fn run_app<B: ratatui::backend::Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut App,
+    tick_rate: Duration,
+    save_manager: &SaveManager,
+) -> Result<()> {
+    let mut last_tick = Instant::now();
+    let mut last_save = Instant::now();
+    let auto_save_interval = Duration::from_secs(60); // 1分ごとに自動セーブ
+
+    loop {
+        terminal.draw(|f| ui::draw(f, app))?;
+
+        let timeout = tick_rate
+            .checked_sub(last_tick.elapsed())
+            .unwrap_or_else(|| Duration::from_secs(0));
+
+        if crossterm::event::poll(timeout)? {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Esc => {
+                        // 合成タブで2つ目選択中なら戻る、そうでなければ終了
+                        app.handle_escape();
+                        if app.current_tab != ui::Tab::Synthesis || app.synthesis_state == ui::SynthesisUIState::SelectingFirst {
+                            return Ok(());
+                        }
+                    }
+                    KeyCode::Char('1') => app.set_tab(0),
+                    KeyCode::Char('2') => app.set_tab(1),
+                    KeyCode::Char('3') => app.set_tab(2),
+                    KeyCode::Char('4') => app.set_tab(3),
+                    KeyCode::Char('5') => app.set_tab(4),
+                    KeyCode::Tab => app.next_tab(),
+                    KeyCode::Char(' ') => app.generate_curion()?,
+                    KeyCode::Char('s') => {
+                        // 手動セーブ
+                        save_manager.save(&app.game_state)?;
+                        app.show_save_message();
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => app.scroll_up(),
+                    KeyCode::Down | KeyCode::Char('j') => app.scroll_down(),
+                    KeyCode::Enter => app.handle_enter()?,
+                    _ => {}
+                }
+            }
+        }
+
+        if last_tick.elapsed() >= tick_rate {
+            app.on_tick();
+            last_tick = Instant::now();
+        }
+
+        // 自動セーブ
+        if last_save.elapsed() >= auto_save_interval {
+            save_manager.save(&app.game_state)?;
+            last_save = Instant::now();
+        }
+    }
+}

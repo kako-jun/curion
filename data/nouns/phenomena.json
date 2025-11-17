@@ -1,0 +1,122 @@
+[
+  {
+    "name": "朝",
+    "reading": "あさ",
+    "english": "morning",
+    "weight": 1.0
+  },
+  {
+    "name": "昼",
+    "reading": "ひる",
+    "english": "noon",
+    "weight": 1.0
+  },
+  {
+    "name": "夕",
+    "reading": "ゆう",
+    "english": "evening",
+    "weight": 1.0
+  },
+  {
+    "name": "夜",
+    "reading": "よる",
+    "english": "night",
+    "weight": 1.0
+  },
+  {
+    "name": "春",
+    "reading": "はる",
+    "english": "spring",
+    "weight": 1.0
+  },
+  {
+    "name": "夏",
+    "reading": "なつ",
+    "english": "summer",
+    "weight": 1.0
+  },
+  {
+    "name": "秋",
+    "reading": "あき",
+    "english": "autumn",
+    "weight": 1.0
+  },
+  {
+    "name": "冬",
+    "reading": "ふゆ",
+    "english": "winter",
+    "weight": 1.0
+  },
+  {
+    "name": "嵐",
+    "reading": "あらし",
+    "english": "storm",
+    "weight": 0.7
+  },
+  {
+    "name": "凪",
+    "reading": "なぎ",
+    "english": "calm",
+    "weight": 0.8
+  },
+  {
+    "name": "潮",
+    "reading": "しお",
+    "english": "tide",
+    "weight": 0.9
+  },
+  {
+    "name": "波",
+    "reading": "なみ",
+    "english": "wave",
+    "weight": 1.0
+  },
+  {
+    "name": "渦",
+    "reading": "うず",
+    "english": "whirlpool",
+    "weight": 0.6
+  },
+  {
+    "name": "煙",
+    "reading": "けむり",
+    "english": "smoke",
+    "weight": 1.0
+  },
+  {
+    "name": "炎",
+    "reading": "ほのお",
+    "english": "flame",
+    "weight": 0.8
+  },
+  {
+    "name": "露",
+    "reading": "つゆ",
+    "english": "dew",
+    "weight": 1.0
+  },
+  {
+    "name": "霜",
+    "reading": "しも",
+    "english": "frost",
+    "weight": 0.9
+  },
+  {
+    "name": "雹",
+    "reading": "ひょう",
+    "english": "hail",
+    "weight": 0.5
+  },
+  {
+    "name": "雷鳴",
+    "reading": "らいめい",
+    "english": "thunder",
+    "weight": 0.6
+  },
+  {
+    "name": "地震",
+    "reading": "じしん",
+    "english": "earthquake",
+    "weight": 0.4
+  }
+]

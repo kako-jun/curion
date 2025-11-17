@@ -1,0 +1,314 @@
+[
+  {
+    "name": "愛",
+    "reading": "あい",
+    "english": "love",
+    "weight": 1.0
+  },
+  {
+    "name": "美",
+    "reading": "び",
+    "english": "beauty",
+    "weight": 1.0
+  },
+  {
+    "name": "自由",
+    "reading": "じゆう",
+    "english": "freedom",
+    "weight": 1.0
+  },
+  {
+    "name": "勇気",
+    "reading": "ゆうき",
+    "english": "courage",
+    "weight": 1.0
+  },
+  {
+    "name": "希望",
+    "reading": "きぼう",
+    "english": "hope",
+    "weight": 1.0
+  },
+  {
+    "name": "絶望",
+    "reading": "ぜつぼう",
+    "english": "despair",
+    "weight": 0.7
+  },
+  {
+    "name": "正義",
+    "reading": "せいぎ",
+    "english": "justice",
+    "weight": 1.0
+  },
+  {
+    "name": "知恵",
+    "reading": "ちえ",
+    "english": "wisdom",
+    "weight": 1.0
+  },
+  {
+    "name": "力",
+    "reading": "ちから",
+    "english": "power",
+    "weight": 1.0
+  },
+  {
+    "name": "平和",
+    "reading": "へいわ",
+    "english": "peace",
+    "weight": 1.0
+  },
+  {
+    "name": "調和",
+    "reading": "ちょうわ",
+    "english": "harmony",
+    "weight": 1.0
+  },
+  {
+    "name": "混沌",
+    "reading": "こんとん",
+    "english": "chaos",
+    "weight": 0.6
+  },
+  {
+    "name": "秩序",
+    "reading": "ちつじょ",
+    "english": "order",
+    "weight": 0.8
+  },
+  {
+    "name": "真実",
+    "reading": "しんじつ",
+    "english": "truth",
+    "weight": 0.9
+  },
+  {
+    "name": "嘘",
+    "reading": "うそ",
+    "english": "lie",
+    "weight": 1.0
+  },
+  {
+    "name": "運命",
+    "reading": "うんめい",
+    "english": "fate",
+    "weight": 0.5
+  },
+  {
+    "name": "奇跡",
+    "reading": "きせき",
+    "english": "miracle",
+    "weight": 0.3
+  },
+  {
+    "name": "栄光",
+    "reading": "えいこう",
+    "english": "glory",
+    "weight": 0.7
+  },
+  {
+    "name": "屈辱",
+    "reading": "くつじょく",
+    "english": "humiliation",
+    "weight": 0.8
+  },
+  {
+    "name": "喜び",
+    "reading": "よろこび",
+    "english": "joy",
+    "weight": 1.0
+  },
+  {
+    "name": "悲しみ",
+    "reading": "かなしみ",
+    "english": "sadness",
+    "weight": 1.0
+  },
+  {
+    "name": "怒り",
+    "reading": "いかり",
+    "english": "anger",
+    "weight": 1.0
+  },
+  {
+    "name": "恐怖",
+    "reading": "きょうふ",
+    "english": "fear",
+    "weight": 1.0
+  },
+  {
+    "name": "安心",
+    "reading": "あんしん",
+    "english": "relief",
+    "weight": 1.0
+  },
+  {
+    "name": "孤独",
+    "reading": "こどく",
+    "english": "loneliness",
+    "weight": 0.9
+  },
+  {
+    "name": "友情",
+    "reading": "ゆうじょう",
+    "english": "friendship",
+    "weight": 1.0
+  },
+  {
+    "name": "信頼",
+    "reading": "しんらい",
+    "english": "trust",
+    "weight": 1.0
+  },
+  {
+    "name": "裏切り",
+    "reading": "うらぎり",
+    "english": "betrayal",
+    "weight": 0.7
+  },
+  {
+    "name": "魂",
+    "reading": "たましい",
+    "english": "soul",
+    "weight": 0.6
+  },
+  {
+    "name": "精神",
+    "reading": "せいしん",
+    "english": "spirit",
+    "weight": 0.8
+  },
+  {
+    "name": "意志",
+    "reading": "いし",
+    "english": "will",
+    "weight": 0.9
+  },
+  {
+    "name": "欲望",
+    "reading": "よくぼう",
+    "english": "desire",
+    "weight": 0.8
+  },
+  {
+    "name": "理性",
+    "reading": "りせい",
+    "english": "reason",
+    "weight": 0.8
+  },
+  {
+    "name": "本能",
+    "reading": "ほんのう",
+    "english": "instinct",
+    "weight": 0.9
+  },
+  {
+    "name": "永遠",
+    "reading": "えいえん",
+    "english": "eternity",
+    "weight": 0.4
+  },
+  {
+    "name": "刹那",
+    "reading": "せつな",
+    "english": "moment",
+    "weight": 0.7
+  },
+  {
+    "name": "無限",
+    "reading": "むげん",
+    "english": "infinity",
+    "weight": 0.3
+  },
+  {
+    "name": "虚無",
+    "reading": "きょむ",
+    "english": "nothingness",
+    "weight": 0.2
+  },
+  {
+    "name": "存在",
+    "reading": "そんざい",
+    "english": "existence",
+    "weight": 0.6
+  },
+  {
+    "name": "創造",
+    "reading": "そうぞう",
+    "english": "creation",
+    "weight": 0.5
+  },
+  {
+    "name": "破壊",
+    "reading": "はかい",
+    "english": "destruction",
+    "weight": 0.6
+  },
+  {
+    "name": "生命",
+    "reading": "せいめい",
+    "english": "life",
+    "weight": 0.7
+  },
+  {
+    "name": "死",
+    "reading": "し",
+    "english": "death",
+    "weight": 0.5
+  },
+  {
+    "name": "再生",
+    "reading": "さいせい",
+    "english": "rebirth",
+    "weight": 0.4
+  },
+  {
+    "name": "記憶",
+    "reading": "きおく",
+    "english": "memory",
+    "weight": 0.9
+  },
+  {
+    "name": "忘却",
+    "reading": "ぼうきゃく",
+    "english": "oblivion",
+    "weight": 0.6
+  },
+  {
+    "name": "時",
+    "reading": "とき",
+    "english": "time",
+    "weight": 0.5
+  },
+  {
+    "name": "空",
+    "reading": "くう",
+    "english": "void",
+    "weight": 0.4
+  },
+  {
+    "name": "因果",
+    "reading": "いんが",
+    "english": "causality",
+    "weight": 0.3
+  },
+  {
+    "name": "輪廻",
+    "reading": "りんね",
+    "english": "samsara",
+    "weight": 0.2
+  },
+  {
+    "name": "時間",
+    "reading": "じかん",
+    "english": "time",
+    "weight": 0.5
+  },
+  {
+    "name": "空間",
+    "reading": "くうかん",
+    "english": "space",
+    "weight": 0.5
+  }
+]
