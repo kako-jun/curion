@@ -37,16 +37,15 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-    // コマンドライン引数をパース
     let args = Args::parse();
 
-    // プロファイルマネージャーを初期化
     let profile_manager = ProfileManager::new(args.profile)?;
-
-    // Nostr identityを読み込みまたは生成
     let identity = profile_manager.load_or_generate_identity()?;
 
-    println!("🎮 Starting Curion with profile: {}", profile_manager.profile_name());
+    println!(
+        "🎮 Starting Curion with profile: {}",
+        profile_manager.profile_name()
+    );
     println!("🔑 Your public key: {}", identity.public_key);
 
     if args.interactive {
@@ -62,13 +61,10 @@ fn main() -> Result<()> {
 
 /// TUIモードを起動する
 pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
-    // セーブマネージャーを初期化（プロファイル対応）
     let save_manager = SaveManager::new_with_profile(profile_manager)?;
-
-    // ゲーム状態をロード（存在しない場合は新規作成）
     let game_state = save_manager.load()?;
 
-    // ターミナルのセットアップ
+    // Terminal setup
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -77,11 +73,9 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
 
     let mut app = App::new(game_state);
 
-    // メインループ
-    let tick_rate = Duration::from_millis(250);
-    let res = run_app(&mut terminal, &mut app, tick_rate, &save_manager);
+    let res = run_app(&mut terminal, &mut app, &save_manager);
 
-    // ターミナルを元に戻す
+    // Terminal teardown
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -90,7 +84,7 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     )?;
     terminal.show_cursor()?;
 
-    // 終了時にセーブ
+    // Save on exit
     if let Err(err) = save_manager.save(&app.game_state) {
         eprintln!("Failed to save game state: {:?}", err);
     }
@@ -105,15 +99,15 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
-    tick_rate: Duration,
     save_manager: &SaveManager,
 ) -> Result<()> {
+    let tick_rate = Duration::from_millis(250);
+    let auto_save_interval = Duration::from_secs(60);
     let mut last_tick = Instant::now();
     let mut last_save = Instant::now();
-    let auto_save_interval = Duration::from_secs(60); // 1分ごとに自動セーブ
 
     loop {
-        terminal.draw(|f| ui::draw(f, app))?;
+        terminal.draw(|f| app.ui(f))?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
@@ -121,31 +115,12 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Esc => {
-                        // 合成タブで2つ目選択中なら戻る、そうでなければ終了
-                        app.handle_escape();
-                        if app.current_tab != ui::Tab::Synthesis || app.synthesis_state == ui::SynthesisUIState::SelectingFirst {
-                            return Ok(());
-                        }
-                    }
-                    KeyCode::Char('1') => app.set_tab(0),
-                    KeyCode::Char('2') => app.set_tab(1),
-                    KeyCode::Char('3') => app.set_tab(2),
-                    KeyCode::Char('4') => app.set_tab(3),
-                    KeyCode::Char('5') => app.set_tab(4),
-                    KeyCode::Tab => app.next_tab(),
-                    KeyCode::Char(' ') => app.generate_curion()?,
-                    KeyCode::Char('s') => {
-                        // 手動セーブ
-                        save_manager.save(&app.game_state)?;
-                        app.show_save_message();
-                    }
-                    KeyCode::Up | KeyCode::Char('k') => app.scroll_up(),
-                    KeyCode::Down | KeyCode::Char('j') => app.scroll_down(),
-                    KeyCode::Enter => app.handle_enter()?,
-                    _ => {}
+                // 's' is handled separately because it needs save_manager
+                if key.code == KeyCode::Char('s') {
+                    save_manager.save(&app.game_state)?;
+                    app.handle_save_key();
+                } else if app.handle_key(key.code)? {
+                    return Ok(());
                 }
             }
         }
@@ -155,7 +130,6 @@ fn run_app<B: ratatui::backend::Backend>(
             last_tick = Instant::now();
         }
 
-        // 自動セーブ
         if last_save.elapsed() >= auto_save_interval {
             save_manager.save(&app.game_state)?;
             last_save = Instant::now();
