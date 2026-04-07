@@ -29,6 +29,9 @@ nostr-sdk = "0.37"
 clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1.42", features = ["full"] }
 
+[dev-dependencies]
+cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
+
 [profile.release]
 lto = true
 codegen-units = 1
