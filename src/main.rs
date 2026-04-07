@@ -1,6 +1,7 @@
 mod achievement;
 mod curion;
 mod generator;
+mod interactive;
 mod nostr_identity;
 mod player;
 mod save;
@@ -29,6 +30,10 @@ struct Args {
     /// Profile name for multi-player debug testing
     #[arg(short, long)]
     profile: Option<String>,
+
+    /// Start in interactive (REPL) mode instead of TUI
+    #[arg(short, long)]
+    interactive: bool,
 }
 
 fn main() -> Result<()> {
@@ -44,8 +49,21 @@ fn main() -> Result<()> {
     println!("🎮 Starting Curion with profile: {}", profile_manager.profile_name());
     println!("🔑 Your public key: {}", identity.public_key);
 
+    if args.interactive {
+        // インタラクティブ（REPL）モード
+        interactive::run_interactive_mode(&profile_manager)?;
+    } else {
+        // TUIモード（デフォルト）
+        run_tui(&profile_manager)?;
+    }
+
+    Ok(())
+}
+
+/// TUIモードを起動する
+pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     // セーブマネージャーを初期化（プロファイル対応）
-    let save_manager = SaveManager::new_with_profile(&profile_manager)?;
+    let save_manager = SaveManager::new_with_profile(profile_manager)?;
 
     // ゲーム状態をロード（存在しない場合は新規作成）
     let game_state = save_manager.load()?;
