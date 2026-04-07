@@ -1,9 +1,17 @@
 [package]
 name = "curion"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["kako-jun"]
 description = "A SF collection game where you gather particles of curiosity"
+license = "MIT"
+homepage = "https://github.com/kako-jun/curion"
+repository = "https://github.com/kako-jun/curion"
+readme = "README.md"
+keywords = ["game", "tui", "collection", "nostr"]
+categories = ["command-line-utilities", "games"]
+exclude = [".github/", "target/"]
+rust-version = "1.78.0"
 
 [dependencies]
 ratatui = "0.29"
@@ -19,3 +27,12 @@ dirs = "5.0"
 nostr-sdk = "0.37"
 clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1.42", features = ["full"] }
+
+[dev-dependencies]
+cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
