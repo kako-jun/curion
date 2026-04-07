@@ -7,7 +7,6 @@ description = "A SF collection game where you gather particles of curiosity"
 license = "MIT"
 homepage = "https://github.com/kako-jun/curion"
 repository = "https://github.com/kako-jun/curion"
-documentation = "https://docs.rs/curion"
 readme = "README.md"
 keywords = ["game", "tui", "collection", "nostr"]
 categories = ["command-line-utilities", "games"]
@@ -36,3 +35,4 @@ cargo-husky = { version = "1", default-features = false, features = ["user-hooks
 lto = true
 codegen-units = 1
 panic = "abort"
+strip = true
