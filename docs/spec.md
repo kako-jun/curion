@@ -84,20 +84,30 @@ Level N -> N+1 requires N * 100 XP.
 
 ## TUI Layout
 
-4 tabs, switched via Tab key or number keys 1-4.
+5 tabs, switched via Tab key or number keys 1-5.
+
+Each tab now uses a 3-layer layout:
+
+- Top: global tab bar
+- Left pane: section list for the current tab
+- Right pane: content for the selected section
+- Bottom: one-line help bar
 
 ### Tab 1: Dashboard
 
-Split into two halves:
+Left pane sections:
+- Overview
+- Login Bonus
+- Daily Mission
 
-**Upper half -- Current status:**
+**Overview right pane:**
 - GUID generation countdown (progress bar)
 - Quick stats: total collected, today's count, play time
 - Latest curion acquired
 - Rarity distribution (horizontal bar chart)
 - Category distribution (compact bar chart)
 
-**Lower half -- Goal nudges ("almost there!"):**
+**Overview lower area -- Goal nudges ("almost there!"):**
 - Lists goals sorted by proximity to completion
 - Priority display by completion percentage:
   - 95%+: red "Urgent!" badge
@@ -106,37 +116,68 @@ Split into two halves:
   - 30-49%: gray
   - Below 30%: hidden
 
+**Login Bonus / Daily Mission right panes:**
+- Reserved for dedicated subviews; placeholders are shown until those issues land
+
 ### Tab 2: Collection
 
+Left pane sections:
+- Owned List
+- Encyclopedia
+
+**Owned List right pane:**
 - Scrollable list of all owned curions
-- Filter by rarity and category
-- Sort by: newest, rarity, category
-- Detail view on Enter
 - Display format: `#ID stars [Rarity] Category Name  Date`
 - Attribute bars (interest, beauty) shown inline
 
+**Encyclopedia right pane:**
+- Category-by-category total / unique counts
+- Placeholder for future filterable compendium view
+
 ### Tab 3: Achievements
 
-- List of all achievements with unlock status
-- Unlocked: checkmark, unlock date, XP reward
-- Locked: progress bar, required count, reward preview
-- Claimable rewards highlighted
+Left pane sections:
+- Claimable
+- In Progress
+- Completed
+
+Right pane behavior:
+- Claimable: rewards can be claimed with Enter
+- In Progress: locked achievements with progress bars
+- Completed: unlocked achievements with unlock date and reward history
 
 ### Tab 4: Stats
 
-- Basic info: level, total play time, first/last play, login streak
-- Collection stats: total, daily, peak day, average rate, rate per hour
-- Rarity breakdown with most frequent item per tier
-- Category completion percentages with bar charts
+Left pane sections:
+- Rarity
+- Category
+- Timeline
+
+Right pane behavior:
+- Rarity: player summary + rarity breakdown
+- Category: total / unique counts per category
+- Timeline: first play, last play, total play time; sparkline view planned
+
+### Tab 5: Synthesis
+
+Left pane sections:
+- Recipe List
+- Synthesize
+
+Right pane behavior:
+- Recipe List: discovered/undiscovered recipe index
+- Synthesize: two-step ingredient selection flow
 
 ## Key Bindings
 
 ### Global
 | Key | Action |
 |---|---|
-| Tab / 1-4 | Switch tabs |
+| Tab / 1-5 | Switch tabs |
 | q / Esc | Quit |
 | ? | Help |
+| j / k | Move selection in the left pane |
+| Up / Down | Scroll or select inside the right pane |
 
 ### Dashboard
 | Key | Action |
@@ -144,19 +185,11 @@ Split into two halves:
 | Space | Manual GUID generation (with cooldown) |
 | r | Refresh display |
 
-### Collection
+### Collection / Achievements / Stats / Synthesis
 | Key | Action |
 |---|---|
-| Up/Down or j/k | Scroll |
-| Enter | Detail view |
-| f | Filter settings |
-| s | Sort settings |
-
-### Achievements
-| Key | Action |
-|---|---|
-| Up/Down or j/k | Scroll |
-| Enter | Claim reward (unlocked only) |
+| Up/Down | Scroll or select content in the right pane |
+| Enter | Claim reward / start synthesis step |
 
 ## Visual Design
 

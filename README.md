@@ -29,6 +29,7 @@ No ads, no microtransactions, no internet required. Just one more spin.
 - **Synthesis** — combine two curions to create something new; 15 recipes (water + fire = steam, dream + light = hope, ...)
 - **39 achievements** — milestone counts, rarity hunts, category completions, login streaks, playtime goals, and special challenges
 - **5-tab TUI** built with ratatui — Dashboard, Collection, Achievements, Stats, Synthesis
+- **Three-pane navigation** — tab bar + left section list + right content pane, aligned with the future PWA information architecture
 - **Nostr identity** — each player gets a keypair for future decentralized trading
 - **Auto-save** every 60 seconds, manual save with `s`
 - Single binary, no runtime dependencies
@@ -73,24 +74,15 @@ You can also press `Space` to spend a GUID immediately instead of waiting for th
 ## Gameplay
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Dashboard  │  Collection  │  Achievements  │  Stats  │  Synthesis  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Next GUID in: 18s                                              │
-│  [████████████████░░░░░░░░░░░░░░░░░░░░░░]  40%                 │
-│                                                                 │
-│  Latest:                                                        │
-│    ⭐ Dragon    [Legendary]  Animal    curiosity: 97            │
-│    💙 Cobalt    [Rare]       Color     curiosity: 64            │
-│    ⚪ Bread     [Common]     Food      curiosity: 23            │
-│    💜 Quartz    [Epic]       Element   curiosity: 81            │
-│                                                                 │
-│  Total: 142  |  Common: 85  Rare: 41  Epic: 14  Legendary: 2   │
-│                                                                 │
-│  Achievements: 12/39 unlocked                                   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌─ Dashboard / Collection / Achievements / Stats / Synthesis ─────┐
+├─ Overview / Login / Daily ─┬─ Right pane content ───────────────┤
+│ > Overview                 │ Next GUID in: 18s                  │
+│   Login Bonus              │ [████████████████░░░░░░] 40%       │
+│   Daily Mission            │ Latest: [Legendary] Dragon         │
+│                            │ Total: 142 / Rare: 41 / Epic: 14   │
+├────────────────────────────┴─────────────────────────────────────┤
+│ help_line                                                    │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Bindings
@@ -100,7 +92,8 @@ You can also press `Space` to spend a GUID immediately instead of waiting for th
 | `1`-`5` | Switch to tab (Dashboard / Collection / Achievements / Stats / Synthesis) |
 | `Tab` | Next tab |
 | `Space` | Generate a curion now (spends the current GUID) |
-| `j` / `k` or Arrow keys | Scroll up / down |
+| `j` / `k` | Move between left-pane sections |
+| `Up` / `Down` | Scroll or select inside the right pane |
 | `Enter` | Claim achievement reward / Select synthesis ingredient |
 | `Esc` | Cancel synthesis selection / Quit |
 | `s` | Manual save |

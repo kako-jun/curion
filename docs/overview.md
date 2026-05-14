@@ -23,7 +23,9 @@ The UI is deliberately designed to create a "just one more" loop. The bottom hal
 
 ### TUI metaverse
 
-Curion aims to be a metaverse you can experience without VR -- just a terminal. The world is text-based but rich: colored rarity indicators, animated generation effects, and a multi-tab interface (Dashboard, Collection, Achievements, Stats) built with ratatui.
+Curion aims to be a metaverse you can experience without VR -- just a terminal. The world is text-based but rich: colored rarity indicators, animated generation effects, and a five-tab interface (Dashboard, Collection, Achievements, Stats, Synthesis) built with ratatui.
+
+The current TUI uses a three-pane hierarchy: tab bar at the top, a left section list inside each tab, and a right content pane that never stays empty. This structure is intentionally shared with the future terminal-style PWA so the information architecture is fixed early.
 
 ### Nostr-based decentralization
 

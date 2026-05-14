@@ -12,7 +12,8 @@
 
 ### Phase 2: UI/UX
 - [x] Ratatui TUI実装
-- [x] 4タブシステム (Dashboard, Collection, Achievements, Stats)
+- [x] 5タブシステム (Dashboard, Collection, Achievements, Stats, Synthesis)
+- [x] 3層ナビゲーション (タブバー → 左ペイン → 右ペイン)
 - [x] Cookie Clicker風のダッシュボード
 - [x] 進捗バー・統計表示
 - [x] 自動セーブ (60秒間隔)

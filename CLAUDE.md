@@ -30,7 +30,7 @@ src/
 ├── synthesis.rs         # 合成レシピ管理、SynthesisManager
 ├── nostr_identity.rs    # Nostr keypair生成、プロファイル管理
 ├── save.rs              # JSONセーブ/ロード、自動セーブ
-└── ui.rs                # ratatui TUI（4タブ、ダッシュボード、煽りUI）
+└── ui.rs                # ratatui TUI（5タブ、3層ナビゲーション、ダッシュボード、煽りUI）
 
 data/
 ├── nouns/               # 名詞データベース（9カテゴリ、250+語）
