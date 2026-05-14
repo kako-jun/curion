@@ -1,16 +1,25 @@
 use crate::curion::{Category, Curion, Rarity};
 use anyhow::{Context, Result};
-use rand::distributions::{Distribution, WeightedIndex};
 use rand::SeedableRng;
+use rand::distributions::{Distribution, WeightedIndex};
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 use uuid::Uuid;
 
-/// 名詞エントリ（JSONファイルから読み込む）
+// コンパイル時にデータをバイナリに埋め込む
+const NOUNS_ANIMALS: &str = include_str!("../data/nouns/animals.json");
+const NOUNS_PLANTS: &str = include_str!("../data/nouns/plants.json");
+const NOUNS_COLORS: &str = include_str!("../data/nouns/colors.json");
+const NOUNS_OBJECTS: &str = include_str!("../data/nouns/objects.json");
+const NOUNS_CONCEPTS: &str = include_str!("../data/nouns/concepts.json");
+const NOUNS_ELEMENTS: &str = include_str!("../data/nouns/elements.json");
+const NOUNS_FOODS: &str = include_str!("../data/nouns/foods.json");
+const NOUNS_PHENOMENA: &str = include_str!("../data/nouns/phenomena.json");
+const NOUNS_ABSTRACTS: &str = include_str!("../data/nouns/abstracts.json");
+
+/// 名詞エントリ
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NounEntry {
     pub name: String,
@@ -25,36 +34,31 @@ pub struct NounDatabase {
 }
 
 impl NounDatabase {
-    /// JSONファイルから名詞データベースを読み込む
-    pub fn load_from_dir<P: AsRef<Path>>(dir: P) -> Result<Self> {
+    /// 埋め込みデータから名詞データベースを構築
+    pub fn load_embedded() -> Result<Self> {
         let mut entries = HashMap::new();
 
-        // カテゴリとファイル名のマッピング
-        let categories = [
-            (Category::Animal, "animals.json"),
-            (Category::Plant, "plants.json"),
-            (Category::Color, "colors.json"),
-            (Category::Object, "objects.json"),
-            (Category::Concept, "concepts.json"),
-            (Category::Element, "elements.json"),
-            (Category::Food, "foods.json"),
-            (Category::Phenomenon, "phenomena.json"),
-            (Category::Abstract, "abstracts.json"),
+        let embedded: &[(Category, &str)] = &[
+            (Category::Animal, NOUNS_ANIMALS),
+            (Category::Plant, NOUNS_PLANTS),
+            (Category::Color, NOUNS_COLORS),
+            (Category::Object, NOUNS_OBJECTS),
+            (Category::Concept, NOUNS_CONCEPTS),
+            (Category::Element, NOUNS_ELEMENTS),
+            (Category::Food, NOUNS_FOODS),
+            (Category::Phenomenon, NOUNS_PHENOMENA),
+            (Category::Abstract, NOUNS_ABSTRACTS),
         ];
 
-        for (category, filename) in categories {
-            let path = dir.as_ref().join(filename);
-            let content = fs::read_to_string(&path)
-                .with_context(|| format!("Failed to read {}", path.display()))?;
-
-            let nouns: Vec<NounEntry> = serde_json::from_str(&content)
-                .with_context(|| format!("Failed to parse {}", path.display()))?;
+        for (category, content) in embedded {
+            let nouns: Vec<NounEntry> = serde_json::from_str(content)
+                .with_context(|| format!("Failed to parse noun data for {:?}", category))?;
 
             if nouns.is_empty() {
-                anyhow::bail!("No nouns found in {}", path.display());
+                anyhow::bail!("No nouns found for {:?}", category);
             }
 
-            entries.insert(category, nouns);
+            entries.insert(category.clone(), nouns);
         }
 
         Ok(Self { entries })
@@ -85,9 +89,9 @@ pub struct CurionGenerator {
 }
 
 impl CurionGenerator {
-    /// 指定ディレクトリから名詞データベースを読み込んで生成器を作成
-    pub fn new<P: AsRef<Path>>(nouns_dir: P) -> Result<Self> {
-        let noun_db = NounDatabase::load_from_dir(nouns_dir)?;
+    /// 埋め込みデータから生成器を作成
+    pub fn new() -> Result<Self> {
+        let noun_db = NounDatabase::load_embedded()?;
         Ok(Self { noun_db })
     }
 
@@ -216,8 +220,7 @@ mod tests {
 
     #[test]
     fn test_generate_curion() {
-        // テスト用のディレクトリパスを指定
-        let generator = CurionGenerator::new("data/nouns").expect("Failed to load noun database");
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
         let guid = Uuid::new_v4();
         let curion = generator.generate_from_guid(guid).expect("Failed to generate curion");
 
@@ -229,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_deterministic_generation() {
-        let generator = CurionGenerator::new("data/nouns").expect("Failed to load noun database");
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
         let guid = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
 
         let curion1 = generator.generate_from_guid(guid).expect("Failed to generate curion 1");
@@ -245,11 +248,11 @@ mod tests {
 
     #[test]
     fn test_database_stats() {
-        let generator = CurionGenerator::new("data/nouns").expect("Failed to load noun database");
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
         let stats = generator.database_stats();
 
         // 全カテゴリにデータが存在することを確認
-        assert!(stats.len() > 0);
+        assert!(!stats.is_empty());
         for (category, count) in stats {
             assert!(count > 0, "Category {:?} has no nouns", category);
         }

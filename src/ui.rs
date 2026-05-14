@@ -136,7 +136,7 @@ pub struct App {
 
 impl App {
     pub fn new(game_state: GameState) -> Self {
-        let generator = CurionGenerator::new("data/nouns")
+        let generator = CurionGenerator::new()
             .unwrap_or_else(|e| panic!("Failed to load noun database: {e}"));
 
         Self {
@@ -368,8 +368,9 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),
-                Constraint::Percentage(100),
+                Constraint::Length(3),  // タブバー
+                Constraint::Min(0),     // コンテンツ
+                Constraint::Length(1),  // help_line
             ])
             .split(f.area());
 
@@ -383,6 +384,8 @@ impl App {
             Tab::Synthesis => self.render_synthesis(f, chunks[1]),
         }
 
+        self.render_help_line(f, chunks[2]);
+
         if let Some((message, _)) = &self.save_message {
             let area = Rect {
                 x: f.area().width.saturating_sub(20),
@@ -394,6 +397,57 @@ impl App {
                 .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
             f.render_widget(save_text, area);
         }
+    }
+
+    fn render_help_line(&self, f: &mut Frame<'_>, area: Rect) {
+        let help = match self.current_tab {
+            Tab::Synthesis => Line::from(vec![
+                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 生成  "),
+                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
+                Span::raw(" 合成  "),
+                Span::styled(" Esc ", Style::default().fg(Color::Black).bg(Color::Gray)),
+                Span::raw(" 戻る  "),
+                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" スクロール  "),
+                Span::styled(" 1-5 ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" タブ  "),
+                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 保存  "),
+                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 終了"),
+            ]),
+            Tab::Achievements => Line::from(vec![
+                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 生成  "),
+                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
+                Span::raw(" 報酬受取  "),
+                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" スクロール  "),
+                Span::styled(" 1-5 ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" タブ  "),
+                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 保存  "),
+                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 終了"),
+            ]),
+            _ => Line::from(vec![
+                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 生成  "),
+                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" スクロール  "),
+                Span::styled(" 1-5 ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" タブ  "),
+                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 保存  "),
+                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 終了"),
+            ]),
+        };
+
+        let help_widget = Paragraph::new(help)
+            .style(Style::default().bg(Color::Black));
+        f.render_widget(help_widget, area);
     }
 
     fn render_tabs(&self, f: &mut Frame<'_>, area: Rect) {

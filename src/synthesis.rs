@@ -2,9 +2,9 @@ use crate::curion::{Category, Curion, Rarity};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 use uuid::Uuid;
+
+const RECIPES_JSON: &str = include_str!("../data/recipes/basic_recipes.json");
 
 /// 合成レシピ
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,14 +113,10 @@ pub struct RecipeDatabase {
 }
 
 impl RecipeDatabase {
-    /// JSONファイルからレシピデータベースを読み込む
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let content = fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read {}", path.as_ref().display()))?;
-
-        let recipes: Vec<SynthesisRecipe> = serde_json::from_str(&content)
-            .with_context(|| format!("Failed to parse {}", path.as_ref().display()))?;
-
+    /// 埋め込みデータからレシピデータベースを構築
+    pub fn load_embedded() -> Result<Self> {
+        let recipes: Vec<SynthesisRecipe> = serde_json::from_str(RECIPES_JSON)
+            .context("Failed to parse embedded recipe data")?;
         Ok(Self { recipes })
     }
 

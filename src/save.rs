@@ -94,7 +94,7 @@ impl SaveManager {
 
     /// 合成マネージャーを作成
     fn create_synthesis_manager() -> Result<SynthesisManager> {
-        let recipe_db = RecipeDatabase::load_from_file("data/recipes/basic_recipes.json")
+        let recipe_db = RecipeDatabase::load_embedded()
             .context("Failed to load recipe database")?;
         Ok(SynthesisManager::new(recipe_db))
     }

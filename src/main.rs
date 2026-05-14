@@ -3,6 +3,7 @@ mod curion;
 mod generator;
 mod interactive;
 mod nostr_identity;
+mod plain;
 mod player;
 mod save;
 mod synthesis;
@@ -34,6 +35,15 @@ struct Args {
     /// Start in interactive (REPL) mode instead of TUI
     #[arg(short, long)]
     interactive: bool,
+
+    /// Plain text mode (no TUI). Useful for debugging and scripting.
+    /// Usage: curion --plain [status|collect [n]|collection|achievements|synthesize <i> <j>|help]
+    #[arg(long)]
+    plain: bool,
+
+    /// Subcommand args for --plain mode
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    plain_args: Vec<String>,
 }
 
 fn main() -> Result<()> {
@@ -51,6 +61,9 @@ fn main() -> Result<()> {
     if args.interactive {
         // インタラクティブ（REPL）モード
         interactive::run_interactive_mode(&profile_manager)?;
+    } else if args.plain {
+        // プレーンテキストモード（TUI なし、デバッグ用）
+        plain::run_plain_mode(&profile_manager, &args.plain_args)?;
     } else {
         // TUIモード（デフォルト）
         run_tui(&profile_manager)?;

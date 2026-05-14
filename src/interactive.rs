@@ -178,7 +178,7 @@ impl Helper for CurionHelper {}
 pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
     let save_manager = SaveManager::new_with_profile(profile_manager)?;
     let mut game_state = save_manager.load()?;
-    let generator = CurionGenerator::new("data/nouns")?;
+    let generator = CurionGenerator::new()?;
 
     // ログイン処理
     game_state.player.update_login();
