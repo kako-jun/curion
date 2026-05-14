@@ -104,8 +104,8 @@ Left pane sections:
 - GUID generation countdown (progress bar)
 - Quick stats: total collected, today's count, play time
 - Latest curion acquired
-- Rarity distribution (horizontal bar chart)
-- Category distribution (compact bar chart)
+- Rarity distribution (horizontal text bars)
+- Category distribution (compact text summary for now; visual chart is part of the visual-enhancement issue)
 
 **Overview lower area -- Goal nudges ("almost there!"):**
 - Lists goals sorted by proximity to completion
@@ -155,8 +155,8 @@ Left pane sections:
 
 Right pane behavior:
 - Rarity: player summary + rarity breakdown
-- Category: total / unique counts per category
-- Timeline: first play, last play, total play time; sparkline view planned
+- Category: current collection-based total / unique counts per category
+- Timeline: first play, last play, total play time; sparkline view remains planned and is not yet implemented in Issue #17
 
 ### Tab 5: Synthesis
 

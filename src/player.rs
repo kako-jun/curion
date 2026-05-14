@@ -81,10 +81,6 @@ impl CategoryStats {
             .max_by_key(|(_, count)| *count)
             .map(|(noun, _)| noun.clone());
     }
-
-    pub fn unique_count(&self) -> usize {
-        self.unique_nouns.len()
-    }
 }
 
 impl Default for CategoryStats {
@@ -220,14 +216,6 @@ impl Player {
         self.category_stats
             .get(category)
             .map(|s| s.count)
-            .unwrap_or(0)
-    }
-
-    /// カテゴリ別のユニーク数
-    pub fn unique_count_by_category(&self, category: &Category) -> usize {
-        self.category_stats
-            .get(category)
-            .map(|s| s.unique_count())
             .unwrap_or(0)
     }
 

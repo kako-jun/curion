@@ -30,6 +30,7 @@ No ads, no microtransactions, no internet required. Just one more spin.
 - **39 achievements** — milestone counts, rarity hunts, category completions, login streaks, playtime goals, and special challenges
 - **5-tab TUI** built with ratatui — Dashboard, Collection, Achievements, Stats, Synthesis
 - **Three-pane navigation** — tab bar + left section list + right content pane, aligned with the future PWA information architecture
+- **Scaffolded subviews** — Login Bonus / Daily Mission / Timeline are visible as reserved panes before their dedicated gameplay issues land
 - **Nostr identity** — each player gets a keypair for future decentralized trading
 - **Auto-save** every 60 seconds, manual save with `s`
 - Single binary, no runtime dependencies
@@ -116,7 +117,7 @@ Mix types. Discover them by experimenting.
 
 ## Documentation
 
-- [Game Spec](GAME_SPEC.md) — full game design document
+- [Game Spec](docs/spec.md) — full game design document
 
 ## Roadmap
 

@@ -21,6 +21,8 @@ use crate::save::SaveManager;
 pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Result<()> {
     let save_manager = SaveManager::new_with_profile(profile_manager)?;
     let mut game_state = save_manager.load()?;
+    game_state.player.update_login();
+    save_manager.save(&game_state)?;
     let generator = CurionGenerator::new()?;
 
     let cmd = args.first().map(|s| s.as_str()).unwrap_or("status");

@@ -10,22 +10,34 @@ use ratatui::{
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use crate::curion::Rarity;
+use crate::curion::{Category, Rarity};
 use crate::generator::CurionGenerator;
 use crate::player::GameState;
 
 // ── Style constants ──────────────────────────────────────────────
 
-const COLOR_COMMON: Color = Color::White;
+const COLOR_COMMON: Color = Color::Gray;
 const COLOR_RARE: Color = Color::Cyan;
-const COLOR_EPIC: Color = Color::Magenta;
-const COLOR_LEGENDARY: Color = Color::Yellow;
+const COLOR_EPIC: Color = Color::Yellow;
+const COLOR_LEGENDARY: Color = Color::Red;
 const COLOR_BORDER: Color = Color::Cyan;
-const COLOR_LABEL: Color = Color::Gray;
+const COLOR_LABEL: Color = Color::DarkGray;
 const COLOR_BAR_HOT: Color = Color::Red;
 const COLOR_BAR_WARM: Color = Color::Yellow;
 const COLOR_BAR_COOL: Color = Color::Cyan;
 const COLOR_BAR_COLD: Color = Color::Gray;
+
+const ALL_CATEGORIES: [Category; 9] = [
+    Category::Animal,
+    Category::Plant,
+    Category::Color,
+    Category::Object,
+    Category::Concept,
+    Category::Element,
+    Category::Food,
+    Category::Phenomenon,
+    Category::Abstract,
+];
 
 fn rarity_color(rarity: &Rarity) -> Color {
     match rarity {
@@ -394,6 +406,28 @@ impl App {
         self.section_indices[self.current_tab.index()].min(max_index)
     }
 
+    fn collection_count_by_category(&self, category: &Category) -> usize {
+        self.game_state
+            .player
+            .collection
+            .iter()
+            .filter(|curion| &curion.category == category)
+            .count()
+    }
+
+    fn collection_unique_count_by_category(&self, category: &Category) -> usize {
+        use std::collections::BTreeSet;
+
+        self.game_state
+            .player
+            .collection
+            .iter()
+            .filter(|curion| &curion.category == category)
+            .map(|curion| curion.noun.as_str())
+            .collect::<BTreeSet<_>>()
+            .len()
+    }
+
     // ── Rendering ────────────────────────────────────────────────
 
     pub fn ui(&self, f: &mut Frame<'_>) {
@@ -751,10 +785,12 @@ impl App {
         f.render_widget(rarity_widget, chunks[3]);
 
         // Category distribution
-        let category_text = player
-            .category_stats
+        let category_text = ALL_CATEGORIES
             .iter()
-            .map(|(cat, stats)| format!("{}: {}個", cat.as_str(), stats.count))
+            .filter_map(|category| {
+                let count = self.collection_count_by_category(category);
+                (count > 0).then(|| format!("{}: {}個", category.as_str(), count))
+            })
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text)
@@ -921,7 +957,7 @@ impl App {
                 Span::styled("総所持数", Style::default().fg(COLOR_LABEL)),
                 Span::raw("  "),
                 Span::styled(
-                    format!("{} entries", player.total_acquired()),
+                    format!("{} 個", player.total_acquired()),
                     Style::default()
                         .fg(COLOR_LEGENDARY)
                         .add_modifier(Modifier::BOLD),
@@ -930,17 +966,7 @@ impl App {
             Line::from(""),
         ];
 
-        for category in [
-            crate::curion::Category::Animal,
-            crate::curion::Category::Plant,
-            crate::curion::Category::Color,
-            crate::curion::Category::Object,
-            crate::curion::Category::Concept,
-            crate::curion::Category::Element,
-            crate::curion::Category::Food,
-            crate::curion::Category::Phenomenon,
-            crate::curion::Category::Abstract,
-        ] {
+        for category in ALL_CATEGORIES {
             lines.push(Line::from(vec![
                 Span::styled(
                     format!("{:<8}", category.as_str()),
@@ -948,9 +974,9 @@ impl App {
                 ),
                 Span::raw(" "),
                 Span::raw(format!(
-                    "{:>3} total / {:>3} unique",
-                    player.count_by_category(&category),
-                    player.unique_count_by_category(&category)
+                    "{:>3} 所持 / {:>3} 種類",
+                    self.collection_count_by_category(&category),
+                    self.collection_unique_count_by_category(&category)
                 )),
             ]));
         }
@@ -1258,29 +1284,18 @@ impl App {
     }
 
     fn render_stats_category(&self, f: &mut Frame<'_>, area: Rect) {
-        let player = &self.game_state.player;
         let mut lines = Vec::new();
 
-        for category in [
-            crate::curion::Category::Animal,
-            crate::curion::Category::Plant,
-            crate::curion::Category::Color,
-            crate::curion::Category::Object,
-            crate::curion::Category::Concept,
-            crate::curion::Category::Element,
-            crate::curion::Category::Food,
-            crate::curion::Category::Phenomenon,
-            crate::curion::Category::Abstract,
-        ] {
-            let total = player.count_by_category(&category);
-            let unique = player.unique_count_by_category(&category);
+        for category in ALL_CATEGORIES {
+            let total = self.collection_count_by_category(&category);
+            let unique = self.collection_unique_count_by_category(&category);
             lines.push(Line::from(vec![
                 Span::styled(
                     format!("{:<8}", category.as_str()),
                     Style::default().fg(COLOR_RARE),
                 ),
                 Span::raw(" "),
-                Span::raw(format!("{total:>3} total / {unique:>3} unique")),
+                Span::raw(format!("{total:>3} 所持 / {unique:>3} 種類")),
             ]));
         }
 
@@ -1309,7 +1324,7 @@ impl App {
             Line::from(vec![
                 Span::styled("総プレイ時間", Style::default().fg(COLOR_LABEL)),
                 Span::raw("  "),
-                Span::raw(format!("{} sec", player.total_play_time)),
+                Span::raw(format!("{} 秒", player.total_play_time)),
             ]),
             Line::from(""),
             Line::from("Sparkline 系の時系列可視化は Issue #26 で追加します。"),

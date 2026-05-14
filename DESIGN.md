@@ -6,6 +6,8 @@ curion — Design System
 
 SF collection game running in a terminal. The visual language borrows from Linux system monitors (glances, btop, htop): dense information panels, color-coded status, live progress bars, and sparklines — all inside a ratatui TUI.
 
+Issue #17 establishes the 3-layer information architecture first. Some widget-level visuals in this document are target styles for the follow-up visual enhancement issue, not all fully implemented yet.
+
 The player should feel like they are watching a scientific instrument, not a toy. Data is alive. Bars fill. Counters tick. Rare events pulse.
 
 Inspirations: glances, btop, htop, FF14 cooldown indicators, Cookie Clicker saturation of numbers.

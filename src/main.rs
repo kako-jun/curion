@@ -75,7 +75,8 @@ fn main() -> Result<()> {
 /// TUIモードを起動する
 pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     let save_manager = SaveManager::new_with_profile(profile_manager)?;
-    let game_state = save_manager.load()?;
+    let mut game_state = save_manager.load()?;
+    game_state.player.update_login();
 
     // Terminal setup
     enable_raw_mode()?;
