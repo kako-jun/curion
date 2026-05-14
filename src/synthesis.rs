@@ -21,13 +21,13 @@ pub struct SynthesisRecipe {
 /// レシピタイプ
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecipeType {
-    Intuitive,   // 直感的（水+火→蒸気）
-    Conceptual,  // 概念的（夢+光→希望）
-    Biological,  // 生物的（狼+月→月光狼）
-    Cooking,     // 料理系（米+火→ご飯）
-    Abstract,    // 抽象概念（愛+美→美愛）
-    ChaosMix,    // ごった煮（猫+愛→愛猫）
-    Advanced,    // 複雑（3つ以上の材料）
+    Intuitive,  // 直感的（水+火→蒸気）
+    Conceptual, // 概念的（夢+光→希望）
+    Biological, // 生物的（狼+月→月光狼）
+    Cooking,    // 料理系（米+火→ご飯）
+    Abstract,   // 抽象概念（愛+美→美愛）
+    ChaosMix,   // ごった煮（猫+愛→愛猫）
+    Advanced,   // 複雑（3つ以上の材料）
 }
 
 /// 材料要求
@@ -115,8 +115,8 @@ pub struct RecipeDatabase {
 impl RecipeDatabase {
     /// 埋め込みデータからレシピデータベースを構築
     pub fn load_embedded() -> Result<Self> {
-        let recipes: Vec<SynthesisRecipe> = serde_json::from_str(RECIPES_JSON)
-            .context("Failed to parse embedded recipe data")?;
+        let recipes: Vec<SynthesisRecipe> =
+            serde_json::from_str(RECIPES_JSON).context("Failed to parse embedded recipe data")?;
         Ok(Self { recipes })
     }
 
@@ -178,7 +178,10 @@ impl SynthesisManager {
 
     /// レシピが発見済みか
     pub fn is_discovered(&self, recipe_id: &str) -> bool {
-        self.discovered_recipes.get(recipe_id).copied().unwrap_or(false)
+        self.discovered_recipes
+            .get(recipe_id)
+            .copied()
+            .unwrap_or(false)
     }
 
     /// レシピを発見済みにする
@@ -187,10 +190,7 @@ impl SynthesisManager {
     }
 
     /// 合成を試みる
-    pub fn try_synthesize(
-        &mut self,
-        ingredients: Vec<Curion>,
-    ) -> Result<SynthesisAttemptResult> {
+    pub fn try_synthesize(&mut self, ingredients: Vec<Curion>) -> Result<SynthesisAttemptResult> {
         // マッチするレシピを検索
         let matching_recipes = self.recipe_db.find_matching_recipes(&ingredients);
 
@@ -215,7 +215,7 @@ impl SynthesisManager {
             let roll: f64 = rand::random();
             if roll > discovery_rate {
                 return Ok(SynthesisAttemptResult::DiscoveryFailed {
-                    hint: format!("何かが起こりそうだが、まだ完全には理解できていない..."),
+                    hint: "何かが起こりそうだが、まだ完全には理解できていない...".to_string(),
                 });
             }
 
@@ -239,15 +239,6 @@ impl SynthesisManager {
     /// 全レシピ数
     pub fn total_recipe_count(&self) -> usize {
         self.recipe_db.all_recipes().len()
-    }
-
-    /// 発見済みレシピの一覧を取得
-    pub fn get_discovered_recipes(&self) -> Vec<&SynthesisRecipe> {
-        self.recipe_db
-            .all_recipes()
-            .iter()
-            .filter(|recipe| self.is_discovered(&recipe.id))
-            .collect()
     }
 
     /// 発見状態を取得（セーブ用）
@@ -327,7 +318,6 @@ impl SynthesisManager {
                         } else {
                             None
                         },
-                        recipe_id: recipe.id.clone(),
                         is_discovered,
                     })
                     .available_count += 1;
@@ -350,7 +340,6 @@ pub struct PossibleSecondIngredient {
     pub category: Category,
     pub available_count: usize,
     pub result_preview: Option<String>, // 発見済みなら結果、未発見ならNone
-    pub recipe_id: String,
     pub is_discovered: bool,
 }
 

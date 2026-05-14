@@ -1,8 +1,8 @@
 use crate::curion::{Category, Curion, Rarity};
 use anyhow::{Context, Result};
-use rand::SeedableRng;
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::rngs::StdRng;
+use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -52,10 +52,10 @@ impl NounDatabase {
 
         for (category, content) in embedded {
             let nouns: Vec<NounEntry> = serde_json::from_str(content)
-                .with_context(|| format!("Failed to parse noun data for {:?}", category))?;
+                .with_context(|| format!("Failed to parse noun data for {category:?}"))?;
 
             if nouns.is_empty() {
-                anyhow::bail!("No nouns found for {:?}", category);
+                anyhow::bail!("No nouns found for {category:?}");
             }
 
             entries.insert(category.clone(), nouns);
@@ -69,12 +69,8 @@ impl NounDatabase {
         self.entries.get(category)
     }
 
-    /// 全カテゴリを取得
-    pub fn categories(&self) -> Vec<Category> {
-        self.entries.keys().cloned().collect()
-    }
-
     /// 統計情報を取得
+    #[cfg(test)]
     pub fn stats(&self) -> HashMap<Category, usize> {
         self.entries
             .iter()
@@ -175,7 +171,12 @@ impl CurionGenerator {
 
         // 累積確率でレアリティを決定
         let mut cumulative = 0.0;
-        for rarity in &[Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common] {
+        for rarity in &[
+            Rarity::Legendary,
+            Rarity::Epic,
+            Rarity::Rare,
+            Rarity::Common,
+        ] {
             cumulative += rarity.probability();
             if roll < cumulative {
                 return *rarity;
@@ -187,11 +188,13 @@ impl CurionGenerator {
 
     /// カテゴリから名詞を選択（重み付き）
     fn select_noun_from_category(&self, category: &Category, seed: u32) -> Result<String> {
-        let nouns = self.noun_db.get_nouns(category)
+        let nouns = self
+            .noun_db
+            .get_nouns(category)
             .context("Category not found in noun database")?;
 
         if nouns.is_empty() {
-            anyhow::bail!("No nouns available for category {:?}", category);
+            anyhow::bail!("No nouns available for category {category:?}");
         }
 
         // 重みの配列を作成
@@ -201,14 +204,15 @@ impl CurionGenerator {
         let mut rng = StdRng::seed_from_u64(seed as u64);
 
         // 重み付き選択
-        let dist = WeightedIndex::new(&weights)
-            .context("Failed to create weighted distribution")?;
+        let dist =
+            WeightedIndex::new(&weights).context("Failed to create weighted distribution")?;
         let index = dist.sample(&mut rng);
 
         Ok(nouns[index].name.clone())
     }
 
     /// 統計情報を取得
+    #[cfg(test)]
     pub fn database_stats(&self) -> HashMap<Category, usize> {
         self.noun_db.stats()
     }
@@ -222,7 +226,9 @@ mod tests {
     fn test_generate_curion() {
         let generator = CurionGenerator::new().expect("Failed to load noun database");
         let guid = Uuid::new_v4();
-        let curion = generator.generate_from_guid(guid).expect("Failed to generate curion");
+        let curion = generator
+            .generate_from_guid(guid)
+            .expect("Failed to generate curion");
 
         assert_eq!(curion.source_guid, guid);
         assert!(!curion.noun.is_empty());
@@ -235,8 +241,12 @@ mod tests {
         let generator = CurionGenerator::new().expect("Failed to load noun database");
         let guid = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
 
-        let curion1 = generator.generate_from_guid(guid).expect("Failed to generate curion 1");
-        let curion2 = generator.generate_from_guid(guid).expect("Failed to generate curion 2");
+        let curion1 = generator
+            .generate_from_guid(guid)
+            .expect("Failed to generate curion 1");
+        let curion2 = generator
+            .generate_from_guid(guid)
+            .expect("Failed to generate curion 2");
 
         // 同じGUIDからは同じキュリオンが生成される
         assert_eq!(curion1.noun, curion2.noun);
@@ -254,7 +264,7 @@ mod tests {
         // 全カテゴリにデータが存在することを確認
         assert!(!stats.is_empty());
         for (category, count) in stats {
-            assert!(count > 0, "Category {:?} has no nouns", category);
+            assert!(count > 0, "Category {category:?} has no nouns");
         }
     }
 }

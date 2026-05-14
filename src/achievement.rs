@@ -1,6 +1,6 @@
+use crate::curion::{Category, Rarity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::curion::{Category, Rarity};
 
 /// 実績ID
 pub type AchievementId = String;
@@ -111,11 +111,7 @@ impl AchievementProgress {
 
     /// 残り数
     pub fn remaining(&self) -> usize {
-        if self.current >= self.target {
-            0
-        } else {
-            self.target - self.current
-        }
+        self.target.saturating_sub(self.current)
     }
 
     /// 達成可能かチェック
@@ -166,9 +162,9 @@ impl AchievementManager {
         // 総数マイルストーン
         for count in [10, 50, 100, 250, 500, 1000] {
             self.register_achievement(Achievement::new(
-                format!("total_{}", count),
+                format!("total_{count}"),
                 format!("コレクター Lv.{}", count / 10),
-                format!("{}個のキュリオンを集める", count),
+                format!("{count}個のキュリオンを集める"),
                 AchievementType::TotalCount(count),
                 count as u32 * 10,
                 if count >= 1000 {
@@ -176,7 +172,14 @@ impl AchievementManager {
                 } else {
                     None
                 },
-                if count >= 1000 { "👑" } else if count >= 500 { "💎" } else { "📦" }.to_string(),
+                if count >= 1000 {
+                    "👑"
+                } else if count >= 500 {
+                    "💎"
+                } else {
+                    "📦"
+                }
+                .to_string(),
             ));
         }
 
@@ -188,16 +191,17 @@ impl AchievementManager {
         ] {
             for count in counts {
                 self.register_achievement(Achievement::new(
-                    format!("{:?}_{}",rarity, count).to_lowercase(),
-                    format!("{:?} ハンター {}", rarity, count),
-                    format!("{:?}を{}個集める", rarity, count),
+                    format!("{rarity:?}_{count}").to_lowercase(),
+                    format!("{rarity:?} ハンター {count}"),
+                    format!("{rarity:?}を{count}個集める"),
                     AchievementType::RarityCount { rarity, count },
-                    count as u32 * match rarity {
-                        Rarity::Rare => 15,
-                        Rarity::Epic => 30,
-                        Rarity::Legendary => 100,
-                        _ => 10,
-                    },
+                    count as u32
+                        * match rarity {
+                            Rarity::Rare => 15,
+                            Rarity::Epic => 30,
+                            Rarity::Legendary => 100,
+                            _ => 10,
+                        },
                     if count >= 100 && rarity == Rarity::Legendary {
                         Some("神話の収集家".to_string())
                     } else if count == 1 && rarity == Rarity::Legendary {
@@ -210,7 +214,8 @@ impl AchievementManager {
                         Rarity::Epic => "💜",
                         Rarity::Rare => "💙",
                         _ => "⚪",
-                    }.to_string(),
+                    }
+                    .to_string(),
                 ));
             }
         }
@@ -228,7 +233,7 @@ impl AchievementManager {
             Category::Abstract,
         ] {
             self.register_achievement(Achievement::new(
-                format!("complete_{:?}", category).to_lowercase(),
+                format!("complete_{category:?}").to_lowercase(),
                 format!("{}マスター", category.as_str()),
                 format!("{}カテゴリを全種コンプリート", category.as_str()),
                 AchievementType::CategoryComplete(category.clone()),
@@ -252,9 +257,9 @@ impl AchievementManager {
         // 連続ログイン
         for days in [3, 7, 14, 30, 100] {
             self.register_achievement(Achievement::new(
-                format!("login_{}", days),
-                format!("継続は力なり {}", days),
-                format!("{}日連続ログイン", days),
+                format!("login_{days}"),
+                format!("継続は力なり {days}"),
+                format!("{days}日連続ログイン"),
                 AchievementType::ConsecutiveLogin(days),
                 days as u32 * 50,
                 if days >= 100 {
@@ -269,9 +274,9 @@ impl AchievementManager {
         // プレイ時間
         for hours in [1, 10, 50, 100, 500] {
             self.register_achievement(Achievement::new(
-                format!("playtime_{}", hours),
-                format!("ベテラン {}", hours),
-                format!("{}時間プレイ", hours),
+                format!("playtime_{hours}"),
+                format!("ベテラン {hours}"),
+                format!("{hours}時間プレイ"),
                 AchievementType::PlayTime(hours * 60),
                 hours as u32 * 20,
                 if hours >= 500 {
@@ -317,7 +322,8 @@ impl AchievementManager {
         let progress = AchievementProgress::new(achievement.id.clone(), target);
 
         self.progress.insert(achievement.id.clone(), progress);
-        self.achievements.insert(achievement.id.clone(), achievement);
+        self.achievements
+            .insert(achievement.id.clone(), achievement);
     }
 
     /// 実績のターゲット値を取得
@@ -369,15 +375,20 @@ impl AchievementManager {
 
     /// 進捗率でソートした実績リストを取得
     pub fn get_sorted_by_progress(&self) -> Vec<(&Achievement, &AchievementProgress)> {
-        let mut list: Vec<_> = self.achievements
+        let mut list: Vec<_> = self
+            .achievements
             .iter()
             .filter_map(|(id, achievement)| {
-                self.progress.get(id).map(|progress| (achievement, progress))
+                self.progress
+                    .get(id)
+                    .map(|progress| (achievement, progress))
             })
             .collect();
 
         list.sort_by(|a, b| {
-            b.1.progress_ratio().partial_cmp(&a.1.progress_ratio()).unwrap()
+            b.1.progress_ratio()
+                .partial_cmp(&a.1.progress_ratio())
+                .unwrap()
         });
 
         list

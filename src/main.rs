@@ -99,11 +99,11 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
 
     // Save on exit
     if let Err(err) = save_manager.save(&app.game_state) {
-        eprintln!("Failed to save game state: {:?}", err);
+        eprintln!("Failed to save game state: {err:?}");
     }
 
     if let Err(err) = res {
-        eprintln!("Error: {:?}", err);
+        eprintln!("Error: {err:?}");
     }
 
     Ok(())

@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+#[cfg(test)]
+use std::path::Path;
 
 use crate::nostr_identity::ProfileManager;
 use crate::player::GameState;
@@ -19,8 +21,7 @@ impl SaveManager {
 
         // ディレクトリが存在しない場合は作成
         if !save_dir.exists() {
-            fs::create_dir_all(&save_dir)
-                .context("Failed to create save directory")?;
+            fs::create_dir_all(&save_dir).context("Failed to create save directory")?;
         }
 
         let save_path = save_dir.join("save.json");
@@ -35,8 +36,7 @@ impl SaveManager {
         // ディレクトリが存在しない場合は作成
         if let Some(parent) = save_path.parent() {
             if !parent.exists() {
-                fs::create_dir_all(parent)
-                    .context("Failed to create save directory")?;
+                fs::create_dir_all(parent).context("Failed to create save directory")?;
             }
         }
 
@@ -46,8 +46,7 @@ impl SaveManager {
     /// セーブディレクトリのパスを取得
     fn get_save_directory() -> Result<PathBuf> {
         // ホームディレクトリを取得
-        let home = dirs::home_dir()
-            .context("Could not find home directory")?;
+        let home = dirs::home_dir().context("Could not find home directory")?;
 
         Ok(home.join(".curion"))
     }
@@ -62,8 +61,7 @@ impl SaveManager {
             .context("Failed to serialize game state")?;
 
         // ファイルに書き込み
-        fs::write(&self.save_path, json)
-            .context("Failed to write save file")?;
+        fs::write(&self.save_path, json).context("Failed to write save file")?;
 
         Ok(())
     }
@@ -79,12 +77,11 @@ impl SaveManager {
         }
 
         // ファイルを読み込み
-        let json = fs::read_to_string(&self.save_path)
-            .context("Failed to read save file")?;
+        let json = fs::read_to_string(&self.save_path).context("Failed to read save file")?;
 
         // JSONをパース
-        let serializable: SerializableGameState = serde_json::from_str(&json)
-            .context("Failed to parse save file")?;
+        let serializable: SerializableGameState =
+            serde_json::from_str(&json).context("Failed to parse save file")?;
 
         // GameStateに変換
         let game_state = serializable.into_game_state(synthesis_manager);
@@ -94,17 +91,13 @@ impl SaveManager {
 
     /// 合成マネージャーを作成
     fn create_synthesis_manager() -> Result<SynthesisManager> {
-        let recipe_db = RecipeDatabase::load_embedded()
-            .context("Failed to load recipe database")?;
+        let recipe_db =
+            RecipeDatabase::load_embedded().context("Failed to load recipe database")?;
         Ok(SynthesisManager::new(recipe_db))
     }
 
-    /// セーブファイルが存在するか確認
-    pub fn save_exists(&self) -> bool {
-        self.save_path.exists()
-    }
-
     /// セーブファイルのパスを取得
+    #[cfg(test)]
     pub fn save_path(&self) -> &Path {
         &self.save_path
     }
@@ -167,7 +160,9 @@ impl SerializableGameState {
         }
 
         // 合成レシピの発見状態を復元
-        game_state.synthesis_manager.set_discovered_state(self.discovered_recipes);
+        game_state
+            .synthesis_manager
+            .set_discovered_state(self.discovered_recipes);
 
         game_state
     }

@@ -1,9 +1,9 @@
-use chrono::{DateTime, Utc, Duration};
+use crate::achievement::{AchievementManager, AchievementProgress};
+use crate::curion::{Category, Curion, Rarity};
+use crate::synthesis::SynthesisManager;
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::curion::{Curion, Category, Rarity};
-use crate::achievement::{AchievementManager, AchievementProgress};
-use crate::synthesis::SynthesisManager;
 
 /// プレイヤー状態
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,7 +75,8 @@ impl CategoryStats {
     }
 
     fn update_most_frequent(&mut self) {
-        self.most_frequent = self.unique_nouns
+        self.most_frequent = self
+            .unique_nouns
             .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(noun, _)| noun.clone());
@@ -172,15 +173,14 @@ impl Player {
     /// キュリオンを追加
     pub fn add_curion(&mut self, curion: Curion) -> u32 {
         // カテゴリ統計を更新
-        let category_stat = self.category_stats
+        let category_stat = self
+            .category_stats
             .entry(curion.category.clone())
-            .or_insert_with(CategoryStats::new);
+            .or_default();
         category_stat.add_curion(&curion.noun);
 
         // レアリティ統計を更新
-        let rarity_stat = self.rarity_stats
-            .entry(curion.rarity)
-            .or_insert_with(RarityStats::new);
+        let rarity_stat = self.rarity_stats.entry(curion.rarity).or_default();
         rarity_stat.add_curion(&curion.noun);
 
         // 今日の獲得数を更新
@@ -217,12 +217,18 @@ impl Player {
 
     /// カテゴリ別の獲得数
     pub fn count_by_category(&self, category: &Category) -> usize {
-        self.category_stats.get(category).map(|s| s.count).unwrap_or(0)
+        self.category_stats
+            .get(category)
+            .map(|s| s.count)
+            .unwrap_or(0)
     }
 
     /// カテゴリ別のユニーク数
     pub fn unique_count_by_category(&self, category: &Category) -> usize {
-        self.category_stats.get(category).map(|s| s.unique_count()).unwrap_or(0)
+        self.category_stats
+            .get(category)
+            .map(|s| s.unique_count())
+            .unwrap_or(0)
     }
 
     /// 特定の名詞の獲得数
@@ -293,35 +299,9 @@ impl Player {
         }
     }
 
-    /// 称号を設定
-    pub fn set_active_title(&mut self, title: Option<String>) {
-        if let Some(ref t) = title {
-            if self.titles.contains(t) {
-                self.active_title = title;
-            }
-        } else {
-            self.active_title = None;
-        }
-    }
-
     /// 最新のキュリオンを取得
     pub fn latest_curion(&self) -> Option<&Curion> {
         self.collection.last()
-    }
-
-    /// レアリティ分布を計算
-    pub fn rarity_distribution(&self) -> HashMap<Rarity, f64> {
-        let total = self.total_acquired() as f64;
-        if total == 0.0 {
-            return HashMap::new();
-        }
-
-        let mut dist = HashMap::new();
-        for rarity in [Rarity::Common, Rarity::Rare, Rarity::Epic, Rarity::Legendary] {
-            let count = self.count_by_rarity(rarity) as f64;
-            dist.insert(rarity, count / total);
-        }
-        dist
     }
 }
 
@@ -357,7 +337,8 @@ impl GameState {
         let mut newly_unlocked = Vec::new();
 
         // 全実績をチェック（まず情報を集める）
-        let achievement_updates: Vec<_> = self.achievement_manager
+        let achievement_updates: Vec<_> = self
+            .achievement_manager
             .get_all_achievements()
             .iter()
             .map(|achievement| {
@@ -406,7 +387,9 @@ impl GameState {
     pub fn claim_achievement_reward(&mut self, achievement_id: &str) -> Option<u32> {
         if let Some(progress) = self.achievement_manager.get_progress_mut(achievement_id) {
             if progress.claim_reward() {
-                if let Some(achievement) = self.achievement_manager.get_all_achievements()
+                if let Some(achievement) = self
+                    .achievement_manager
+                    .get_all_achievements()
                     .iter()
                     .find(|a| a.id == achievement_id)
                 {
@@ -426,8 +409,12 @@ impl GameState {
     }
 
     /// 「もうすぐ達成」の実績を取得（進捗率順）
-    pub fn get_almost_complete_achievements(&self, limit: usize) -> Vec<(String, AchievementProgress, f64)> {
-        let mut list: Vec<_> = self.achievement_manager
+    pub fn get_almost_complete_achievements(
+        &self,
+        limit: usize,
+    ) -> Vec<(String, AchievementProgress, f64)> {
+        let mut list: Vec<_> = self
+            .achievement_manager
             .get_sorted_by_progress()
             .into_iter()
             .filter(|(_, progress)| !progress.unlocked && progress.progress_ratio() >= 0.3)

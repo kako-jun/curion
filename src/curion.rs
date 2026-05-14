@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// キュリオンのレアリティ
@@ -12,23 +12,13 @@ pub enum Rarity {
 }
 
 impl Rarity {
-    /// レアリティに対応する色を返す
-    pub fn color(&self) -> &str {
-        match self {
-            Rarity::Common => "white",
-            Rarity::Rare => "blue",
-            Rarity::Epic => "magenta",
-            Rarity::Legendary => "yellow",
-        }
-    }
-
     /// レアリティの確率を返す
     pub fn probability(&self) -> f64 {
         match self {
-            Rarity::Common => 0.60,     // 60%
-            Rarity::Rare => 0.30,       // 30%
-            Rarity::Epic => 0.09,       // 9%
-            Rarity::Legendary => 0.01,  // 1%
+            Rarity::Common => 0.60,    // 60%
+            Rarity::Rare => 0.30,      // 30%
+            Rarity::Epic => 0.09,      // 9%
+            Rarity::Legendary => 0.01, // 1%
         }
     }
 }
@@ -36,15 +26,15 @@ impl Rarity {
 /// キュリオンのカテゴリ
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Category {
-    Animal,      // 動物
-    Plant,       // 植物
-    Color,       // 色
-    Object,      // 物体
-    Concept,     // 概念
-    Element,     // 元素
-    Food,        // 食べ物
-    Phenomenon,  // 現象
-    Abstract,    // 抽象概念
+    Animal,     // 動物
+    Plant,      // 植物
+    Color,      // 色
+    Object,     // 物体
+    Concept,    // 概念
+    Element,    // 元素
+    Food,       // 食べ物
+    Phenomenon, // 現象
+    Abstract,   // 抽象概念
 }
 
 impl Category {
@@ -116,17 +106,5 @@ impl Curion {
     /// キュリオンの表示用文字列
     pub fn display_name(&self) -> String {
         format!("{} の {}", self.category.as_str(), self.noun)
-    }
-
-    /// キュリオンのスコアを計算（ソート用）
-    pub fn score(&self) -> f64 {
-        let rarity_score = match self.rarity {
-            Rarity::Common => 1.0,
-            Rarity::Rare => 2.0,
-            Rarity::Epic => 4.0,
-            Rarity::Legendary => 10.0,
-        };
-
-        (rarity_score * 100.0) + (self.interest * 50.0) + (self.beauty * 50.0)
     }
 }

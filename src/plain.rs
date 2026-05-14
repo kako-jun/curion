@@ -38,7 +38,11 @@ pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Resu
                 let rarity_label = rarity_tag(curion.rarity);
                 println!(
                     "[{}] {} ({}) - interest:{:.2} beauty:{:.2}",
-                    rarity_label, curion.noun, curion.category.as_str(), curion.interest, curion.beauty
+                    rarity_label,
+                    curion.noun,
+                    curion.category.as_str(),
+                    curion.interest,
+                    curion.beauty
                 );
                 game_state.add_curion(curion);
             }
@@ -55,16 +59,20 @@ pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Resu
         }
 
         "synthesize" | "syn" => {
-            let idx1: usize = args.get(1).and_then(|s| s.parse::<usize>().ok())
+            let idx1: usize = args
+                .get(1)
+                .and_then(|s| s.parse::<usize>().ok())
                 .ok_or_else(|| anyhow::anyhow!("Usage: synthesize <idx1> <idx2>"))?
                 .saturating_sub(1);
-            let idx2: usize = args.get(2).and_then(|s| s.parse::<usize>().ok())
+            let idx2: usize = args
+                .get(2)
+                .and_then(|s| s.parse::<usize>().ok())
                 .ok_or_else(|| anyhow::anyhow!("Usage: synthesize <idx1> <idx2>"))?
                 .saturating_sub(1);
 
             let col_len = game_state.player.collection.len();
             if idx1 >= col_len || idx2 >= col_len {
-                println!("Error: index out of range (collection has {} items)", col_len);
+                println!("Error: index out of range (collection has {col_len} items)");
                 return Ok(());
             }
             if idx1 == idx2 {
@@ -79,25 +87,41 @@ pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Resu
 
             use crate::synthesis::SynthesisAttemptResult;
             match game_state.synthesis_manager.try_synthesize(vec![a, b])? {
-                SynthesisAttemptResult::Success { curion, recipe_name, first_discovery } => {
-                    let flag = if first_discovery { " [FIRST DISCOVERY!]" } else { "" };
-                    println!("[SUCCESS]{} {} + {} => {} [{}] (recipe: {})",
-                        flag, a_noun, b_noun,
+                SynthesisAttemptResult::Success {
+                    curion,
+                    recipe_name,
+                    first_discovery,
+                } => {
+                    let flag = if first_discovery {
+                        " [FIRST DISCOVERY!]"
+                    } else {
+                        ""
+                    };
+                    println!(
+                        "[SUCCESS]{} {} + {} => {} [{}] (recipe: {})",
+                        flag,
+                        a_noun,
+                        b_noun,
                         curion.noun,
                         rarity_tag(curion.rarity),
-                        recipe_name);
+                        recipe_name
+                    );
                     game_state.add_curion(curion);
                     // 素材を削除（大きいインデックスから）
-                    let (hi, lo) = if idx1 > idx2 { (idx1, idx2) } else { (idx2, idx1) };
+                    let (hi, lo) = if idx1 > idx2 {
+                        (idx1, idx2)
+                    } else {
+                        (idx2, idx1)
+                    };
                     game_state.player.collection.remove(hi);
                     game_state.player.collection.remove(lo);
                     save_manager.save(&game_state)?;
                 }
                 SynthesisAttemptResult::DiscoveryFailed { hint } => {
-                    println!("[HINT] {}", hint);
+                    println!("[HINT] {hint}");
                 }
                 SynthesisAttemptResult::NoRecipe => {
-                    println!("[NO RECIPE] no matching recipe for {} + {}", a_noun, b_noun);
+                    println!("[NO RECIPE] no matching recipe for {a_noun} + {b_noun}");
                 }
             }
         }
@@ -131,7 +155,12 @@ fn cmd_status(game_state: &crate::player::GameState) {
     println!("Login streak: {} days", p.consecutive_login_days);
     println!();
     println!("--- Rarity breakdown ---");
-    for rarity in [Rarity::Legendary, Rarity::Epic, Rarity::Rare, Rarity::Common] {
+    for rarity in [
+        Rarity::Legendary,
+        Rarity::Epic,
+        Rarity::Rare,
+        Rarity::Common,
+    ] {
         let count = p.count_by_rarity(rarity);
         if count > 0 {
             println!("  {:10} : {}", rarity_tag(rarity), count);
@@ -150,7 +179,10 @@ fn cmd_collection(game_state: &crate::player::GameState) {
         println!("(empty)");
         return;
     }
-    println!("{:>4}  {:12}  {:10}  {:9}  int    bty", "#", "noun", "category", "rarity");
+    println!(
+        "{:>4}  {:12}  {:10}  {:9}  int    bty",
+        "#", "noun", "category", "rarity"
+    );
     println!("{}", "-".repeat(60));
     for (i, c) in col.iter().enumerate() {
         println!(
@@ -180,7 +212,12 @@ fn cmd_achievements(game_state: &crate::player::GameState) {
     println!();
     println!("--- In progress (top 10) ---");
     for (name, progress, ratio) in game_state.get_almost_complete_achievements(10) {
-        println!("  [{:3.0}%] {} (current: {})", ratio * 100.0, name, progress.current);
+        println!(
+            "  [{:3.0}%] {} (current: {})",
+            ratio * 100.0,
+            name,
+            progress.current
+        );
     }
 }
 
@@ -195,5 +232,10 @@ fn rarity_tag(rarity: Rarity) -> &'static str {
 
 fn unique_count(player: &crate::player::Player) -> usize {
     use std::collections::HashSet;
-    player.collection.iter().map(|c| &c.noun).collect::<HashSet<_>>().len()
+    player
+        .collection
+        .iter()
+        .map(|c| &c.noun)
+        .collect::<HashSet<_>>()
+        .len()
 }

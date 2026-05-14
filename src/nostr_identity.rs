@@ -25,8 +25,7 @@ impl NostrIdentity {
 
     /// 秘密鍵からkeypairを復元
     pub fn from_secret_key(secret_hex: &str) -> Result<Self> {
-        let secret_key = SecretKey::from_hex(secret_hex)
-            .context("Failed to parse secret key")?;
+        let secret_key = SecretKey::from_hex(secret_hex).context("Failed to parse secret key")?;
         let keys = Keys::new(secret_key);
         Ok(Self {
             secret_key: keys.secret_key().to_secret_hex(),
@@ -36,18 +35,19 @@ impl NostrIdentity {
 
     /// Keysオブジェクトを取得
     pub fn keys(&self) -> Result<Keys> {
-        let secret_key = SecretKey::from_hex(&self.secret_key)
-            .context("Failed to parse secret key")?;
+        let secret_key =
+            SecretKey::from_hex(&self.secret_key).context("Failed to parse secret key")?;
         Ok(Keys::new(secret_key))
     }
 
     /// ファイルから読み込み
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let content = fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read identity file: {}", path.as_ref().display()))?;
+        let content = fs::read_to_string(&path).with_context(|| {
+            format!("Failed to read identity file: {}", path.as_ref().display())
+        })?;
 
-        let identity: NostrIdentity = serde_json::from_str(&content)
-            .context("Failed to parse identity file")?;
+        let identity: NostrIdentity =
+            serde_json::from_str(&content).context("Failed to parse identity file")?;
 
         Ok(identity)
     }
@@ -56,15 +56,14 @@ impl NostrIdentity {
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         // ディレクトリが存在しない場合は作成
         if let Some(parent) = path.as_ref().parent() {
-            fs::create_dir_all(parent)
-                .context("Failed to create identity directory")?;
+            fs::create_dir_all(parent).context("Failed to create identity directory")?;
         }
 
-        let json = serde_json::to_string_pretty(self)
-            .context("Failed to serialize identity")?;
+        let json = serde_json::to_string_pretty(self).context("Failed to serialize identity")?;
 
-        fs::write(&path, json)
-            .with_context(|| format!("Failed to write identity file: {}", path.as_ref().display()))?;
+        fs::write(&path, json).with_context(|| {
+            format!("Failed to write identity file: {}", path.as_ref().display())
+        })?;
 
         Ok(())
     }
@@ -90,8 +89,7 @@ impl ProfileManager {
 
     /// 設定ディレクトリを取得
     fn get_config_directory() -> Result<PathBuf> {
-        let home = dirs::home_dir()
-            .context("Could not find home directory")?;
+        let home = dirs::home_dir().context("Could not find home directory")?;
         Ok(home.join(".curion"))
     }
 
@@ -114,7 +112,8 @@ impl ProfileManager {
         if self.profile_name == "default" {
             self.config_dir.join("identity.json")
         } else {
-            self.config_dir.join(format!("{}_identity.json", self.profile_name))
+            self.config_dir
+                .join(format!("{}_identity.json", self.profile_name))
         }
     }
 
@@ -127,7 +126,10 @@ impl ProfileManager {
         } else {
             let identity = NostrIdentity::generate()?;
             identity.save_to_file(&identity_path)?;
-            println!("✨ Generated new Nostr identity for profile '{}'", self.profile_name);
+            println!(
+                "✨ Generated new Nostr identity for profile '{}'",
+                self.profile_name
+            );
             println!("   Public key: {}", identity.public_key);
             Ok(identity)
         }

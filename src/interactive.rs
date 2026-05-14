@@ -37,8 +37,15 @@ const COMMANDS: &[&str] = &[
 
 /// カテゴリ名一覧（補完用）
 const CATEGORY_NAMES: &[&str] = &[
-    "Animals", "Plants", "Colors", "Objects", "Concepts",
-    "Elements", "Foods", "Phenomena", "Abstracts",
+    "Animals",
+    "Plants",
+    "Colors",
+    "Objects",
+    "Concepts",
+    "Elements",
+    "Foods",
+    "Phenomena",
+    "Abstracts",
 ];
 
 /// CurionHelper: rustyline の補完・ヒント・ハイライトを提供
@@ -64,8 +71,6 @@ impl CurionHelper {
     pub fn update_curion_names(&mut self, names: Vec<String>) {
         self.curion_names = names;
     }
-
-
 }
 
 impl Completer for CurionHelper {
@@ -89,7 +94,9 @@ impl Completer for CurionHelper {
 
         if word.is_empty() && start > 0 {
             // コマンドの後にスペースがある場合、キュリオン名を候補にする
-            let candidates: Vec<Pair> = self.curion_names.iter()
+            let candidates: Vec<Pair> = self
+                .curion_names
+                .iter()
                 .map(|name| Pair {
                     display: name.clone(),
                     replacement: name.clone(),
@@ -100,7 +107,8 @@ impl Completer for CurionHelper {
 
         let candidates: Vec<Pair> = if start == 0 {
             // 最初の単語 → コマンド補完
-            self.commands.iter()
+            self.commands
+                .iter()
                 .filter(|cmd| cmd.starts_with(word))
                 .map(|cmd| Pair {
                     display: cmd.clone(),
@@ -225,10 +233,12 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
                 match cmd {
                     "exit" | "quit" => {
                         // プレイ時間を加算
-                        game_state.player.add_play_time(session_start.elapsed().as_secs());
+                        game_state
+                            .player
+                            .add_play_time(session_start.elapsed().as_secs());
                         // 終了時にセーブ
                         if let Err(e) = save_manager.save(&game_state) {
-                            eprintln!("Save failed: {:?}", e);
+                            eprintln!("Save failed: {e:?}");
                         } else {
                             println!("Game saved.");
                         }
@@ -250,7 +260,7 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
                             println!("Usage: synth <name1> <name2>");
                             println!("  Example: synth 水 火");
                         } else {
-                            cmd_synthesize(&parts[1], &parts[2], &mut game_state)?;
+                            cmd_synthesize(parts[1], parts[2], &mut game_state)?;
                             // ヘルパーのキュリオン名を更新
                             if let Some(h) = rl.helper_mut() {
                                 update_helper_names(h, &game_state);
@@ -267,17 +277,21 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
                         cmd_stats(&game_state, session_start.elapsed().as_secs());
                     }
                     "save" => {
-                        game_state.player.add_play_time(session_start.elapsed().as_secs());
+                        game_state
+                            .player
+                            .add_play_time(session_start.elapsed().as_secs());
                         match save_manager.save(&game_state) {
                             Ok(()) => println!("Game saved."),
-                            Err(e) => eprintln!("Save failed: {:?}", e),
+                            Err(e) => eprintln!("Save failed: {e:?}"),
                         }
                     }
                     "tui" => {
                         // プレイ時間を加算してセーブ
-                        game_state.player.add_play_time(session_start.elapsed().as_secs());
+                        game_state
+                            .player
+                            .add_play_time(session_start.elapsed().as_secs());
                         if let Err(e) = save_manager.save(&game_state) {
-                            eprintln!("Save failed: {:?}", e);
+                            eprintln!("Save failed: {e:?}");
                         }
                         println!("Switching to TUI mode...");
                         let _ = rl.save_history(&history_file);
@@ -286,7 +300,7 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
                         return Ok(());
                     }
                     _ => {
-                        println!("Unknown command: {}. Type 'help' for available commands.", cmd);
+                        println!("Unknown command: {cmd}. Type 'help' for available commands.");
                     }
                 }
             }
@@ -296,9 +310,11 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
             }
             Err(ReadlineError::Eof) => {
                 // Ctrl-D: セーブして終了
-                game_state.player.add_play_time(session_start.elapsed().as_secs());
+                game_state
+                    .player
+                    .add_play_time(session_start.elapsed().as_secs());
                 if let Err(e) = save_manager.save(&game_state) {
-                    eprintln!("Save failed: {:?}", e);
+                    eprintln!("Save failed: {e:?}");
                 } else {
                     println!("Game saved.");
                 }
@@ -306,7 +322,7 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
                 break;
             }
             Err(err) => {
-                eprintln!("Error: {:?}", err);
+                eprintln!("Error: {err:?}");
                 break;
             }
         }
@@ -368,7 +384,7 @@ fn cmd_generate(generator: &CurionGenerator, game_state: &mut GameState) -> Resu
 
     let newly_unlocked = game_state.add_curion(curion);
     for achievement_id in &newly_unlocked {
-        println!("  \x1b[1;33m★ Achievement unlocked: {}\x1b[0m", achievement_id);
+        println!("  \x1b[1;33m★ Achievement unlocked: {achievement_id}\x1b[0m");
     }
 
     Ok(())
@@ -377,27 +393,39 @@ fn cmd_generate(generator: &CurionGenerator, game_state: &mut GameState) -> Resu
 /// synthesize コマンド
 fn cmd_synthesize(name1: &str, name2: &str, game_state: &mut GameState) -> Result<()> {
     // 名前からキュリオンを検索
-    let first = game_state.player.collection.iter().find(|c| c.noun == name1).cloned();
-    let second = game_state.player.collection.iter().find(|c| c.noun == name2 && {
-        // 同名の場合は別のインスタンスを選ぶ
-        if let Some(ref f) = first {
-            c.id != f.id
-        } else {
-            true
-        }
-    }).cloned();
+    let first = game_state
+        .player
+        .collection
+        .iter()
+        .find(|c| c.noun == name1)
+        .cloned();
+    let second = game_state
+        .player
+        .collection
+        .iter()
+        .find(|c| {
+            c.noun == name2 && {
+                // 同名の場合は別のインスタンスを選ぶ
+                if let Some(ref f) = first {
+                    c.id != f.id
+                } else {
+                    true
+                }
+            }
+        })
+        .cloned();
 
     let first = match first {
         Some(c) => c,
         None => {
-            println!("  '{}' is not in your collection.", name1);
+            println!("  '{name1}' is not in your collection.");
             return Ok(());
         }
     };
     let second = match second {
         Some(c) => c,
         None => {
-            println!("  '{}' is not in your collection.", name2);
+            println!("  '{name2}' is not in your collection.");
             return Ok(());
         }
     };
@@ -413,10 +441,13 @@ fn cmd_synthesize(name1: &str, name2: &str, game_state: &mut GameState) -> Resul
             first_discovery,
         } => {
             // 使用した材料を削除
-            game_state.player.collection.retain(|c| c.id != first_id && c.id != second_id);
+            game_state
+                .player
+                .collection
+                .retain(|c| c.id != first_id && c.id != second_id);
 
             if first_discovery {
-                println!("  \x1b[1;33m✨ New discovery: {}!\x1b[0m", recipe_name);
+                println!("  \x1b[1;33m✨ New discovery: {recipe_name}!\x1b[0m");
             }
 
             let rarity_color = match curion.rarity {
@@ -437,10 +468,10 @@ fn cmd_synthesize(name1: &str, name2: &str, game_state: &mut GameState) -> Resul
             game_state.add_curion(curion);
         }
         SynthesisAttemptResult::NoRecipe => {
-            println!("  No recipe found for {} + {}.", name1, name2);
+            println!("  No recipe found for {name1} + {name2}.");
         }
         SynthesisAttemptResult::DiscoveryFailed { hint } => {
-            println!("  {}", hint);
+            println!("  {hint}");
         }
     }
 
@@ -468,10 +499,16 @@ fn cmd_collection(game_state: &GameState) {
         Category::Abstract,
     ];
 
-    println!("  \x1b[1;36m=== Collection ({} total) ===\x1b[0m", collection.len());
+    println!(
+        "  \x1b[1;36m=== Collection ({} total) ===\x1b[0m",
+        collection.len()
+    );
 
     for category in &categories {
-        let items: Vec<_> = collection.iter().filter(|c| &c.category == category).collect();
+        let items: Vec<_> = collection
+            .iter()
+            .filter(|c| &c.category == category)
+            .collect();
         if items.is_empty() {
             continue;
         }
@@ -537,14 +574,22 @@ fn cmd_stats(game_state: &GameState, session_seconds: u64) {
     println!("  Level: {}", player.level);
     println!("  XP: {}/{}", player.xp, player.xp_for_next_level());
     println!("  Total collected: {}", player.total_acquired());
-    println!("  Play time: {}h {}m", hours, minutes);
+    println!("  Play time: {hours}h {minutes}m");
     println!("  Days played: {}", player.days_played());
-    println!("  Consecutive login: {} days", player.consecutive_login_days);
+    println!(
+        "  Consecutive login: {} days",
+        player.consecutive_login_days
+    );
     println!("  Today acquired: {}", player.today_acquired);
     println!("  Avg daily: {:.1}", player.average_daily_acquired());
 
     println!("  \x1b[1m--- Rarity Distribution ---\x1b[0m");
-    for rarity in [Rarity::Common, Rarity::Rare, Rarity::Epic, Rarity::Legendary] {
+    for rarity in [
+        Rarity::Common,
+        Rarity::Rare,
+        Rarity::Epic,
+        Rarity::Legendary,
+    ] {
         let count = player.count_by_rarity(rarity);
         let rarity_color = match rarity {
             Rarity::Common => "\x1b[37m",
@@ -552,7 +597,7 @@ fn cmd_stats(game_state: &GameState, session_seconds: u64) {
             Rarity::Epic => "\x1b[35m",
             Rarity::Legendary => "\x1b[33m",
         };
-        println!("    {}{:?}\x1b[0m: {}", rarity_color, rarity, count);
+        println!("    {rarity_color}{rarity:?}\x1b[0m: {count}");
     }
 
     println!("  \x1b[1m--- Recipes ---\x1b[0m");
