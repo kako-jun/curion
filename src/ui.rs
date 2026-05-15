@@ -62,6 +62,15 @@ fn rarity_stars(rarity: &Rarity) -> &'static str {
     }
 }
 
+fn rarity_label(rarity: &Rarity) -> &'static str {
+    match rarity {
+        Rarity::Common => "COM",
+        Rarity::Rare => "RARE",
+        Rarity::Epic => "EPIC",
+        Rarity::Legendary => "LEG",
+    }
+}
+
 fn progress_color(ratio: f64) -> Color {
     if ratio >= 0.95 {
         COLOR_BAR_HOT
@@ -915,11 +924,12 @@ impl App {
         if let Some(curion) = player.latest_curion() {
             let color = rarity_color(&curion.rarity);
             let stars = rarity_stars(&curion.rarity);
+            let label = rarity_label(&curion.rarity);
             let latest_text = vec![Line::from(vec![
                 Span::styled(stars, Style::default().fg(color)),
                 Span::raw(" "),
                 Span::styled(
-                    format!("[{:?}]", curion.rarity),
+                    format!("[{label}]"),
                     Style::default().fg(color).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" "),
@@ -949,12 +959,10 @@ impl App {
                 0
             };
             let color = rarity_color(&rarity);
+            let label = rarity_label(&rarity);
 
             rarity_items.push(Line::from(vec![
-                Span::styled(
-                    format!("{:<9}", format!("{:?}", rarity)),
-                    Style::default().fg(color),
-                ),
+                Span::styled(format!("{label:<4}"), Style::default().fg(color)),
                 Span::raw(" "),
                 Span::styled(
                     bar(percentage as f64 / 100.0, 30),
@@ -1075,6 +1083,25 @@ impl App {
         let player = &self.game_state.player;
         let collection = &player.collection;
 
+        if collection.is_empty() {
+            let empty = Paragraph::new(vec![
+                Line::from(""),
+                Line::from(vec![Span::styled(
+                    "まだキュリオンがありません",
+                    Style::default().fg(COLOR_LABEL),
+                )]),
+                Line::from(""),
+                Line::from(vec![Span::styled(
+                    "スペースキーでキュリオンを生成",
+                    Style::default().fg(COLOR_LABEL),
+                )]),
+            ])
+            .block(focused_block("コレクション [0 個]"))
+            .alignment(Alignment::Center);
+            f.render_widget(empty, area);
+            return;
+        }
+
         let items: Vec<ListItem> = collection
             .iter()
             .rev()
@@ -1084,6 +1111,7 @@ impl App {
             .map(|(i, curion)| {
                 let color = rarity_color(&curion.rarity);
                 let stars = rarity_stars(&curion.rarity);
+                let label = rarity_label(&curion.rarity);
                 let index = collection.len() - i;
 
                 ListItem::new(vec![
@@ -1091,10 +1119,7 @@ impl App {
                         Span::styled(format!("#{index:<4}"), Style::default().fg(COLOR_LABEL)),
                         Span::styled(stars, Style::default().fg(color)),
                         Span::raw(" "),
-                        Span::styled(
-                            format!("[{:<9}]", format!("{:?}", curion.rarity)),
-                            Style::default().fg(color),
-                        ),
+                        Span::styled(format!("[{label:<4}]"), Style::default().fg(color)),
                         Span::raw(" "),
                         Span::styled(
                             format!("{:<20}", curion.display_name()),
@@ -1122,9 +1147,8 @@ impl App {
             .collect();
 
         let list = List::new(items).block(focused_block(format!(
-            "コレクション [{} / {}]",
+            "コレクション [{} 個]",
             collection.len(),
-            collection.len()
         )));
 
         f.render_widget(list, area);
@@ -1630,10 +1654,10 @@ impl App {
                 };
 
                 ListItem::new(format!(
-                    "{} {} ({:?})",
+                    "{} {} [{}]",
                     rarity_stars(&curion.rarity),
                     curion.noun,
-                    curion.category
+                    rarity_label(&curion.rarity),
                 ))
                 .style(style)
             })
@@ -1698,11 +1722,11 @@ impl App {
 
     fn render_selected_first(&self, f: &mut Frame<'_>, curion: &crate::curion::Curion, area: Rect) {
         let text = format!(
-            "Ingredient 1:\n\n{} {}\nCategory: {:?}\nRarity: {:?}",
+            "Ingredient 1:\n\n{} {}\nCategory: {:?}\nRarity: [{}]",
             rarity_stars(&curion.rarity),
             curion.noun,
             curion.category,
-            curion.rarity
+            rarity_label(&curion.rarity),
         );
 
         let widget = Paragraph::new(text)
