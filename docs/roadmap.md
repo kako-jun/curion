@@ -16,6 +16,7 @@
 - [x] 3層ナビゲーション (タブバー → 左ペイン → 右ペイン)
 - [x] Cookie Clicker風のダッシュボード
 - [x] 進捗バー・統計表示
+- [x] DESIGN.md 準拠のビジュアル強化（Gauge / LineGauge / Sparkline / BarChart / border states）
 - [x] 自動セーブ (60秒間隔)
 
 ### Phase 3: 合成システム

@@ -102,10 +102,11 @@ Left pane sections:
 
 **Overview right pane:**
 - GUID generation countdown (progress bar)
-- Quick stats: total collected, today's count, play time
+- XP bar with rarity-aligned warning colors
+- Quick stats: total collected, today's count, level
 - Latest curion acquired
 - Rarity distribution (horizontal text bars)
-- Category distribution (compact text summary for now; visual chart is part of the visual-enhancement issue)
+- Category distribution (compact text summary)
 
 **Overview lower area -- Goal nudges ("almost there!"):**
 - Lists goals sorted by proximity to completion
@@ -157,7 +158,7 @@ Left pane sections:
 
 Right pane behavior:
 - Claimable: rewards can be claimed with Enter
-- In Progress: locked achievements with progress bars
+- In Progress: locked achievements with `LineGauge` overlays
 - Completed: unlocked achievements with unlock date and reward history
 
 ### Tab 4: Stats
@@ -168,9 +169,9 @@ Left pane sections:
 - Timeline
 
 Right pane behavior:
-- Rarity: player summary + rarity breakdown
-- Category: current collection-based total / unique counts per category
-- Timeline: first play, last play, total play time; sparkline view remains planned and is not yet implemented in Issue #17
+- Rarity: player summary + recent-acquisition `Sparkline` + rarity `BarChart`
+- Category: category `BarChart` plus total / unique breakdown
+- Timeline: first play, last play, total play time, streak gauges, and collection-rate `Sparkline`
 
 ### Tab 5: Synthesis
 

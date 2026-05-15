@@ -4,7 +4,10 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, Paragraph, Tabs},
+    widgets::{
+        Bar, BarChart, BarGroup, Block, BorderType, Borders, Gauge, LineGauge, List, ListItem,
+        Paragraph, Sparkline, Tabs,
+    },
     Frame,
 };
 use std::time::{Duration, Instant};
@@ -26,6 +29,8 @@ const COLOR_BAR_HOT: Color = Color::Red;
 const COLOR_BAR_WARM: Color = Color::Yellow;
 const COLOR_BAR_COOL: Color = Color::Cyan;
 const COLOR_BAR_COLD: Color = Color::Gray;
+const COLOR_SUCCESS: Color = Color::Green;
+const RECENT_ACTIVITY_BUCKETS: usize = 16;
 
 const ALL_CATEGORIES: [Category; 9] = [
     Category::Animal,
@@ -69,9 +74,52 @@ fn progress_color(ratio: f64) -> Color {
     }
 }
 
+fn xp_bar_color(ratio: f64) -> Color {
+    if ratio >= 0.95 {
+        COLOR_BAR_HOT
+    } else if ratio >= 0.75 {
+        COLOR_BAR_WARM
+    } else {
+        COLOR_BAR_COOL
+    }
+}
+
 fn bar(filled_ratio: f64, width: usize) -> String {
     let filled = ((filled_ratio * width as f64) as usize).min(width);
     "█".repeat(filled) + &"░".repeat(width - filled)
+}
+
+fn focused_block<'a, T>(title: T) -> Block<'a>
+where
+    T: Into<Line<'a>>,
+{
+    Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(COLOR_BORDER))
+}
+
+fn unfocused_block<'a, T>(title: T) -> Block<'a>
+where
+    T: Into<Line<'a>>,
+{
+    Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_type(BorderType::Plain)
+        .border_style(Style::default().fg(COLOR_LABEL))
+}
+
+fn tab_block<'a, T>(title: T) -> Block<'a>
+where
+    T: Into<Line<'a>>,
+{
+    Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_type(BorderType::Plain)
+        .border_style(Style::default().fg(Color::White))
 }
 
 // ── Types ────────────────────────────────────────────────────────
@@ -435,6 +483,36 @@ impl App {
             .len()
     }
 
+    fn recent_acquisition_buckets(&self, bucket_count: usize) -> Vec<u64> {
+        let player = &self.game_state.player;
+        if bucket_count == 0 {
+            return Vec::new();
+        }
+
+        if player.collection.is_empty() {
+            return vec![0; bucket_count];
+        }
+
+        let now = chrono::Utc::now();
+        let span_seconds = (now - player.first_played_at)
+            .num_seconds()
+            .max(bucket_count as i64);
+        let bucket_span = ((span_seconds as f64) / bucket_count as f64)
+            .ceil()
+            .max(1.0);
+        let mut buckets = vec![0_u64; bucket_count];
+
+        for curion in &player.collection {
+            let elapsed = (curion.acquired_at - player.first_played_at)
+                .num_seconds()
+                .clamp(0, span_seconds);
+            let index = ((elapsed as f64) / bucket_span).floor() as usize;
+            buckets[index.min(bucket_count.saturating_sub(1))] += 1;
+        }
+
+        buckets
+    }
+
     // ── Rendering ────────────────────────────────────────────────
 
     pub fn ui(&self, f: &mut Frame<'_>) {
@@ -552,7 +630,7 @@ impl App {
         ];
 
         let tabs_widget = Tabs::new(tabs)
-            .block(Block::default().borders(Borders::ALL).title("Curion"))
+            .block(tab_block("Curion"))
             .select(self.current_tab.index())
             .style(Style::default().fg(Color::White))
             .highlight_style(Style::default().fg(COLOR_RARE).add_modifier(Modifier::BOLD));
@@ -590,11 +668,7 @@ impl App {
             })
             .collect();
 
-        let block = Block::default()
-            .title(self.current_tab.title())
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(COLOR_RARE));
+        let block = unfocused_block(self.current_tab.title());
         let list = List::new(items).block(block);
         f.render_widget(list, area);
     }
@@ -619,10 +693,14 @@ impl App {
     }
 
     fn render_dashboard_overview(&self, f: &mut Frame<'_>, area: Rect) {
+        let block = focused_block("概要");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
-            .split(area);
+            .split(inner);
 
         self.render_dashboard_top(f, chunks[0]);
         self.render_dashboard_bottom(f, chunks[1]);
@@ -642,6 +720,19 @@ impl App {
         } else {
             "未受取"
         };
+        let block = focused_block("ログインボーナス");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(2),
+                Constraint::Length(2),
+                Constraint::Min(0),
+            ])
+            .split(inner);
+
         let mut lines = vec![
             Line::from(vec![
                 Span::styled("連続ログイン", Style::default().fg(COLOR_LABEL)),
@@ -649,7 +740,7 @@ impl App {
                 Span::styled(
                     format!("{} 日", player.consecutive_login_days),
                     Style::default()
-                        .fg(Color::Green)
+                        .fg(COLOR_SUCCESS)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw("   "),
@@ -706,29 +797,45 @@ impl App {
                 )),
             ]),
         ]);
-        let widget = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("ログインボーナス"),
-        );
-        f.render_widget(widget, area);
+
+        let streak_ratio = (player.consecutive_login_days.min(7) as f64) / 7.0;
+        let streak = LineGauge::default()
+            .ratio(streak_ratio)
+            .label(format!(
+                "STREAK [{}] {:>2}/7 days",
+                bar(streak_ratio, 10),
+                player.consecutive_login_days.min(7)
+            ))
+            .filled_style(Style::default().fg(COLOR_SUCCESS))
+            .unfilled_style(Style::default().fg(COLOR_LABEL));
+        f.render_widget(streak, chunks[0]);
+
+        let reward_cycle = ((today_reward.day - 1) % 7 + 1) as f64 / 7.0;
+        let cycle = LineGauge::default()
+            .ratio(reward_cycle)
+            .label(format!(
+                "REWARD CYCLE [{}] Day {}",
+                bar(reward_cycle, 10),
+                today_reward.day
+            ))
+            .filled_style(Style::default().fg(COLOR_RARE))
+            .unfilled_style(Style::default().fg(COLOR_LABEL));
+        f.render_widget(cycle, chunks[1]);
+
+        let widget = Paragraph::new(lines);
+        f.render_widget(widget, chunks[2]);
     }
 
     fn render_daily_mission_placeholder(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
         let ratio = (player.today_acquired.min(10) as f64) / 10.0;
         let gauge = Gauge::default()
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title("デイリーミッション"),
-            )
-            .gauge_style(Style::default().fg(progress_color(ratio)))
+            .block(focused_block("デイリーミッション"))
+            .gauge_style(Style::default().fg(if ratio >= 1.0 { COLOR_EPIC } else { COLOR_RARE }))
             .ratio(ratio)
             .label(format!(
-                "{} / 10 collected today",
+                "[{}] {:>2} / 10 collected today",
+                bar(ratio, 12),
                 player.today_acquired.min(10)
             ));
         f.render_widget(gauge, area);
@@ -742,6 +849,7 @@ impl App {
                 Constraint::Length(3),
                 Constraint::Length(3),
                 Constraint::Length(2),
+                Constraint::Length(3),
                 Constraint::Length(6),
                 Constraint::Min(4),
             ])
@@ -751,15 +859,29 @@ impl App {
         let progress = self.guid_progress();
         let remaining = self.guid_remaining_seconds();
         let gauge = Gauge::default()
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("次のキュリオン生成まで"),
-            )
+            .block(unfocused_block("次のキュリオン生成まで"))
             .gauge_style(Style::default().fg(COLOR_RARE).bg(Color::Black))
             .percent((progress * 100.0) as u16)
-            .label(format!("{remaining}秒"));
+            .label(format!(
+                "[{}] {:>2}%  ({remaining}秒)",
+                bar(progress, 12),
+                (progress * 100.0) as u16
+            ));
         f.render_widget(gauge, chunks[0]);
+
+        let xp_ratio = self.game_state.player.xp_progress_ratio();
+        let xp_gauge = Gauge::default()
+            .block(unfocused_block("XP"))
+            .gauge_style(Style::default().fg(xp_bar_color(xp_ratio)))
+            .ratio(xp_ratio)
+            .label(format!(
+                "[{}] {:>3}%  ({} / {})",
+                bar(xp_ratio, 12),
+                self.game_state.player.xp_progress_percentage(),
+                self.game_state.player.xp,
+                self.game_state.player.xp_for_next_level()
+            ));
+        f.render_widget(xp_gauge, chunks[1]);
 
         // Basic stats
         let player = &self.game_state.player;
@@ -785,9 +907,9 @@ impl App {
             ),
         ])];
         let stats = Paragraph::new(stats_text)
-            .block(Block::default().borders(Borders::ALL).title("統計"))
+            .block(unfocused_block("統計"))
             .alignment(Alignment::Left);
-        f.render_widget(stats, chunks[1]);
+        f.render_widget(stats, chunks[2]);
 
         // Latest curion
         if let Some(curion) = player.latest_curion() {
@@ -808,12 +930,8 @@ impl App {
                         .add_modifier(Modifier::BOLD),
                 ),
             ])];
-            let latest = Paragraph::new(latest_text).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("最新キュリオン"),
-            );
-            f.render_widget(latest, chunks[2]);
+            let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
+            f.render_widget(latest, chunks[3]);
         }
 
         // Rarity distribution
@@ -845,12 +963,8 @@ impl App {
                 Span::raw(format!("  {count} ({percentage}%)")),
             ]));
         }
-        let rarity_widget = Paragraph::new(rarity_items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("レアリティ分布"),
-        );
-        f.render_widget(rarity_widget, chunks[3]);
+        let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
+        f.render_widget(rarity_widget, chunks[4]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -861,9 +975,8 @@ impl App {
             })
             .collect::<Vec<_>>()
             .join("  ");
-        let category_widget = Paragraph::new(category_text)
-            .block(Block::default().borders(Borders::ALL).title("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[4]);
+        let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
+        f.render_widget(category_widget, chunks[5]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
@@ -932,7 +1045,10 @@ impl App {
             )]),
             Line::from(vec![
                 Span::raw("    "),
-                Span::styled(bar(xp_ratio, 40), Style::default().fg(COLOR_EPIC)),
+                Span::styled(
+                    bar(xp_ratio, 40),
+                    Style::default().fg(xp_bar_color(xp_ratio)),
+                ),
                 Span::raw(format!(
                     "  {}% ({}/{})",
                     player.xp_progress_percentage(),
@@ -942,11 +1058,7 @@ impl App {
             ]),
         ]));
 
-        let list = List::new(items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("🎯 もうすぐ達成できる目標 (あと少し！)"),
-        );
+        let list = List::new(items).block(focused_block("🎯 もうすぐ達成できる目標"));
 
         f.render_widget(list, area);
     }
@@ -1009,7 +1121,7 @@ impl App {
             })
             .collect();
 
-        let list = List::new(items).block(Block::default().borders(Borders::ALL).title(format!(
+        let list = List::new(items).block(focused_block(format!(
             "コレクション [{} / {}]",
             collection.len(),
             collection.len()
@@ -1049,12 +1161,7 @@ impl App {
             ]));
         }
 
-        let widget = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("図鑑"),
-        );
+        let widget = Paragraph::new(lines).block(focused_block("図鑑"));
         f.render_widget(widget, area);
     }
 
@@ -1098,96 +1205,125 @@ impl App {
             &crate::achievement::AchievementProgress,
         )>,
     ) {
-        let items: Vec<ListItem> = achievements
-            .iter()
-            .skip(self.detail_scroll)
-            .take(area.height as usize - 3)
-            .map(|(achievement, progress)| {
-                let icon = if progress.unlocked && !progress.claimed {
-                    "✅💰"
-                } else if progress.unlocked {
-                    "✅"
-                } else {
-                    "🔒"
-                };
-
-                let ratio = progress.progress_ratio();
-                let bar_color = progress_color(ratio);
-
-                let mut lines = vec![
-                    Line::from(vec![
-                        Span::raw(icon),
-                        Span::raw(" "),
-                        Span::styled(
-                            format!("[{}] {}", achievement.icon, achievement.name),
-                            Style::default()
-                                .fg(Color::White)
-                                .add_modifier(Modifier::BOLD),
-                        ),
-                    ]),
-                    Line::from(vec![Span::raw("    "), Span::raw(&achievement.description)]),
-                ];
-
-                if !progress.unlocked {
-                    lines.push(Line::from(vec![
-                        Span::raw("    "),
-                        Span::styled(bar(ratio, 30), Style::default().fg(bar_color)),
-                        Span::raw(format!(
-                            "  {}% ({}/{})",
-                            progress.progress_percentage(),
-                            progress.current,
-                            progress.target
-                        )),
-                    ]));
-                }
-
-                lines.push(Line::from(vec![
-                    Span::raw("    報酬: "),
-                    Span::styled(
-                        format!("{} XP", achievement.reward_xp),
-                        Style::default().fg(COLOR_LEGENDARY),
-                    ),
-                    achievement
-                        .reward_title
-                        .as_ref()
-                        .map(|title| {
-                            Span::styled(
-                                format!(", 称号「{title}」"),
-                                Style::default().fg(COLOR_EPIC),
-                            )
-                        })
-                        .unwrap_or_else(|| Span::raw("")),
-                    progress
-                        .unlocked_at
-                        .map(|date| {
-                            Span::styled(
-                                format!("  解除日: {}", date.format("%Y-%m-%d")),
-                                Style::default().fg(Color::DarkGray),
-                            )
-                        })
-                        .unwrap_or_else(|| Span::raw("")),
-                ]));
-
-                lines.push(Line::from(""));
-
-                ListItem::new(lines)
-            })
-            .collect();
-
         let unlocked = self.game_state.achievement_manager.get_unlocked_count();
         let total = self.game_state.achievement_manager.get_total_count();
         let percentage = self.game_state.achievement_manager.get_unlock_percentage();
 
-        let list = List::new(items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title(format!(
-                    "{title} | {unlocked} / {total} 解除済み ({percentage}%)"
-                )),
-        );
+        let block = focused_block(format!(
+            "{title} | {unlocked} / {total} 解除済み ({percentage}%)"
+        ));
+        let inner = block.inner(area);
+        f.render_widget(block, area);
 
-        f.render_widget(list, area);
+        let item_height = 6_u16;
+        let visible = achievements
+            .iter()
+            .skip(self.detail_scroll)
+            .take((inner.height / item_height).max(1) as usize);
+
+        for (index, (achievement, progress)) in visible.enumerate() {
+            let y = inner.y + index as u16 * item_height;
+            if y + item_height > inner.bottom() {
+                break;
+            }
+
+            let item_rect = Rect {
+                x: inner.x,
+                y,
+                width: inner.width,
+                height: item_height,
+            };
+            let item_block = unfocused_block("");
+            let item_inner = item_block.inner(item_rect);
+            f.render_widget(item_block, item_rect);
+
+            let icon = if progress.unlocked && !progress.claimed {
+                "✅💰"
+            } else if progress.unlocked {
+                "✅"
+            } else {
+                "🔒"
+            };
+
+            let header = Paragraph::new(vec![
+                Line::from(vec![
+                    Span::raw(icon),
+                    Span::raw(" "),
+                    Span::styled(
+                        format!("[{}] {}", achievement.icon, achievement.name),
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]),
+                Line::from(vec![Span::raw("  "), Span::raw(&achievement.description)]),
+            ]);
+            let header_area = Rect {
+                x: item_inner.x,
+                y: item_inner.y,
+                width: item_inner.width,
+                height: 2,
+            };
+            f.render_widget(header, header_area);
+
+            let ratio = progress.progress_ratio();
+            let gauge = LineGauge::default()
+                .ratio(ratio)
+                .label(format!(
+                    "[{}] {:>3}% ({}/{})",
+                    bar(ratio, 10),
+                    progress.progress_percentage(),
+                    progress.current,
+                    progress.target
+                ))
+                .filled_style(Style::default().fg(if progress.unlocked {
+                    COLOR_SUCCESS
+                } else {
+                    COLOR_BAR_COLD
+                }))
+                .unfilled_style(Style::default().fg(COLOR_LABEL));
+            let gauge_area = Rect {
+                x: item_inner.x + 1,
+                y: item_inner.y + 2,
+                width: item_inner.width.saturating_sub(2),
+                height: 1,
+            };
+            f.render_widget(gauge, gauge_area);
+
+            let reward = Paragraph::new(Line::from(vec![
+                Span::raw("報酬: "),
+                Span::styled(
+                    format!("{} XP", achievement.reward_xp),
+                    Style::default().fg(COLOR_LEGENDARY),
+                ),
+                achievement
+                    .reward_title
+                    .as_ref()
+                    .map(|title| {
+                        Span::styled(
+                            format!(", 称号「{title}」"),
+                            Style::default().fg(COLOR_EPIC),
+                        )
+                    })
+                    .unwrap_or_else(|| Span::raw("")),
+                progress
+                    .unlocked_at
+                    .map(|date| {
+                        Span::styled(
+                            format!("  解除日: {}", date.format("%Y-%m-%d")),
+                            Style::default().fg(Color::DarkGray),
+                        )
+                    })
+                    .unwrap_or_else(|| Span::raw("")),
+            ]));
+            let reward_area = Rect {
+                x: item_inner.x,
+                y: item_inner.y + 3,
+                width: item_inner.width,
+                height: 1,
+            };
+            f.render_widget(reward, reward_area);
+        }
     }
 
     fn render_stats_section(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1201,183 +1337,161 @@ impl App {
 
     fn render_stats_rarity(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
+        let block = focused_block("レアリティ");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
 
-        let hours = player.total_play_time / 3600;
-        let minutes = (player.total_play_time % 3600) / 60;
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(5),
+                Constraint::Length(5),
+                Constraint::Min(8),
+            ])
+            .split(inner);
 
-        let mut lines = vec![
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "┌─ 基本情報 ─────────────────────┐",
-                Style::default().fg(COLOR_BORDER),
-            )]),
+        let summary = Paragraph::new(vec![
             Line::from(vec![
-                Span::raw("│ レベル:          "),
+                Span::styled("LEVEL", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
                 Span::styled(
-                    format!("{:<15}", player.level),
-                    Style::default().fg(COLOR_LEGENDARY),
+                    format!("{}", player.level),
+                    Style::default()
+                        .fg(COLOR_LEGENDARY)
+                        .add_modifier(Modifier::BOLD),
                 ),
-                Span::raw("│"),
+                Span::raw("    "),
+                Span::styled("TOTAL", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
+                Span::styled(
+                    format!("{}", player.total_acquired()),
+                    Style::default()
+                        .fg(COLOR_SUCCESS)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
-                Span::raw("│ 総プレイ時間:    "),
+                Span::styled("RATE", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
                 Span::styled(
-                    format!("{}時間 {}分{:<5}", hours, minutes, ""),
-                    Style::default().fg(Color::Green),
-                ),
-                Span::raw("│"),
-            ]),
-            Line::from(vec![
-                Span::raw("│ 初回プレイ:      "),
-                Span::styled(
-                    format!("{:<15}", player.first_played_at.format("%Y-%m-%d")),
-                    Style::default().fg(Color::White),
-                ),
-                Span::raw("│"),
-            ]),
-            Line::from(vec![
-                Span::raw("│ 連続ログイン:    "),
-                Span::styled(
-                    format!("{}日{:<12}", player.consecutive_login_days, ""),
-                    Style::default().fg(COLOR_EPIC),
-                ),
-                Span::raw("│"),
-            ]),
-            Line::from(vec![Span::styled(
-                "└────────────────────────────────┘",
-                Style::default().fg(COLOR_BORDER),
-            )]),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "┌─ 収集統計 ─────────────────────┐",
-                Style::default().fg(COLOR_BORDER),
-            )]),
-            Line::from(vec![
-                Span::raw("│ 総獲得数:        "),
-                Span::styled(
-                    format!("{}個{:<12}", player.total_acquired(), ""),
-                    Style::default().fg(COLOR_LEGENDARY),
-                ),
-                Span::raw("│"),
-            ]),
-            Line::from(vec![
-                Span::raw("│ 今日の獲得:      "),
-                Span::styled(
-                    format!("{}個{:<12}", player.today_acquired, ""),
-                    Style::default().fg(Color::Green),
-                ),
-                Span::raw("│"),
-            ]),
-            Line::from(vec![
-                Span::raw("│ 最高日間獲得:    "),
-                Span::styled(
-                    format!("{}個{:<12}", player.max_daily_acquired, ""),
-                    Style::default().fg(COLOR_BAR_HOT),
-                ),
-                Span::raw("│"),
-            ]),
-            Line::from(vec![
-                Span::raw("│ 平均日間獲得:    "),
-                Span::styled(
-                    format!("{:.1}個{:<10}", player.average_daily_acquired(), ""),
+                    format!("{:.1}/h", player.acquisition_rate_per_hour()),
                     Style::default().fg(COLOR_RARE),
                 ),
-                Span::raw("│"),
-            ]),
-            Line::from(vec![
-                Span::raw("│ 獲得レート:      "),
+                Span::raw("    "),
+                Span::styled("AVG/DAY", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
                 Span::styled(
-                    format!("{:.1}個/時間{:<6}", player.acquisition_rate_per_hour(), ""),
+                    format!("{:.1}", player.average_daily_acquired()),
                     Style::default().fg(COLOR_EPIC),
                 ),
-                Span::raw("│"),
             ]),
-            Line::from(vec![Span::styled(
-                "└────────────────────────────────┘",
-                Style::default().fg(COLOR_BORDER),
-            )]),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "┌─ レアリティ別統計 ─────────────┐",
-                Style::default().fg(COLOR_BORDER),
-            )]),
+        ])
+        .block(unfocused_block("PLAYER"));
+        f.render_widget(summary, chunks[0]);
+
+        let recent = Sparkline::default()
+            .block(unfocused_block("RECENT ACQUISITIONS"))
+            .data(self.recent_acquisition_buckets(RECENT_ACTIVITY_BUCKETS))
+            .style(Style::default().fg(COLOR_RARE));
+        f.render_widget(recent, chunks[1]);
+
+        let rarity_bars = vec![
+            Bar::default()
+                .label("COM".into())
+                .value(player.count_by_rarity(Rarity::Common) as u64)
+                .style(Style::default().fg(COLOR_COMMON)),
+            Bar::default()
+                .label("RARE".into())
+                .value(player.count_by_rarity(Rarity::Rare) as u64)
+                .style(Style::default().fg(COLOR_RARE)),
+            Bar::default()
+                .label("EPIC".into())
+                .value(player.count_by_rarity(Rarity::Epic) as u64)
+                .style(Style::default().fg(COLOR_EPIC)),
+            Bar::default()
+                .label("LEG".into())
+                .value(player.count_by_rarity(Rarity::Legendary) as u64)
+                .style(Style::default().fg(COLOR_LEGENDARY)),
         ];
-
-        for rarity in [
-            Rarity::Common,
-            Rarity::Rare,
-            Rarity::Epic,
-            Rarity::Legendary,
-        ] {
-            let count = player.count_by_rarity(rarity);
-            let percentage = if player.total_acquired() > 0 {
-                (count * 1000 / player.total_acquired()) as f64 / 10.0
-            } else {
-                0.0
-            };
-
-            let most_recent = player
-                .rarity_stats
-                .get(&rarity)
-                .and_then(|s| s.most_recent.as_ref())
-                .map(|s| s.as_str())
-                .unwrap_or("-");
-
-            lines.push(Line::from(vec![
-                Span::raw("│ "),
-                Span::styled(
-                    format!("{:<9}", format!("{:?}:", rarity)),
-                    Style::default().fg(rarity_color(&rarity)),
-                ),
-                Span::raw(format!(" {count:>4}個 ({percentage:>5.1}%)")),
-                Span::raw(format!(" 最新: {most_recent:<6}")),
-                Span::raw("│"),
-            ]));
-        }
-
-        lines.push(Line::from(vec![Span::styled(
-            "└────────────────────────────────┘",
-            Style::default().fg(COLOR_BORDER),
-        )]));
-
-        let paragraph = Paragraph::new(lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("プレイヤー統計"),
+        let rarity_chart = BarChart::default()
+            .block(unfocused_block("RARITY BREAKDOWN"))
+            .data(BarGroup::default().bars(&rarity_bars))
+            .bar_width(6)
+            .bar_gap(1)
+            .value_style(
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
             )
-            .alignment(Alignment::Left);
-
-        f.render_widget(paragraph, area);
+            .label_style(Style::default().fg(Color::White));
+        f.render_widget(rarity_chart, chunks[2]);
     }
 
     fn render_stats_category(&self, f: &mut Frame<'_>, area: Rect) {
-        let mut lines = Vec::new();
+        let block = focused_block("カテゴリ");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
 
-        for category in ALL_CATEGORIES {
-            let total = self.collection_count_by_category(&category);
-            let unique = self.collection_unique_count_by_category(&category);
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("{:<8}", category.as_str()),
-                    Style::default().fg(COLOR_RARE),
-                ),
-                Span::raw(" "),
-                Span::raw(format!("{total:>3} 所持 / {unique:>3} 種類")),
-            ]));
-        }
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(9), Constraint::Min(7)])
+            .split(inner);
 
-        let widget = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("カテゴリ"),
-        );
-        f.render_widget(widget, area);
+        let category_bars: Vec<Bar> = ALL_CATEGORIES
+            .iter()
+            .map(|category| {
+                Bar::default()
+                    .label(category.as_str().into())
+                    .value(self.collection_count_by_category(category) as u64)
+                    .style(Style::default().fg(COLOR_RARE))
+            })
+            .collect();
+
+        let chart = BarChart::default()
+            .block(unfocused_block("CATEGORY BREAKDOWN"))
+            .data(BarGroup::default().bars(&category_bars))
+            .bar_width(5)
+            .bar_gap(1)
+            .value_style(Style::default().fg(Color::White))
+            .label_style(Style::default().fg(Color::White));
+        f.render_widget(chart, chunks[0]);
+
+        let lines: Vec<Line> = ALL_CATEGORIES
+            .iter()
+            .map(|category| {
+                let total = self.collection_count_by_category(category);
+                let unique = self.collection_unique_count_by_category(category);
+                Line::from(vec![
+                    Span::styled(
+                        format!("{:<8}", category.as_str()),
+                        Style::default().fg(COLOR_RARE),
+                    ),
+                    Span::raw(" "),
+                    Span::raw(format!("{total:>3} 所持 / {unique:>3} 種類")),
+                ])
+            })
+            .collect();
+
+        let widget = Paragraph::new(lines).block(unfocused_block("CATEGORY DETAIL"));
+        f.render_widget(widget, chunks[1]);
     }
 
     fn render_stats_timeline(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
+        let block = focused_block("時系列");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(5),
+                Constraint::Length(3),
+                Constraint::Length(3),
+                Constraint::Min(0),
+            ])
+            .split(inner);
+
         let lines = vec![
             Line::from(vec![
                 Span::styled("初回プレイ", Style::default().fg(COLOR_LABEL)),
@@ -1394,17 +1508,45 @@ impl App {
                 Span::raw("  "),
                 Span::raw(format!("{} 秒", player.total_play_time)),
             ]),
-            Line::from(""),
-            Line::from("Sparkline 系の時系列可視化は Issue #26 で追加します。"),
         ];
 
-        let widget = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("時系列"),
-        );
-        f.render_widget(widget, area);
+        let widget = Paragraph::new(lines).block(unfocused_block("SESSION"));
+        f.render_widget(widget, chunks[0]);
+
+        let login_ratio = (player.consecutive_login_days.min(30) as f64) / 30.0;
+        let streak = LineGauge::default()
+            .block(unfocused_block("LOGIN STREAK"))
+            .ratio(login_ratio)
+            .label(format!(
+                "[{}] {:>2} / 30 days",
+                bar(login_ratio, 12),
+                player.consecutive_login_days.min(30)
+            ))
+            .filled_style(Style::default().fg(COLOR_SUCCESS))
+            .unfilled_style(Style::default().fg(COLOR_LABEL));
+        f.render_widget(streak, chunks[1]);
+
+        let today_ratio = (player.today_acquired.min(player.max_daily_acquired.max(1)) as f64)
+            / (player.max_daily_acquired.max(1) as f64);
+        let today = LineGauge::default()
+            .block(unfocused_block("TODAY VS BEST"))
+            .ratio(today_ratio)
+            .label(format!(
+                "[{}] {:>2} / {}",
+                bar(today_ratio, 12),
+                player.today_acquired,
+                player.max_daily_acquired.max(1)
+            ))
+            .filled_style(Style::default().fg(COLOR_RARE))
+            .unfilled_style(Style::default().fg(COLOR_LABEL));
+        f.render_widget(today, chunks[2]);
+
+        let data = self.recent_acquisition_buckets(RECENT_ACTIVITY_BUCKETS);
+        let sparkline = Sparkline::default()
+            .block(unfocused_block("COLLECTION RATE"))
+            .data(&data)
+            .style(Style::default().fg(COLOR_RARE));
+        f.render_widget(sparkline, chunks[3]);
     }
 
     fn render_synthesis_section(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1427,7 +1569,7 @@ impl App {
             self.game_state.synthesis_manager.discovered_count(),
             self.game_state.synthesis_manager.total_recipe_count()
         ))
-        .block(Block::default().borders(Borders::ALL))
+        .block(focused_block("合成実行"))
         .style(Style::default().fg(COLOR_RARE));
         f.render_widget(header, chunks[0]);
 
@@ -1444,7 +1586,7 @@ impl App {
                 let help = Paragraph::new(
                     "← Select first ingredient\n\nUse ↑↓ to navigate\nPress Enter to select",
                 )
-                .block(Block::default().borders(Borders::ALL).title("Help"))
+                .block(unfocused_block("Help"))
                 .style(Style::default().fg(COLOR_LABEL));
                 f.render_widget(help, content_chunks[1]);
             }
@@ -1468,7 +1610,7 @@ impl App {
 
         if collection.is_empty() {
             let empty = Paragraph::new("No curions in collection")
-                .block(Block::default().borders(Borders::ALL).title("Ingredient 1"))
+                .block(focused_block("Ingredient 1"))
                 .style(Style::default().fg(COLOR_BAR_HOT));
             f.render_widget(empty, area);
             return;
@@ -1480,7 +1622,8 @@ impl App {
             .map(|(i, curion)| {
                 let style = if i == self.detail_scroll {
                     Style::default()
-                        .fg(COLOR_LEGENDARY)
+                        .fg(Color::Black)
+                        .bg(COLOR_RARE)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default()
@@ -1497,14 +1640,11 @@ impl App {
             .collect();
 
         let list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Select Ingredient 1"),
-            )
+            .block(focused_block("Select Ingredient 1"))
             .highlight_style(
                 Style::default()
-                    .fg(COLOR_LEGENDARY)
+                    .fg(Color::Black)
+                    .bg(COLOR_RARE)
                     .add_modifier(Modifier::BOLD),
             );
 
@@ -1552,12 +1692,7 @@ impl App {
             })
             .collect();
 
-        let list = List::new(items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("レシピ一覧"),
-        );
+        let list = List::new(items).block(focused_block("レシピ一覧"));
         f.render_widget(list, area);
     }
 
@@ -1571,8 +1706,8 @@ impl App {
         );
 
         let widget = Paragraph::new(text)
-            .block(Block::default().borders(Borders::ALL).title("Selected"))
-            .style(Style::default().fg(Color::Green));
+            .block(unfocused_block("Selected"))
+            .style(Style::default().fg(COLOR_SUCCESS));
 
         f.render_widget(widget, area);
     }
@@ -1590,7 +1725,7 @@ impl App {
 
         if candidates.is_empty() {
             let empty = Paragraph::new("No possible combinations\n\nPress Esc to go back")
-                .block(Block::default().borders(Borders::ALL).title("Ingredient 2"))
+                .block(focused_block("Ingredient 2"))
                 .style(Style::default().fg(COLOR_BAR_HOT));
             f.render_widget(empty, area);
             return;
@@ -1602,7 +1737,8 @@ impl App {
             .map(|(i, candidate)| {
                 let style = if i == self.synthesis_scroll {
                     Style::default()
-                        .fg(COLOR_LEGENDARY)
+                        .fg(Color::Black)
+                        .bg(COLOR_RARE)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default()
@@ -1629,14 +1765,11 @@ impl App {
             .collect();
 
         let list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Select Ingredient 2"),
-            )
+            .block(focused_block("Select Ingredient 2"))
             .highlight_style(
                 Style::default()
-                    .fg(COLOR_LEGENDARY)
+                    .fg(Color::Black)
+                    .bg(COLOR_RARE)
                     .add_modifier(Modifier::BOLD),
             );
 
