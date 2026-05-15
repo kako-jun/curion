@@ -1777,12 +1777,12 @@ impl App {
                 let discovered_mark = if candidate.is_discovered { "✓" } else { "?" };
 
                 ListItem::new(format!(
-                    "{} {} (×{}) {} {:?}",
+                    "{} {} (×{}) {} {}",
                     discovered_mark,
                     candidate.noun,
                     candidate.available_count,
                     result_text,
-                    candidate.category
+                    candidate.category.as_str(),
                 ))
                 .style(style)
             })

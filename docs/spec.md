@@ -15,7 +15,7 @@ Each curion has:
 |---|---|
 | Category | Hash bytes mapped to one of 9 categories |
 | Name | Index into the category's noun list |
-| Rarity | Common (70%), Rare (20%), Epic (8%), Legendary (2%) |
+| Rarity | Common/COM (70%), Rare/RARE (20%), Epic/EPIC (8%), Legendary/LEG (2%) |
 | Interest | Numeric 0-100, from hash bytes |
 | Rarity Score | Numeric 0-100, from hash bytes |
 | Beauty | Numeric 0-100, from hash bytes |

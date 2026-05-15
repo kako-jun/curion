@@ -28,17 +28,18 @@ ratatui `Color` enum values.
 | Warning | `Yellow` | Near-complete (≥75%), EPIC rarity |
 | Danger | `Red` | Urgent (≥95% achievement), LEGENDARY rarity |
 | Muted | `Gray` | COM rarity, unfocused panels |
-| Special | `Magenta` | UNIQUE rarity, synthesis success |
 
 Rarity color mapping:
 
-| Rarity | Color |
-|---|---|
-| COM | `Gray` |
-| RARE | `Cyan` |
-| EPIC | `Yellow` |
-| LEGENDARY | `Red` |
-| UNIQUE | `Magenta` |
+| Rarity | Label | Color |
+|---|---|---|
+| Common | `COM` | `Gray` |
+| Rare | `RARE` | `Cyan` |
+| Epic | `EPIC` | `Yellow` |
+| Legendary | `LEG` | `Red` |
+
+Labels are always 4 characters wide, left-aligned in `[XXXX]` brackets: `[COM ]`, `[RARE]`, `[EPIC]`, `[LEG ]`.
+`Magenta` is reserved for synthesis success flash (not a rarity).
 
 ## 3. Typography Rules
 
@@ -47,7 +48,7 @@ Terminal monospace only. No font selection — inherits the user's terminal font
 - All labels: UPPERCASE for section headers, Title Case for item names
 - Numbers: right-aligned in columns
 - Percentages: always shown with `%` suffix
-- Rarity labels: always in brackets `[RARE]`, colored by rarity
+- Rarity labels: always in brackets `[RARE]` (4-char width: `[COM ]`, `[RARE]`, `[EPIC]`, `[LEG ]`), colored by rarity
 
 ## 4. Component Usage
 
@@ -59,6 +60,7 @@ Used for any quantity with a known maximum.
 |---|---|---|
 | XP bar | `Gauge` | `Cyan` → `Yellow` at 75% → `Red` at 95% |
 | Achievement progress | `LineGauge` | `Gray` → `Green` when complete |
+| Achievement urgency | `LineGauge` | `Gray` below 50%, `Cyan` 50-80%, `Yellow` 80-95%, `Red` ≥95% |
 | Cooldown timer | `LineGauge` | `Cyan`, drains left to right |
 | Daily mission | `Gauge` | `Yellow` when complete |
 | Login streak | `LineGauge` | `Green` |
@@ -184,7 +186,7 @@ Right pane layout:
 所持一覧 (section 0):
   - Scrollable list of collected curions (newest first)
   - Each item (3 lines):
-    Line 1: #N  ★★  [RARE     ]  名前                 2025-01-01 12:00
+    Line 1: #N  ★★  [RARE]  名前                 2025-01-01 12:00
     Line 2:       興味度: [██████░░░░]  60%  美しさ: [████░░░░░░]  40%
     Line 3: (blank separator)
   - Color: rarity color on stars and rarity label
@@ -259,6 +261,8 @@ Right pane layout:
   - ✓ = Green (discovered), ? = DarkGray (undiscovered)
 
 合成実行 (section 1):
+  Top header (3 lines): "合成実行" focused_block — shows "Synthesis Lab | Discovered: N/M" in Cyan
+
   Phase A — SelectingFirst:
     Left half: "Select Ingredient 1" (focused_block) — scrollable curion list
     Right half: "Help" (unfocused_block) — instructions in DarkGray
@@ -284,8 +288,14 @@ When the underlying data collection is empty (e.g., no curions collected yet):
 ```
 Paragraph with centered message:
   Style: fg(DarkGray)
-  Text: "まだデータがありません"  or  "No data yet"
+  Text: "まだキュリオンがありません"
   Sub-text: hint for action, e.g., "スペースキーでキュリオンを生成"
+```
+
+For generic data-empty states (future screens):
+
+```
+  Text: "まだデータがありません"  or  "No data yet"
 ```
 
 ### Loading State
@@ -394,11 +404,20 @@ Result highlight: Bold on matched text portion.
 // Rarity color
 fn rarity_color(rarity: &Rarity) -> Color {
     match rarity {
-        Rarity::Com       => Color::Gray,
+        Rarity::Common    => Color::Gray,
         Rarity::Rare      => Color::Cyan,
         Rarity::Epic      => Color::Yellow,
         Rarity::Legendary => Color::Red,
-        Rarity::Unique    => Color::Magenta,
+    }
+}
+
+// Rarity label (4-char width, use with format!("[{label:<4}]"))
+fn rarity_label(rarity: &Rarity) -> &'static str {
+    match rarity {
+        Rarity::Common    => "COM",
+        Rarity::Rare      => "RARE",
+        Rarity::Epic      => "EPIC",
+        Rarity::Legendary => "LEG",
     }
 }
 
