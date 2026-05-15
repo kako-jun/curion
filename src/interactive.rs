@@ -189,7 +189,8 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
     let generator = CurionGenerator::new()?;
 
     // ログイン処理
-    game_state.player.update_login();
+    let login_bonus = game_state.process_login();
+    save_manager.save(&game_state)?;
 
     let mut helper = CurionHelper::new();
     update_helper_names(&mut helper, &game_state);
@@ -210,6 +211,14 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
     println!(
         "Type '\x1b[1;33mhelp\x1b[0m' for available commands, '\x1b[1;33mexit\x1b[0m' to quit\n"
     );
+
+    if let Some(reward) = login_bonus {
+        println!("\x1b[1;32mLogin Bonus\x1b[0m");
+        for line in reward.summary_lines() {
+            println!("  {line}");
+        }
+        println!();
+    }
 
     // 起動時に簡易ステータスを表示
     print_brief_status(&game_state);

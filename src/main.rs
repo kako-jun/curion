@@ -76,7 +76,8 @@ fn main() -> Result<()> {
 pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     let save_manager = SaveManager::new_with_profile(profile_manager)?;
     let mut game_state = save_manager.load()?;
-    game_state.player.update_login();
+    let login_bonus = game_state.process_login();
+    save_manager.save(&game_state)?;
 
     // Terminal setup
     enable_raw_mode()?;
@@ -86,6 +87,9 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new(game_state);
+    if let Some(reward) = login_bonus {
+        app.show_login_bonus_message(&reward);
+    }
 
     let res = run_app(&mut terminal, &mut app, &save_manager);
 

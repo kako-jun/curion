@@ -21,9 +21,17 @@ use crate::save::SaveManager;
 pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Result<()> {
     let save_manager = SaveManager::new_with_profile(profile_manager)?;
     let mut game_state = save_manager.load()?;
-    game_state.player.update_login();
+    let login_bonus = game_state.process_login();
     save_manager.save(&game_state)?;
     let generator = CurionGenerator::new()?;
+
+    if let Some(reward) = &login_bonus {
+        println!("=== Login Bonus ===");
+        for line in reward.summary_lines() {
+            println!("  {line}");
+        }
+        println!();
+    }
 
     let cmd = args.first().map(|s| s.as_str()).unwrap_or("status");
 
@@ -153,8 +161,20 @@ fn cmd_status(game_state: &crate::player::GameState) {
     println!("Level       : {}", p.level);
     println!("XP          : {} / {}", p.xp, p.xp_for_next_level());
     println!("Total       : {}", p.total_acquired());
-    println!("Unique       : {}", unique_count(p));
+    println!("Unique      : {}", unique_count(p));
     println!("Login streak: {} days", p.consecutive_login_days);
+    println!(
+        "Claimed today: {}",
+        if p.login_bonus_claimed_today {
+            "yes"
+        } else {
+            "no"
+        }
+    );
+    println!(
+        "Tickets     : common={} rare={} epic={}",
+        p.guaranteed_tickets.common, p.guaranteed_tickets.rare, p.guaranteed_tickets.epic
+    );
     println!();
     println!("--- Rarity breakdown ---");
     for rarity in [

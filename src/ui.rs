@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::curion::{Category, Rarity};
 use crate::generator::CurionGenerator;
-use crate::player::GameState;
+use crate::player::{GameState, LoginBonusReward};
 
 // ── Style constants ──────────────────────────────────────────────
 
@@ -380,6 +380,13 @@ impl App {
         self.save_message = Some(("💾 Saved!".to_string(), Instant::now()));
     }
 
+    pub fn show_login_bonus_message(&mut self, reward: &LoginBonusReward) {
+        self.save_message = Some((
+            format!("🎁 Day {} +{} XP", reward.day, reward.xp),
+            Instant::now(),
+        ));
+    }
+
     fn guid_progress(&self) -> f64 {
         let elapsed = self.guid_timer.elapsed().as_secs_f64();
         let total = self.guid_interval.as_secs_f64();
@@ -623,7 +630,19 @@ impl App {
 
     fn render_login_bonus_placeholder(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
-        let lines = vec![
+        let today_reward = player.current_login_bonus_reward();
+        let next_reward = player.next_login_bonus_reward();
+        let status_color = if player.login_bonus_claimed_today {
+            Color::Green
+        } else {
+            Color::Yellow
+        };
+        let status_text = if player.login_bonus_claimed_today {
+            "受取済み"
+        } else {
+            "未受取"
+        };
+        let mut lines = vec![
             Line::from(vec![
                 Span::styled("連続ログイン", Style::default().fg(COLOR_LABEL)),
                 Span::raw("  "),
@@ -633,11 +652,60 @@ impl App {
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD),
                 ),
+                Span::raw("   "),
+                Span::styled("状態", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
+                Span::styled(
+                    status_text,
+                    Style::default()
+                        .fg(status_color)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
-            Line::from("次の Issue #19 で報酬テーブルと受取処理を実装します。"),
-            Line::from("この枠は 3 層構造で固定済みなので、次は中身を載せるだけです。"),
+            Line::from(vec![
+                Span::styled("今日の報酬", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
+                Span::styled(
+                    format!("Day {} / {} XP", today_reward.day, today_reward.xp),
+                    Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
+                ),
+            ]),
         ];
+
+        for summary in today_reward.summary_lines().into_iter().skip(1) {
+            lines.push(Line::from(format!("  + {summary}")));
+        }
+
+        lines.extend([
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("次回予告", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
+                Span::styled(
+                    format!("Day {} / {} XP", next_reward.day, next_reward.xp),
+                    Style::default().fg(COLOR_RARE),
+                ),
+            ]),
+        ]);
+
+        for summary in next_reward.summary_lines().into_iter().skip(1) {
+            lines.push(Line::from(format!("  -> {summary}")));
+        }
+
+        lines.extend([
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("所持チケット", Style::default().fg(COLOR_LABEL)),
+                Span::raw("  "),
+                Span::raw(format!(
+                    "Common {} / Rare {} / Epic {}",
+                    player.guaranteed_tickets.common,
+                    player.guaranteed_tickets.rare,
+                    player.guaranteed_tickets.epic
+                )),
+            ]),
+        ]);
         let widget = Paragraph::new(lines).block(
             Block::default()
                 .borders(Borders::ALL)

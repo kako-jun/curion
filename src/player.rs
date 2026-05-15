@@ -1,9 +1,60 @@
 use crate::achievement::{AchievementManager, AchievementProgress};
 use crate::curion::{Category, Curion, Rarity};
 use crate::synthesis::SynthesisManager;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+/// 確定チケットの種類
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GuaranteedTicket {
+    Common,
+    Rare,
+    Epic,
+}
+
+impl GuaranteedTicket {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Common => "コモン確定チケット",
+            Self::Rare => "レア確定チケット",
+            Self::Epic => "エピック確定チケット",
+        }
+    }
+}
+
+/// ログインボーナスの報酬
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoginBonusReward {
+    pub day: u32,
+    pub xp: u32,
+    pub ticket: Option<GuaranteedTicket>,
+    pub title: Option<String>,
+}
+
+impl LoginBonusReward {
+    pub fn summary_lines(&self) -> Vec<String> {
+        let mut lines = vec![format!("Day {}: {} XP", self.day, self.xp)];
+
+        if let Some(ticket) = self.ticket {
+            lines.push(ticket.label().to_string());
+        }
+
+        if let Some(title) = &self.title {
+            lines.push(format!("称号: {title}"));
+        }
+
+        lines
+    }
+}
+
+/// 確定チケットの所持数
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TicketInventory {
+    pub common: u32,
+    pub rare: u32,
+    pub epic: u32,
+}
 
 /// プレイヤー状態
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +77,14 @@ pub struct Player {
     /// 連続ログイン日数
     pub consecutive_login_days: u32,
 
+    /// ログインボーナスを最後に受け取った日
+    #[serde(default)]
+    pub login_bonus_last_claim_date: Option<NaiveDate>,
+
+    /// 今日のログインボーナスを受け取ったか
+    #[serde(default)]
+    pub login_bonus_claimed_today: bool,
+
     /// 獲得した称号
     pub titles: Vec<String>,
 
@@ -40,6 +99,10 @@ pub struct Player {
 
     /// 最高日間獲得日
     pub max_daily_acquired_date: Option<DateTime<Utc>>,
+
+    /// 確定チケット
+    #[serde(default)]
+    pub guaranteed_tickets: TicketInventory,
 
     /// カテゴリ別統計
     pub category_stats: HashMap<Category, CategoryStats>,
@@ -126,11 +189,14 @@ impl Player {
             first_played_at: now,
             last_played_at: now,
             consecutive_login_days: 1,
+            login_bonus_last_claim_date: None,
+            login_bonus_claimed_today: false,
             titles: Vec::new(),
             active_title: None,
             today_acquired: 0,
             max_daily_acquired: 0,
             max_daily_acquired_date: None,
+            guaranteed_tickets: TicketInventory::default(),
             category_stats: HashMap::new(),
             rarity_stats: HashMap::new(),
             collection: Vec::new(),
@@ -247,15 +313,126 @@ impl Player {
 
     /// プレイ日数
     pub fn days_played(&self) -> u32 {
-        let duration = Utc::now().signed_duration_since(self.first_played_at);
+        let duration =
+            Local::now().signed_duration_since(self.first_played_at.with_timezone(&Local));
         (duration.num_days() + 1).max(1) as u32
     }
 
-    /// ログイン処理
-    pub fn update_login(&mut self) {
+    /// 今日のログインボーナス報酬
+    pub fn current_login_bonus_reward(&self) -> LoginBonusReward {
+        Self::login_bonus_reward_for_day(self.consecutive_login_days.max(1))
+    }
+
+    /// 次のログインボーナス報酬
+    pub fn next_login_bonus_reward(&self) -> LoginBonusReward {
+        Self::login_bonus_reward_for_day(self.consecutive_login_days.saturating_add(1).max(1))
+    }
+
+    fn login_bonus_reward_for_day(day: u32) -> LoginBonusReward {
+        match day {
+            1 => LoginBonusReward {
+                day,
+                xp: 50,
+                ticket: None,
+                title: None,
+            },
+            2 => LoginBonusReward {
+                day,
+                xp: 100,
+                ticket: None,
+                title: None,
+            },
+            3 => LoginBonusReward {
+                day,
+                xp: 200,
+                ticket: Some(GuaranteedTicket::Common),
+                title: None,
+            },
+            4 => LoginBonusReward {
+                day,
+                xp: 300,
+                ticket: None,
+                title: None,
+            },
+            5 => LoginBonusReward {
+                day,
+                xp: 500,
+                ticket: Some(GuaranteedTicket::Rare),
+                title: None,
+            },
+            6 => LoginBonusReward {
+                day,
+                xp: 800,
+                ticket: None,
+                title: None,
+            },
+            7 => LoginBonusReward {
+                day,
+                xp: 1500,
+                ticket: Some(GuaranteedTicket::Epic),
+                title: Some("連続加速".to_string()),
+            },
+            _ => LoginBonusReward {
+                day,
+                // Day 8+ は仮のエスカレーション。Issue 側で詳細化されるまで差し替えやすく保つ。
+                xp: 1500 + (day - 7) * 150,
+                ticket: if day % 7 == 0 {
+                    Some(GuaranteedTicket::Epic)
+                } else if day % 5 == 0 {
+                    Some(GuaranteedTicket::Rare)
+                } else if day % 3 == 0 {
+                    Some(GuaranteedTicket::Common)
+                } else {
+                    None
+                },
+                title: match day {
+                    14 => Some("二週間の執着".to_string()),
+                    30 => Some("習慣の支配者".to_string()),
+                    100 => Some("時の蒐集王".to_string()),
+                    _ => None,
+                },
+            },
+        }
+    }
+
+    fn add_guaranteed_ticket(&mut self, ticket: GuaranteedTicket) {
+        match ticket {
+            GuaranteedTicket::Common => self.guaranteed_tickets.common += 1,
+            GuaranteedTicket::Rare => self.guaranteed_tickets.rare += 1,
+            GuaranteedTicket::Epic => self.guaranteed_tickets.epic += 1,
+        }
+    }
+
+    fn apply_login_bonus_reward(&mut self, reward: &LoginBonusReward) {
+        self.add_xp(reward.xp);
+
+        if let Some(ticket) = reward.ticket {
+            self.add_guaranteed_ticket(ticket);
+        }
+
+        if let Some(title) = &reward.title {
+            self.add_title(title.clone());
+        }
+    }
+
+    /// ログイン処理とログインボーナス自動付与
+    pub fn update_login(&mut self) -> Option<LoginBonusReward> {
         let now = Utc::now();
-        let last_date = self.last_played_at.date_naive();
-        let today = now.date_naive();
+        let today_local = now.with_timezone(&Local).date_naive();
+        self.update_login_at(now, today_local)
+    }
+
+    fn update_login_at(
+        &mut self,
+        now: DateTime<Utc>,
+        today_local: NaiveDate,
+    ) -> Option<LoginBonusReward> {
+        let last_date = self.last_played_at.with_timezone(&Local).date_naive();
+        let today = today_local;
+
+        if self.login_bonus_last_claim_date == Some(today) {
+            self.login_bonus_claimed_today = true;
+        }
 
         if last_date == today {
             // 同日ログイン、何もしない
@@ -270,9 +447,21 @@ impl Player {
         // 日付が変わったら今日の獲得数をリセット
         if last_date != today {
             self.today_acquired = 0;
+            self.login_bonus_claimed_today = false;
         }
 
+        let reward = if !self.login_bonus_claimed_today {
+            let reward = self.current_login_bonus_reward();
+            self.apply_login_bonus_reward(&reward);
+            self.login_bonus_last_claim_date = Some(today);
+            self.login_bonus_claimed_today = true;
+            Some(reward)
+        } else {
+            None
+        };
+
         self.last_played_at = now;
+        reward
     }
 
     /// プレイ時間を更新（秒）
@@ -316,12 +505,23 @@ impl GameState {
         }
     }
 
+    /// 起動時ログイン処理
+    pub fn process_login(&mut self) -> Option<LoginBonusReward> {
+        let reward = self.player.update_login();
+        self.refresh_achievement_progress();
+        reward
+    }
+
     /// キュリオンを追加し、実績を更新
     pub fn add_curion(&mut self, curion: Curion) -> Vec<String> {
         // プレイヤーにキュリオンを追加
         let _xp_gained = self.player.add_curion(curion.clone());
 
         // 実績の進捗を更新
+        self.refresh_achievement_progress()
+    }
+
+    fn refresh_achievement_progress(&mut self) -> Vec<String> {
         let mut newly_unlocked = Vec::new();
 
         // 全実績をチェック（まず情報を集める）
@@ -418,5 +618,124 @@ impl GameState {
         list.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
         list.truncate(limit);
         list
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+    use serde_json::json;
+
+    fn dt(y: i32, m: u32, d: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(y, m, d, 12, 0, 0).unwrap()
+    }
+
+    fn dt_hms(y: i32, m: u32, d: u32, h: u32, min: u32, sec: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(y, m, d, h, min, sec).unwrap()
+    }
+
+    #[test]
+    fn login_bonus_is_claimed_only_once_per_day() {
+        let mut player = Player::new();
+        player.last_played_at = dt(2026, 5, 14);
+
+        let reward = player
+            .update_login_at(
+                dt(2026, 5, 15),
+                NaiveDate::from_ymd_opt(2026, 5, 15).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(reward.day, 2);
+        assert_eq!(reward.xp, 100);
+        assert!(player.login_bonus_claimed_today);
+        assert_eq!(
+            player.login_bonus_last_claim_date,
+            Some(dt(2026, 5, 15).date_naive())
+        );
+
+        let second = player.update_login_at(
+            dt(2026, 5, 15),
+            NaiveDate::from_ymd_opt(2026, 5, 15).unwrap(),
+        );
+        assert!(second.is_none());
+    }
+
+    #[test]
+    fn login_bonus_resets_streak_after_gap() {
+        let mut player = Player::new();
+        player.consecutive_login_days = 5;
+        player.last_played_at = dt(2026, 5, 10);
+
+        let reward = player
+            .update_login_at(
+                dt(2026, 5, 15),
+                NaiveDate::from_ymd_opt(2026, 5, 15).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(player.consecutive_login_days, 1);
+        assert_eq!(reward.day, 1);
+        assert_eq!(reward.xp, 50);
+    }
+
+    #[test]
+    fn login_bonus_grants_tickets_and_titles() {
+        let mut player = Player::new();
+        player.consecutive_login_days = 6;
+        player.last_played_at = dt(2026, 5, 14);
+
+        let reward = player
+            .update_login_at(
+                dt(2026, 5, 15),
+                NaiveDate::from_ymd_opt(2026, 5, 15).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(reward.day, 7);
+        assert_eq!(player.guaranteed_tickets.epic, 1);
+        assert!(player.titles.iter().any(|title| title == "連続加速"));
+    }
+
+    #[test]
+    fn login_bonus_uses_local_date_boundary_instead_of_utc_date() {
+        let mut player = Player::new();
+        player.last_played_at = dt_hms(2026, 5, 14, 12, 0, 0);
+        player.consecutive_login_days = 4;
+
+        let reward = player
+            .update_login_at(
+                dt_hms(2026, 5, 14, 23, 30, 0),
+                NaiveDate::from_ymd_opt(2026, 5, 15).unwrap(),
+            )
+            .unwrap();
+
+        assert_eq!(reward.day, 5);
+        assert_eq!(player.consecutive_login_days, 5);
+    }
+
+    #[test]
+    fn legacy_save_fields_default_cleanly() {
+        let legacy = json!({
+            "level": 1,
+            "xp": 0,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+        });
+
+        let player: Player = serde_json::from_value(legacy).unwrap();
+        assert_eq!(player.login_bonus_last_claim_date, None);
+        assert!(!player.login_bonus_claimed_today);
+        assert_eq!(player.guaranteed_tickets.common, 0);
+        assert_eq!(player.guaranteed_tickets.rare, 0);
+        assert_eq!(player.guaranteed_tickets.epic, 0);
     }
 }

@@ -78,7 +78,7 @@ Combine two owned curions to create a new one.
 | Epic curion | 50 |
 | Legendary curion | 200 |
 | Achievement unlock | Per-achievement reward |
-| Daily login | 50 |
+| Daily login | 50-1500+ (streak escalates) |
 
 Level N -> N+1 requires N * 100 XP.
 
@@ -116,8 +116,22 @@ Left pane sections:
   - 30-49%: gray
   - Below 30%: hidden
 
-**Login Bonus / Daily Mission right panes:**
-- Reserved for dedicated subviews; placeholders are shown until those issues land
+**Login Bonus right pane:**
+- Shows current consecutive login days
+- Auto-claims once per day on the first launch of the day
+- Displays today's reward, next reward, and guaranteed-ticket inventory
+- Daily reset is based on the local system date, not UTC
+- Reward ladder:
+  - Day 1: 50 XP
+  - Day 2: 100 XP
+  - Day 3: 200 XP + Common guaranteed ticket
+  - Day 5: 500 XP + Rare guaranteed ticket
+  - Day 7: 1500 XP + Epic guaranteed ticket + title
+  - Day 8+: XP keeps escalating; ticket rewards continue on 3/5/7 day cadence
+- Guaranteed tickets are inventory-only for now; spending flow belongs to a future issue
+
+**Daily Mission right pane:**
+- Placeholder gauge for today's collection count; dedicated mission logic remains future work
 
 ### Tab 2: Collection
 
@@ -196,19 +210,19 @@ Right pane behavior:
 ### Rarity colors
 | Rarity | Color |
 |---|---|
-| Common | White/Gray |
-| Rare | Blue/Cyan |
-| Epic | Magenta/Purple |
-| Legendary | Yellow/Gold |
+| Common | Gray |
+| Rare | Cyan |
+| Epic | Yellow |
+| Legendary | Red |
 
 ### Progress bar color ramp
 | Range | Color |
 |---|---|
 | 0-29% | Gray |
-| 30-49% | White |
-| 50-79% | Blue |
+| 30-49% | Gray |
+| 50-79% | Cyan |
 | 80-94% | Yellow |
-| 95-99% | Orange |
+| 95-99% | Red |
 | 100%+ | Green (claimable) |
 
 ### Animations
