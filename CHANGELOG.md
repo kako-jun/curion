@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.2 - 2026-05-15
+## v0.1.3 - 2026-05-15
 
 ### Added
 - Dashboard login bonus with escalating streak rewards, guaranteed ticket inventory, and local-date daily claim handling.
