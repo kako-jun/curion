@@ -46,6 +46,47 @@ Combine two owned curions to create a new one.
 - Smart synthesis UI suggests valid combinations from the player's inventory.
 - Discovered recipes are tracked and shown in the UI.
 
+## Lifespan System (Issue #30)
+
+Each curion has a finite lifespan tied to its rarity. Curions left in the
+collection past their lifespan are auto-removed at the next launch (treated
+as natural decay). Synthesizing a curion does **not** count as natural decay
+— "using it up" is its proper send-off.
+
+| Rarity | Lifespan |
+|---|---|
+| Common | 3 days |
+| Rare | 7 days |
+| Epic | 14 days |
+| Legendary | 30 days |
+
+- `Curion::lifespan_days: Option<u32>` is set at acquisition time via
+  `lifespan_for_rarity(rarity)` in `src/curion.rs`. New curions always carry
+  `Some(...)`; legacy saves without the field deserialize to `None` (immortal)
+  for backward compatibility.
+- `Curion::expires_at()` = `acquired_at + lifespan_days`. Returns `None`
+  for immortal curions.
+- `Curion::is_expired(now)` = `now > expires_at()`. Always `false` for
+  immortal curions.
+- `Curion::days_remaining(now)` returns `(expires_at - now).num_days()`.
+  Negative values mean already-expired.
+- `Player::prune_expired(now) -> Vec<Curion>` removes expired curions from
+  the collection and returns the removed list. Stats (`rarity_stats`,
+  `category_stats`) are intentionally left untouched — they are cumulative
+  acquisition histories, not current-inventory views.
+- `GameState::prune_expired_curions(now)` delegates to the player and is
+  invoked right after `process_login()` in `main.rs`, `plain.rs`, and
+  `interactive.rs`. The returned list drives:
+  - TUI: `App::show_expired_curions_message` toast (6-second display)
+  - `--plain` mode: a `=== 寿命で消えたキュリオン (N 個) ===` section
+  - Interactive (REPL) mode: a yellow-titled list
+- Dashboard Overview shows `⚠ 期限切れ間近 (残り 1 日以下): N 個` while at
+  least one curion is one day from expiring; otherwise the row is blank but
+  still occupies one terminal line for layout stability.
+- Synthesis consumes ingredients via the existing inventory removal path
+  and does not interact with lifespan — using a curion for synthesis simply
+  retires it before natural decay can occur.
+
 ## Achievement System
 
 40+ achievements across 4 categories:
@@ -164,6 +205,9 @@ Left pane sections:
   - 変動ロジックは `src/san.rs` のピュア関数 (`san_gain_for_acquisition`,
     `apply_decay`, `apply_gain`, `san_state`) に閉じ、`ui.rs` は値を読み取って描画するだけ。
   - Save compatibility: `san` は `#[serde(default = "default_san")]` (= 100.0 で復元)。
+- **Lifespan warning** (Issue #30):
+  - 残り寿命 1 日以下のキュリオン数を 1 行で表示: `⚠ 期限切れ間近 (残り 1 日以下): N 個`
+  - 0 個のときは空行扱い (レイアウトは予約)
 - Latest curion acquired
 - Rarity distribution (horizontal text bars)
 - Category distribution (compact text summary)
@@ -216,7 +260,11 @@ Left pane sections:
 
 **Owned List right pane:**
 - Scrollable list of all owned curions
-- Display format: `#ID stars [Rarity] Category Name  Date`
+- Display format: `#ID stars [Rarity] Category Name  Date  残 N 日` (Issue #30 残り寿命を右端に追記)
+  - 残り 0 日以下: 赤 + `寿命: ! まもなく消滅`
+  - 残り 1〜3 日: 黄色 `残 N 日`
+  - それ以上: 薄いグレー `残 N 日`
+  - 寿命なし (旧セーブ): `寿命: --`
 - Attribute bars (interest, beauty) shown inline
 - Bottom detail pane (`Constraint::Length(4)`, Issue #22 + #27): two lines for the curion currently at the top of the visible list. Wraps if the flavor exceeds the line width.
   - Line 1: SF flavor text (Issue #22). Missing flavor falls back to `(フレーバー未登録)`.
