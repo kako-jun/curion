@@ -157,7 +157,11 @@ Right pane layout:
   Top 45% — Gauges + dense stats
     - Gauge: 次のキュリオン生成まで (Cyan)
     - Gauge: XP (color-shifts Cyan→Yellow→Red by ratio)
-    - Paragraph: 総獲得数 / 今日の獲得 / レベル (one line, inline)
+    - Paragraph: 総獲得数 / 今日の獲得 / レベル / COMBO (one line, inline)
+      - COMBO: N — Common でリセット、Rare 以上で +1
+      - 表示色: 0/1=Label, 2=Rare, 3-4=Epic, 5+=Legendary + `🔥 コンボマスター!`
+      - XP 倍率: 2x=1.5, 3-4x=2.0, 5+=3.0 を `add_curion` で適用 (切り捨て)
+      - combo 5 到達で称号「コンボマスター」を 1 回だけ付与
     - Paragraph: 最新キュリオン (rarity color)
     - Paragraph: レアリティ分布 (bar per rarity, per-rarity color)
     - Paragraph: カテゴリ分布 (compact one-liner)

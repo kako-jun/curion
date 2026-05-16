@@ -1179,6 +1179,20 @@ impl App {
 
         // Basic stats
         let player = &self.game_state.player;
+        // COMBO 表示: コンボ中はレアリティ色で強調、5+ は Legendary + 称号アイコン
+        let (combo_color, combo_suffix) = match player.combo_count {
+            0 | 1 => (COLOR_LABEL, String::new()),
+            2 => (COLOR_RARE, String::new()),
+            3 | 4 => (COLOR_EPIC, String::new()),
+            _ => (COLOR_LEGENDARY, "  🔥 コンボマスター!".to_string()),
+        };
+        let combo_value_style = if player.combo_count >= 2 {
+            Style::default()
+                .fg(combo_color)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(combo_color)
+        };
         let stats_text = vec![Line::from(vec![
             Span::styled("総獲得数: ", Style::default().fg(COLOR_LABEL)),
             Span::styled(
@@ -1198,6 +1212,15 @@ impl App {
             Span::styled(
                 format!("{}", player.level),
                 Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("  "),
+            Span::styled("COMBO: ", Style::default().fg(COLOR_LABEL)),
+            Span::styled(format!("{}", player.combo_count), combo_value_style),
+            Span::styled(
+                combo_suffix,
+                Style::default()
+                    .fg(COLOR_LEGENDARY)
+                    .add_modifier(Modifier::BOLD),
             ),
         ])];
         let stats = Paragraph::new(stats_text)

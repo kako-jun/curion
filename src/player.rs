@@ -117,6 +117,16 @@ pub struct Player {
     /// デイリーミッション管理（旧セーブには無いため `#[serde(default)]`）
     #[serde(default)]
     pub daily_mission_manager: DailyMissionManager,
+
+    /// 現在のコンボカウント (Rare 以上を連続獲得した数)
+    /// Common 獲得で 0 にリセット。旧セーブには無いため `#[serde(default)]`。
+    #[serde(default)]
+    pub combo_count: u32,
+
+    /// 過去最高コンボカウント。Stats 等で将来表示する用途。
+    /// 旧セーブには無いため `#[serde(default)]`。
+    #[serde(default)]
+    pub max_combo: u32,
 }
 
 /// カテゴリ別統計
@@ -206,6 +216,8 @@ impl Player {
             rarity_stats: HashMap::new(),
             collection: Vec::new(),
             daily_mission_manager: DailyMissionManager::new(),
+            combo_count: 0,
+            max_combo: 0,
         }
     }
 
@@ -261,13 +273,36 @@ impl Player {
         // コレクションに追加
         self.collection.push(curion.clone());
 
-        // 経験値を付与
-        let xp = match curion.rarity {
+        // コンボ更新 (Common でリセット、Rare 以上で +1)
+        match curion.rarity {
+            Rarity::Common => self.combo_count = 0,
+            _ => self.combo_count += 1,
+        }
+        if self.combo_count > self.max_combo {
+            self.max_combo = self.combo_count;
+        }
+
+        // ベース経験値
+        let base_xp = match curion.rarity {
             Rarity::Common => 10,
             Rarity::Rare => 25,
             Rarity::Epic => 50,
             Rarity::Legendary => 200,
         };
+
+        // コンボ倍率
+        let multiplier = match self.combo_count {
+            0 | 1 => 1.0,
+            2 => 1.5,
+            3 | 4 => 2.0,
+            _ => 3.0,
+        };
+        let xp = (base_xp as f64 * multiplier) as u32;
+
+        // コンボ 5 到達で称号「コンボマスター」を付与 (重複しない)
+        if self.combo_count >= 5 {
+            self.add_title("コンボマスター".to_string());
+        }
 
         self.add_xp(xp);
         xp
@@ -995,5 +1030,162 @@ mod tests {
             state.player.xp, xp_before,
             "順序が逆だと XP が増えない (= バグ再現)"
         );
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #21 コンボシステム関連のテスト
+    // -----------------------------------------------------------------
+
+    /// テスト用 Curion を生成 (rarity だけ可変)
+    fn combo_test_curion(rarity: Rarity) -> Curion {
+        Curion::new(
+            uuid::Uuid::new_v4(),
+            "テスト".to_string(),
+            Category::Concept,
+            rarity,
+            50.0,
+            50.0,
+        )
+    }
+
+    #[test]
+    fn test_combo_increments_on_rare() {
+        let mut player = Player::new();
+        player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 1);
+        player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 2);
+    }
+
+    #[test]
+    fn test_combo_resets_on_common() {
+        let mut player = Player::new();
+        player.add_curion(combo_test_curion(Rarity::Rare));
+        player.add_curion(combo_test_curion(Rarity::Rare));
+        player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 3);
+
+        player.add_curion(combo_test_curion(Rarity::Common));
+        assert_eq!(player.combo_count, 0, "Common でコンボがリセットされる");
+    }
+
+    #[test]
+    fn test_combo_count_caps_growth_via_max_combo() {
+        let mut player = Player::new();
+        // combo を 5 まで上げる
+        for _ in 0..5 {
+            player.add_curion(combo_test_curion(Rarity::Rare));
+        }
+        assert_eq!(player.combo_count, 5);
+        assert_eq!(player.max_combo, 5);
+
+        // Common でリセット
+        player.add_curion(combo_test_curion(Rarity::Common));
+        assert_eq!(player.combo_count, 0);
+        assert_eq!(player.max_combo, 5, "max_combo は最高値を維持する");
+
+        // 再度 Rare を 1 回
+        player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 1);
+        assert_eq!(player.max_combo, 5);
+    }
+
+    #[test]
+    fn test_combo_xp_multipliers() {
+        // combo=1, base 25 → 25
+        let mut player = Player::new();
+        let xp1 = player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 1);
+        assert_eq!(xp1, 25, "combo 1: 1.0x");
+
+        // combo=2, base 25 → 25 * 1.5 = 37.5 → 37 (f64→u32 切り捨て)
+        let xp2 = player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 2);
+        assert_eq!(xp2, 37, "combo 2: 1.5x で 37.5 切り捨て → 37");
+
+        // combo=3, base 25 → 25 * 2.0 = 50
+        let xp3 = player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 3);
+        assert_eq!(xp3, 50, "combo 3: 2.0x");
+
+        // combo=4 (still 2.0x), then combo=5 (3.0x → 75)
+        let _ = player.add_curion(combo_test_curion(Rarity::Rare));
+        let xp5 = player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 5);
+        assert_eq!(xp5, 75, "combo 5: 3.0x");
+    }
+
+    #[test]
+    fn test_combo_master_title_awarded_at_5() {
+        let mut player = Player::new();
+        for _ in 0..4 {
+            player.add_curion(combo_test_curion(Rarity::Rare));
+        }
+        assert!(
+            !player.titles.iter().any(|t| t == "コンボマスター"),
+            "combo 4 ではまだ称号は付与されない"
+        );
+        player.add_curion(combo_test_curion(Rarity::Rare));
+        assert_eq!(player.combo_count, 5);
+        assert!(
+            player.titles.iter().any(|t| t == "コンボマスター"),
+            "combo 5 で「コンボマスター」が付与される"
+        );
+    }
+
+    #[test]
+    fn test_combo_master_title_not_duplicated() {
+        let mut player = Player::new();
+        // 1 回目: combo 5 まで
+        for _ in 0..5 {
+            player.add_curion(combo_test_curion(Rarity::Rare));
+        }
+        // リセットして再度 5 まで
+        player.add_curion(combo_test_curion(Rarity::Common));
+        for _ in 0..5 {
+            player.add_curion(combo_test_curion(Rarity::Rare));
+        }
+        let master_count = player
+            .titles
+            .iter()
+            .filter(|t| *t == "コンボマスター")
+            .count();
+        assert_eq!(master_count, 1, "称号は重複付与されない");
+    }
+
+    #[test]
+    fn test_combo_serde_default_for_legacy_save() {
+        // combo_count / max_combo フィールドの無い旧 JSON でロードできる
+        let legacy = json!({
+            "level": 1,
+            "xp": 0,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+        });
+
+        let player: Player = serde_json::from_value(legacy).expect("旧セーブでも読める");
+        assert_eq!(player.combo_count, 0);
+        assert_eq!(player.max_combo, 0);
+    }
+
+    #[test]
+    fn test_combo_legendary_counts_toward_combo() {
+        let mut player = Player::new();
+        player.add_curion(combo_test_curion(Rarity::Legendary));
+        assert_eq!(player.combo_count, 1);
+        player.add_curion(combo_test_curion(Rarity::Epic));
+        assert_eq!(player.combo_count, 2);
+        player.add_curion(combo_test_curion(Rarity::Legendary));
+        assert_eq!(player.combo_count, 3);
     }
 }
