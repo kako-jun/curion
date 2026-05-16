@@ -132,7 +132,15 @@ Left pane sections:
 - Guaranteed tickets are inventory-only for now; spending flow belongs to a future issue
 
 **Daily Mission right pane:**
-- Placeholder gauge for today's collection count; dedicated mission logic remains future work
+- 1 日に 3 本のミッションが並ぶ。日付ベースのシードで同じ日には全プレイヤー同じ 3 本が選ばれる
+- ミッションテンプレ (4 種から 3 つランダム抽選):
+  - 「10 個のキュリオンを収集」: +100 XP
+  - 「Rare 以上を 3 個獲得」: +200 XP
+  - 「合成を 1 回成功させる」: +300 XP
+  - 「5 種類の異なるカテゴリから収集」: +150 XP
+- 報酬は達成検知のたびに自動で XP 付与され、トーストで通知する
+- 進捗・達成状態は `daily_mission_manager` に保存され、日付が変わると自動でリセット
+- リセットは端末ローカル日付 0:00 基準。タイトルにリセットまでの残時間 (HH:MM) を表示
 
 ### Tab 2: Collection
 

@@ -1,5 +1,6 @@
 use crate::achievement::{AchievementManager, AchievementProgress};
 use crate::curion::{Category, Curion, Rarity};
+use crate::daily_mission::{DailyMission, DailyMissionManager};
 use crate::synthesis::SynthesisManager;
 use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -112,6 +113,10 @@ pub struct Player {
 
     /// コレクション（所持キュリオン）
     pub collection: Vec<Curion>,
+
+    /// デイリーミッション管理（旧セーブには無いため `#[serde(default)]`）
+    #[serde(default)]
+    pub daily_mission_manager: DailyMissionManager,
 }
 
 /// カテゴリ別統計
@@ -200,6 +205,7 @@ impl Player {
             category_stats: HashMap::new(),
             rarity_stats: HashMap::new(),
             collection: Vec::new(),
+            daily_mission_manager: DailyMissionManager::new(),
         }
     }
 
@@ -508,17 +514,50 @@ impl GameState {
     /// 起動時ログイン処理
     pub fn process_login(&mut self) -> Option<LoginBonusReward> {
         let reward = self.player.update_login();
+        let today = Local::now().date_naive();
+        self.player
+            .daily_mission_manager
+            .ensure_today_missions(today);
         self.refresh_achievement_progress();
         reward
     }
 
-    /// キュリオンを追加し、実績を更新
+    /// キュリオンを追加し、実績とデイリーミッションを更新する。
+    /// 戻り値は新規解除された実績 ID のリスト（既存仕様を踏襲）。
     pub fn add_curion(&mut self, curion: Curion) -> Vec<String> {
         // プレイヤーにキュリオンを追加
         let _xp_gained = self.player.add_curion(curion.clone());
 
+        // デイリーミッション進捗を更新（日付が変わっていれば先に再生成）
+        let today = Local::now().date_naive();
+        self.player
+            .daily_mission_manager
+            .ensure_today_missions(today);
+        self.player
+            .daily_mission_manager
+            .record_curion_acquired(&curion);
+
         // 実績の進捗を更新
         self.refresh_achievement_progress()
+    }
+
+    /// 合成成功を記録し、デイリーミッションの進捗を更新する
+    pub fn record_synthesis_success(&mut self) {
+        let today = Local::now().date_naive();
+        self.player
+            .daily_mission_manager
+            .ensure_today_missions(today);
+        self.player.daily_mission_manager.record_synthesis_success();
+    }
+
+    /// 達成済みのデイリーミッションに自動で報酬 (XP) を付与し、
+    /// 通知用にミッション情報を返す。
+    pub fn auto_claim_daily_missions(&mut self) -> Vec<DailyMission> {
+        let claimed = self.player.daily_mission_manager.claim_completed();
+        for mission in &claimed {
+            self.player.add_xp(mission.reward_xp);
+        }
+        claimed
     }
 
     fn refresh_achievement_progress(&mut self) -> Vec<String> {

@@ -444,6 +444,9 @@ impl App {
                                             c.id != first_curion.id && c.id != second_curion.id
                                         });
                                         self.game_state.add_curion(curion.clone());
+                                        // デイリーミッション「合成成功」進捗を更新
+                                        self.game_state.record_synthesis_success();
+                                        self.flush_daily_mission_rewards();
 
                                         let message = if first_discovery {
                                             format!("✨ Discovered: {recipe_name}!")
@@ -478,8 +481,36 @@ impl App {
         let guid = Uuid::new_v4();
         let curion = self.generator.generate_from_guid(guid)?;
         self.game_state.add_curion(curion);
+        self.flush_daily_mission_rewards();
         self.guid_timer = Instant::now();
         Ok(())
+    }
+
+    /// 達成済みデイリーミッションの自動受取（外部から呼ぶ起動時用）
+    pub fn flush_daily_mission_rewards_public(&mut self) {
+        self.flush_daily_mission_rewards();
+    }
+
+    /// 達成済みデイリーミッションを自動受取し、結果をトーストへ流す
+    fn flush_daily_mission_rewards(&mut self) {
+        let claimed = self.game_state.auto_claim_daily_missions();
+        if let Some(mission) = claimed.first() {
+            // 連続受取は最後 (1 件目以降は) 連結文に丸める
+            let msg = if claimed.len() == 1 {
+                format!(
+                    "🎯 [Mission] {} +{} XP",
+                    mission.description, mission.reward_xp
+                )
+            } else {
+                let total_xp: u32 = claimed.iter().map(|m| m.reward_xp).sum();
+                format!(
+                    "🎯 [Mission] {} 件達成! +{} XP",
+                    claimed.len(),
+                    total_xp
+                )
+            };
+            self.save_message = Some((msg, Instant::now()));
+        }
     }
 
     pub fn on_tick(&mut self) {
@@ -783,7 +814,7 @@ impl App {
         match self.current_section_index() {
             0 => self.render_dashboard_overview(f, area),
             1 => self.render_login_bonus_placeholder(f, area),
-            2 => self.render_daily_mission_placeholder(f, area),
+            2 => self.render_daily_missions(f, area),
             _ => self.render_dashboard_overview(f, area),
         }
     }
@@ -922,19 +953,102 @@ impl App {
         f.render_widget(widget, chunks[2]);
     }
 
-    fn render_daily_mission_placeholder(&self, f: &mut Frame<'_>, area: Rect) {
-        let player = &self.game_state.player;
-        let ratio = (player.today_acquired.min(10) as f64) / 10.0;
-        let gauge = Gauge::default()
-            .block(focused_block("デイリーミッション"))
-            .gauge_style(Style::default().fg(if ratio >= 1.0 { COLOR_EPIC } else { COLOR_RARE }))
-            .ratio(ratio)
-            .label(format!(
-                "[{}] {:>2} / 10 collected today",
-                bar(ratio, 12),
-                player.today_acquired.min(10)
-            ));
-        f.render_widget(gauge, area);
+    fn render_daily_missions(&self, f: &mut Frame<'_>, area: Rect) {
+        use chrono::{Local, Timelike};
+
+        let missions = &self.game_state.player.daily_mission_manager.missions;
+
+        // タイトル: 残り時間 (今日の終わり 24:00 まで)
+        let now = Local::now();
+        let remaining_minutes = (23 - now.hour()) * 60 + (59 - now.minute());
+        let hh = remaining_minutes / 60;
+        let mm = remaining_minutes % 60;
+        let title = format!(
+            "デイリーミッション (リセットまで {:02}:{:02})",
+            hh, mm
+        );
+
+        let block = focused_block(title);
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        if missions.is_empty() {
+            let empty = Paragraph::new("まだデータがありません")
+                .style(Style::default().fg(COLOR_LABEL))
+                .alignment(Alignment::Center);
+            f.render_widget(empty, inner);
+            return;
+        }
+
+        // 各ミッションは 4 行（icon+desc / gauge / reward / blank）
+        let constraints: Vec<Constraint> = missions
+            .iter()
+            .flat_map(|_| {
+                [
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                ]
+            })
+            .collect();
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(constraints)
+            .split(inner);
+
+        for (i, mission) in missions.iter().enumerate() {
+            let base = i * 4;
+            let completed = mission.is_completed();
+            let icon = if completed { "✅" } else { "🎯" };
+            let title_line = Line::from(vec![
+                Span::raw(icon),
+                Span::raw(" "),
+                Span::styled(
+                    mission.description.clone(),
+                    Style::default()
+                        .fg(if completed {
+                            COLOR_SUCCESS
+                        } else {
+                            Color::White
+                        })
+                        .add_modifier(if completed {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
+                ),
+            ]);
+            f.render_widget(Paragraph::new(title_line), chunks[base]);
+
+            let ratio = mission.progress_ratio();
+            let gauge_color = if completed { COLOR_SUCCESS } else { COLOR_RARE };
+            let gauge_line = Line::from(vec![
+                Span::raw("  "),
+                Span::styled(format!("[{}]", bar(ratio, 12)), Style::default().fg(gauge_color)),
+                Span::raw(format!(
+                    "  {:>3} / {}",
+                    mission.current.min(mission.target),
+                    mission.target
+                )),
+            ]);
+            f.render_widget(Paragraph::new(gauge_line), chunks[base + 1]);
+
+            let reward_line = if mission.claimed {
+                Line::from(vec![Span::styled(
+                    format!("  [✅ +{} XP claimed]", mission.reward_xp),
+                    Style::default().fg(COLOR_SUCCESS),
+                )])
+            } else {
+                Line::from(vec![Span::styled(
+                    format!("  報酬: +{} XP", mission.reward_xp),
+                    Style::default().fg(COLOR_LABEL),
+                )])
+            };
+            f.render_widget(Paragraph::new(reward_line), chunks[base + 2]);
+
+            // blank chunk (chunks[base + 3]) は空行として残す
+        }
     }
 
     fn render_dashboard_top(&self, f: &mut Frame<'_>, area: Rect) {
