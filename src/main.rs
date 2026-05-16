@@ -1,4 +1,5 @@
 mod achievement;
+mod cooldown;
 mod curion;
 mod daily_mission;
 mod generator;

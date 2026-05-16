@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 
+use crate::cooldown::{cooldown_progress, remaining_seconds};
 use crate::curion::{Category, Rarity};
 use crate::generator::CurionGenerator;
 use crate::player::{GameState, LoginBonusReward};
@@ -508,7 +509,13 @@ impl App {
 
     pub fn generate_curion(&mut self) -> Result<()> {
         let guid = Uuid::new_v4();
-        let curion = self.generator.generate_from_guid(guid)?;
+        // Issue #25: 収集後 X 時間でレア確率が段階的に上昇する。
+        // クールダウン満了時 (progress=1.0) に最大ボーナスでロールする。
+        let progress = cooldown_progress(
+            self.game_state.player.last_collection_at,
+            chrono::Utc::now(),
+        );
+        let curion = self.generator.generate_with_bonus(guid, progress)?;
         self.game_state.add_curion(curion);
         self.flush_daily_mission_rewards();
         self.guid_timer = Instant::now();
@@ -1164,6 +1171,7 @@ impl App {
             .constraints([
                 Constraint::Length(3),
                 Constraint::Length(3),
+                Constraint::Length(1),
                 Constraint::Length(2),
                 Constraint::Length(3),
                 Constraint::Length(6),
@@ -1198,6 +1206,33 @@ impl App {
                 self.game_state.player.xp_for_next_level()
             ));
         f.render_widget(xp_gauge, chunks[1]);
+
+        // Issue #25: レア出現予告クールダウン (LineGauge, 1 行)
+        let cooldown_p = cooldown_progress(
+            self.game_state.player.last_collection_at,
+            chrono::Utc::now(),
+        );
+        let (cd_color, cd_label) = if cooldown_p >= 1.0 {
+            (COLOR_EPIC, "RARE COOLDOWN ⚡ レア出現確率上昇中!".to_string())
+        } else {
+            let secs = remaining_seconds(
+                self.game_state.player.last_collection_at,
+                chrono::Utc::now(),
+            );
+            let mm = secs / 60;
+            let hh = mm / 60;
+            let m_rem = mm % 60;
+            (
+                COLOR_RARE,
+                format!("RARE COOLDOWN {hh}:{m_rem:02} remaining"),
+            )
+        };
+        let cooldown_gauge = LineGauge::default()
+            .ratio(cooldown_p.clamp(0.0, 1.0))
+            .label(cd_label)
+            .filled_style(Style::default().fg(cd_color))
+            .unfilled_style(Style::default().fg(COLOR_LABEL));
+        f.render_widget(cooldown_gauge, chunks[2]);
 
         // Basic stats
         let player = &self.game_state.player;
@@ -1248,7 +1283,7 @@ impl App {
         let stats = Paragraph::new(stats_text)
             .block(unfocused_block("統計"))
             .alignment(Alignment::Left);
-        f.render_widget(stats, chunks[2]);
+        f.render_widget(stats, chunks[3]);
 
         // Latest curion
         if let Some(curion) = player.latest_curion() {
@@ -1271,7 +1306,7 @@ impl App {
                 ),
             ])];
             let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
-            f.render_widget(latest, chunks[3]);
+            f.render_widget(latest, chunks[4]);
         }
 
         // Rarity distribution
@@ -1302,7 +1337,7 @@ impl App {
             ]));
         }
         let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
-        f.render_widget(rarity_widget, chunks[4]);
+        f.render_widget(rarity_widget, chunks[5]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -1314,7 +1349,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[5]);
+        f.render_widget(category_widget, chunks[6]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
