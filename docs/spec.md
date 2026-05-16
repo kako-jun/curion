@@ -247,6 +247,7 @@ Right pane behavior:
 | Up/Down | Scroll or select content in the right pane (Collection > Encyclopedia: move category focus) |
 | PgUp/PgDn | Collection > Encyclopedia: scroll noun list within focused category |
 | Enter | Claim reward / start synthesis step |
+| / | Collection: open regex filter input (Issue #31). Filters Owned List and Encyclopedia by noun / `{category} の {noun}` / rarity label (`COMMON`/`RARE`/`EPIC`/`LEGENDARY`) / category name. Type the pattern live; Enter keeps the filter and exits input mode; Esc clears the filter and exits input mode; Backspace deletes one character. Invalid regex shows a red error inline without crashing. |
 
 ## Visual Design
 
