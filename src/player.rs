@@ -512,8 +512,22 @@ impl GameState {
     }
 
     /// 起動時ログイン処理
+    ///
+    /// 順序が重要:
+    ///   1. `update_login()` でログインボーナス処理を行う
+    ///   2. **`ensure_today_missions` の前に** `auto_claim_daily_missions()` を呼んで、
+    ///      昨夜達成・未受取のまま終了したミッションの XP を救済する。
+    ///      ここで claim しないと、直後の `ensure_today_missions(today)` で
+    ///      日付ロールオーバー判定→ミッション再生成→ current=0 にリセットされ、
+    ///      昨日達成済みだったミッションの XP を取りこぼす。
+    ///   3. `ensure_today_missions` で今日のミッション 3 本を生成 (同日なら no-op)
+    ///   4. 実績進捗の再計算
     pub fn process_login(&mut self) -> Option<LoginBonusReward> {
         let reward = self.player.update_login();
+        // 前日に達成して未 claim のまま終了したミッションを先に回収する。
+        // `auto_claim_daily_missions` は現在保持中の missions を見るだけで
+        // 日付ベースの分岐は行わないため、再生成前に呼ぶことで取りこぼし救済になる。
+        self.auto_claim_daily_missions();
         let today = Local::now().date_naive();
         self.player
             .daily_mission_manager
@@ -828,6 +842,8 @@ mod tests {
 
     #[test]
     fn test_legacy_save_compatibility_with_daily_mission() {
+        // 旧セーブ JSON には `daily_mission_manager` フィールドが存在しない。
+        // それでも Player::deserialize が default で埋めて読めることを確認する。
         let legacy = json!({
             "level": 1,
             "xp": 0,
@@ -843,16 +859,141 @@ mod tests {
             "category_stats": {},
             "rarity_stats": {},
             "collection": []
-            // daily_mission_manager フィールド無し
         });
 
         let player: Player = serde_json::from_value(legacy).expect("旧セーブでも読める");
-        // default で構築されているはず
+        // 各サブ構造体は Default で埋まっているはず
         assert!(player.daily_mission_manager.missions.is_empty());
         assert!(player.daily_mission_manager.generated_date.is_none());
         assert!(player
             .daily_mission_manager
             .unique_categories_today
             .is_empty());
+    }
+
+    /// レビュー指摘 M1: 日付跨ぎでの XP 取りこぼし回帰テスト
+    ///
+    /// シナリオ:
+    ///   Day1 にミッションを達成 (`claimed=false` のまま終了)
+    ///   → Day2 でゲームを起動すると、旧コードでは `ensure_today_missions(day2)` が
+    ///      先に走って `current=0` にリセットされ XP が消えていた。
+    ///   → 修正後は `auto_claim_daily_missions()` → `ensure_today_missions` の順なので
+    ///      Day1 分の XP が確実に加算される。
+    ///
+    /// `process_login` を直接呼ぶと `Local::now()` 依存でテストが脆くなるため、
+    /// `process_login` 内部のステップを順序通りに呼び出して同じ性質を検証する。
+    #[test]
+    fn test_xp_not_lost_when_date_rolls_over() {
+        use crate::daily_mission::{DailyMission, DailyMissionKind};
+        use crate::synthesis::{RecipeDatabase, SynthesisManager};
+
+        let recipe_db = RecipeDatabase::load_embedded().expect("load recipes");
+        let mut state = GameState::new(SynthesisManager::new(recipe_db));
+        let xp_before = state.player.xp;
+        let level_before = state.player.level;
+
+        let day1 = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
+        let day2 = NaiveDate::from_ymd_opt(2026, 5, 17).unwrap();
+
+        // Day1: ミッション 1 本を達成済み (未受取) で保存して終了したシナリオ
+        state.player.daily_mission_manager.missions = vec![DailyMission {
+            id: "collect_any_10".to_string(),
+            description: "10 個収集".to_string(),
+            kind: DailyMissionKind::CollectAny(10),
+            target: 10,
+            current: 10,
+            reward_xp: 100,
+            expires_at: day1,
+            claimed: false,
+        }];
+        state.player.daily_mission_manager.generated_date = Some(day1);
+
+        // Day2 起動時: process_login が辿る順序を再現
+        //   1) auto_claim_daily_missions() で前日分の XP を救う
+        //   2) ensure_today_missions(day2) でミッションを再生成
+        let claimed = state.auto_claim_daily_missions();
+        assert_eq!(claimed.len(), 1, "Day1 分が claim される");
+        assert!(
+            state.player.daily_mission_manager.missions[0].claimed,
+            "claim フラグが立つ"
+        );
+
+        state
+            .player
+            .daily_mission_manager
+            .ensure_today_missions(day2);
+
+        // Day2 のミッションが新たに生成されている
+        assert_eq!(
+            state.player.daily_mission_manager.generated_date,
+            Some(day2)
+        );
+        assert!(
+            !state.player.daily_mission_manager.missions.is_empty(),
+            "Day2 のミッションが生成されている"
+        );
+        assert!(
+            state
+                .player
+                .daily_mission_manager
+                .missions
+                .iter()
+                .all(|m| m.current == 0 && !m.claimed),
+            "Day2 のミッションは current=0, claimed=false で開始"
+        );
+
+        // 100 XP が確かに加算されている (レベルアップで level=2, xp=0 になる想定)
+        let xp_now = state.player.xp;
+        let total_xp_gained = if state.player.level > level_before {
+            xp_now
+                + (level_before..state.player.level)
+                    .map(|lvl| lvl * 100)
+                    .sum::<u32>()
+        } else {
+            xp_now - xp_before
+        };
+        assert_eq!(total_xp_gained, 100, "前日分の +100 XP が消えていないこと");
+    }
+
+    /// レビュー指摘 M1: 順序が逆だった場合の挙動を明示するための回帰確認。
+    /// 「`ensure_today_missions` を先に呼ぶ」と claim 対象が失われることを直接検証し、
+    /// 修正後のステップ順 (claim → ensure) を維持する根拠を残す。
+    #[test]
+    fn test_xp_is_lost_if_ensure_runs_before_claim() {
+        use crate::daily_mission::{DailyMission, DailyMissionKind};
+        use crate::synthesis::{RecipeDatabase, SynthesisManager};
+
+        let recipe_db = RecipeDatabase::load_embedded().expect("load recipes");
+        let mut state = GameState::new(SynthesisManager::new(recipe_db));
+        let xp_before = state.player.xp;
+
+        let day1 = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
+        let day2 = NaiveDate::from_ymd_opt(2026, 5, 17).unwrap();
+
+        state.player.daily_mission_manager.missions = vec![DailyMission {
+            id: "collect_any_10".to_string(),
+            description: "10 個収集".to_string(),
+            kind: DailyMissionKind::CollectAny(10),
+            target: 10,
+            current: 10,
+            reward_xp: 100,
+            expires_at: day1,
+            claimed: false,
+        }];
+        state.player.daily_mission_manager.generated_date = Some(day1);
+
+        // 順序を逆にした場合 (旧バグ挙動の再現)
+        state
+            .player
+            .daily_mission_manager
+            .ensure_today_missions(day2);
+        let claimed = state.auto_claim_daily_missions();
+
+        // 再生成済みなので claim 対象は無く、XP は増えない
+        assert!(claimed.is_empty(), "順序が逆だと claim 対象が消える");
+        assert_eq!(
+            state.player.xp, xp_before,
+            "順序が逆だと XP が増えない (= バグ再現)"
+        );
     }
 }

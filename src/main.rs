@@ -89,7 +89,7 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
 
     let mut app = App::new(game_state);
     // 起動時に達成済みデイリーミッションがあれば自動受取（前回終了時に達成→未受取で残っていたケース）
-    app.flush_daily_mission_rewards_public();
+    app.flush_daily_mission_rewards();
     if let Some(reward) = login_bonus {
         app.show_login_bonus_message(&reward);
     }

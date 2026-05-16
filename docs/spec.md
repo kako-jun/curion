@@ -141,6 +141,12 @@ Left pane sections:
 - 報酬は達成検知のたびに自動で XP 付与され、トーストで通知する
 - 進捗・達成状態は `daily_mission_manager` に保存され、日付が変わると自動でリセット
 - リセットは端末ローカル日付 0:00 基準。タイトルにリセットまでの残時間 (HH:MM) を表示
+- 起動時 (`GameState::process_login`) では、`ensure_today_missions` の**前**に
+  `auto_claim_daily_missions()` を呼んで「前日達成・未受取」のミッション XP を救済する
+- 合成成功で生まれたキュリオンも収集系ミッション (CollectAny / CollectRarityAtLeast /
+  CollectFromCategories) の進捗にカウントされる仕様 (`add_curion` 内の
+  `record_curion_acquired` が走るため)
+- 各ミッションの XP / target は仮置きであり、プレイバランス調整時に変更される予定
 
 ### Tab 2: Collection
 

@@ -65,37 +65,41 @@ struct MissionTemplate {
     reward_xp: u32,
 }
 
-fn templates() -> Vec<MissionTemplate> {
-    vec![
-        MissionTemplate {
-            id: "collect_any_10",
-            description: "10個のキュリオンを収集",
-            kind: DailyMissionKind::CollectAny(10),
-            target: 10,
-            reward_xp: 100,
-        },
-        MissionTemplate {
-            id: "collect_rare_at_least_3",
-            description: "Rare 以上を 3 個獲得",
-            kind: DailyMissionKind::CollectRarityAtLeast(Rarity::Rare, 3),
-            target: 3,
-            reward_xp: 200,
-        },
-        MissionTemplate {
-            id: "synthesize_success_1",
-            description: "合成を 1 回成功させる",
-            kind: DailyMissionKind::SynthesizeSuccess(1),
-            target: 1,
-            reward_xp: 300,
-        },
-        MissionTemplate {
-            id: "collect_from_categories_5",
-            description: "5 種類の異なるカテゴリから収集",
-            kind: DailyMissionKind::CollectFromCategories(5),
-            target: 5,
-            reward_xp: 150,
-        },
-    ]
+/// テンプレート定義は const で固定する。`XP / target` は仮置きでプレイバランス調整時に
+/// 変更される想定 (`docs/spec.md` 参照)。
+const TEMPLATES: &[MissionTemplate] = &[
+    MissionTemplate {
+        id: "collect_any_10",
+        description: "10個のキュリオンを収集",
+        kind: DailyMissionKind::CollectAny(10),
+        target: 10,
+        reward_xp: 100,
+    },
+    MissionTemplate {
+        id: "collect_rare_at_least_3",
+        description: "Rare 以上を 3 個獲得",
+        kind: DailyMissionKind::CollectRarityAtLeast(Rarity::Rare, 3),
+        target: 3,
+        reward_xp: 200,
+    },
+    MissionTemplate {
+        id: "synthesize_success_1",
+        description: "合成を 1 回成功させる",
+        kind: DailyMissionKind::SynthesizeSuccess(1),
+        target: 1,
+        reward_xp: 300,
+    },
+    MissionTemplate {
+        id: "collect_from_categories_5",
+        description: "5 種類の異なるカテゴリから収集",
+        kind: DailyMissionKind::CollectFromCategories(5),
+        target: 5,
+        reward_xp: 150,
+    },
+];
+
+fn templates() -> &'static [MissionTemplate] {
+    TEMPLATES
 }
 
 fn seed_for_date(date: NaiveDate) -> [u8; 32] {
@@ -130,19 +134,25 @@ impl DailyMissionManager {
     /// 日付ベースの seed を使って 4 テンプレから 3 つを選び、`DailyMission` を返す
     pub fn generate_for_date(date: NaiveDate) -> Vec<DailyMission> {
         let mut rng = StdRng::from_seed(seed_for_date(date));
-        let mut all = templates();
-        all.shuffle(&mut rng);
-        all.into_iter()
+        // const TEMPLATES は読み取り専用なのでインデックスをシャッフルしてから参照する
+        let all = templates();
+        let mut indices: Vec<usize> = (0..all.len()).collect();
+        indices.shuffle(&mut rng);
+        indices
+            .into_iter()
             .take(3)
-            .map(|tpl| DailyMission {
-                id: tpl.id.to_string(),
-                description: tpl.description.to_string(),
-                kind: tpl.kind,
-                target: tpl.target,
-                current: 0,
-                reward_xp: tpl.reward_xp,
-                expires_at: date,
-                claimed: false,
+            .map(|i| {
+                let tpl = &all[i];
+                DailyMission {
+                    id: tpl.id.to_string(),
+                    description: tpl.description.to_string(),
+                    kind: tpl.kind.clone(),
+                    target: tpl.target,
+                    current: 0,
+                    reward_xp: tpl.reward_xp,
+                    expires_at: date,
+                    claimed: false,
+                }
             })
             .collect()
     }
@@ -242,175 +252,10 @@ mod tests {
         )
     }
 
-    #[test]
-    fn generate_for_date_deterministic() {
-        let date = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
-        let a = DailyMissionManager::generate_for_date(date);
-        let b = DailyMissionManager::generate_for_date(date);
-        assert_eq!(a.len(), 3);
-        assert_eq!(b.len(), 3);
-        let a_ids: Vec<_> = a.iter().map(|m| m.id.as_str()).collect();
-        let b_ids: Vec<_> = b.iter().map(|m| m.id.as_str()).collect();
-        assert_eq!(a_ids, b_ids);
-    }
-
-    #[test]
-    fn generate_for_date_differs_per_day() {
-        // すべての日付で同一順では困るので、別日のシードが少なくとも一回は別の順序を出すことを確認。
-        let d1 = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
-        let mut seen = std::collections::HashSet::new();
-        for delta in 0..14 {
-            let d = d1
-                .checked_add_signed(chrono::Duration::days(delta))
-                .unwrap();
-            let ids: Vec<_> = DailyMissionManager::generate_for_date(d)
-                .into_iter()
-                .map(|m| m.id)
-                .collect();
-            seen.insert(ids);
-        }
-        assert!(seen.len() > 1, "2週間で順序がまったく変わらないのは異常");
-    }
-
-    #[test]
-    fn ensure_today_missions_only_regenerates_on_date_change() {
-        let mut mgr = DailyMissionManager::new();
-        let d1 = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
-        let d2 = NaiveDate::from_ymd_opt(2026, 5, 17).unwrap();
-        mgr.ensure_today_missions(d1);
-        let snapshot_ids: Vec<_> = mgr.missions.iter().map(|m| m.id.clone()).collect();
-        // 同日呼び出し: 何も変わらない
-        if let Some(m) = mgr.missions.first_mut() {
-            m.current = 5;
-        }
-        mgr.ensure_today_missions(d1);
-        assert_eq!(mgr.missions[0].current, 5);
-        // 翌日: ミッション再生成、カテゴリ集合もクリア
-        mgr.unique_categories_today.insert(Category::Animal);
-        mgr.ensure_today_missions(d2);
-        assert!(mgr.unique_categories_today.is_empty());
-        let new_ids: Vec<_> = mgr.missions.iter().map(|m| m.id.clone()).collect();
-        // 日が変われば current は 0 にリセットされている
-        assert!(mgr.missions.iter().all(|m| m.current == 0));
-        // ID 自体は同じこともある（4 から 3 を選ぶ）が、生成日は更新される
-        assert_eq!(mgr.generated_date, Some(d2));
-        let _ = (snapshot_ids, new_ids);
-    }
-
-    #[test]
-    fn record_curion_acquired_increments() {
-        let mut mgr = DailyMissionManager::new();
-        let date = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
-        mgr.ensure_today_missions(date);
-
-        // 全テンプレに対する進捗を一気に検証するため、4 種から選ばれた 3 本に対し、
-        // 該当する種別の進捗が動くことだけを保証する。
-        let before: Vec<usize> = mgr.missions.iter().map(|m| m.current).collect();
-        let curion = make_curion(Category::Animal, Rarity::Epic);
-        mgr.record_curion_acquired(&curion);
-        let after: Vec<usize> = mgr.missions.iter().map(|m| m.current).collect();
-
-        for (i, mission) in mgr.missions.iter().enumerate() {
-            match &mission.kind {
-                DailyMissionKind::CollectAny(_) => assert_eq!(after[i], before[i] + 1),
-                DailyMissionKind::CollectRarityAtLeast(min, _) => {
-                    if rarity_rank(min) <= rarity_rank(&Rarity::Epic) {
-                        assert_eq!(after[i], before[i] + 1);
-                    }
-                }
-                DailyMissionKind::CollectFromCategories(_) => assert_eq!(after[i], 1),
-                DailyMissionKind::SynthesizeSuccess(_) => assert_eq!(after[i], before[i]),
-            }
-        }
-    }
-
-    #[test]
-    fn collect_from_categories_counts_unique() {
-        let mut mgr = DailyMissionManager::new();
-        // テンプレに依存しないよう、ミッションを手動でセット
-        mgr.missions = vec![DailyMission {
-            id: "collect_from_categories_5".to_string(),
-            description: "5 種類".to_string(),
-            kind: DailyMissionKind::CollectFromCategories(5),
-            target: 5,
-            current: 0,
-            reward_xp: 150,
-            expires_at: NaiveDate::from_ymd_opt(2026, 5, 16).unwrap(),
-            claimed: false,
-        }];
-        mgr.generated_date = Some(NaiveDate::from_ymd_opt(2026, 5, 16).unwrap());
-
-        // 同じカテゴリを 3 回獲得 → 1 のまま
-        for _ in 0..3 {
-            mgr.record_curion_acquired(&make_curion(Category::Animal, Rarity::Common));
-        }
-        assert_eq!(mgr.missions[0].current, 1);
-        // 別カテゴリ → 2
-        mgr.record_curion_acquired(&make_curion(Category::Plant, Rarity::Common));
-        assert_eq!(mgr.missions[0].current, 2);
-    }
-
-    #[test]
-    fn claim_completed_returns_finished_missions_once() {
-        let date = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
-        let mut mgr = DailyMissionManager::new();
-        mgr.missions = vec![DailyMission {
-            id: "collect_any_10".to_string(),
-            description: "10 個".to_string(),
-            kind: DailyMissionKind::CollectAny(10),
-            target: 10,
-            current: 10,
-            reward_xp: 100,
-            expires_at: date,
-            claimed: false,
-        }];
-        mgr.generated_date = Some(date);
-
-        let claimed = mgr.claim_completed();
-        assert_eq!(claimed.len(), 1);
-        assert_eq!(claimed[0].reward_xp, 100);
-        // 2 回目は重複付与されない
-        let again = mgr.claim_completed();
-        assert!(again.is_empty());
-        assert!(mgr.missions[0].claimed);
-    }
-
-    #[test]
-    fn record_synthesis_success_progresses_only_synthesize_kind() {
-        let date = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
-        let mut mgr = DailyMissionManager::new();
-        mgr.missions = vec![
-            DailyMission {
-                id: "synthesize_success_1".to_string(),
-                description: "合成 1 回".to_string(),
-                kind: DailyMissionKind::SynthesizeSuccess(1),
-                target: 1,
-                current: 0,
-                reward_xp: 300,
-                expires_at: date,
-                claimed: false,
-            },
-            DailyMission {
-                id: "collect_any_10".to_string(),
-                description: "10 個".to_string(),
-                kind: DailyMissionKind::CollectAny(10),
-                target: 10,
-                current: 0,
-                reward_xp: 100,
-                expires_at: date,
-                claimed: false,
-            },
-        ];
-        mgr.generated_date = Some(date);
-
-        mgr.record_synthesis_success();
-        assert_eq!(mgr.missions[0].current, 1);
-        assert_eq!(mgr.missions[1].current, 0);
-    }
-
     // -----------------------------------------------------------------
-    // Issue #20 追加テスト群
+    // Issue #20 デイリーミッションテスト群
     // 1 テスト 1 観点で粒度を細かく切り、回帰検知の精度を上げる。
+    // (旧スモークテストは test_* 群と重複していたため統合済み)
     // -----------------------------------------------------------------
 
     #[test]
