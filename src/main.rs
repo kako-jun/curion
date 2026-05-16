@@ -5,6 +5,7 @@ mod daily_mission;
 mod evolution;
 mod generator;
 mod interactive;
+mod latent;
 mod nostr_identity;
 mod plain;
 mod player;
