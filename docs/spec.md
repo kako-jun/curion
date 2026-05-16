@@ -60,10 +60,51 @@ seed bytes  →  SHA-256 × 2 round  →  16-dim f32 latent vector  →  curion
 - `CurionGenerator::generate_from_guid(guid)` は `guid.as_bytes()` を seed として
   この pipeline に委譲する後方互換 API。`generate_with_bonus(guid, bonus)` は
   Issue #25 の roll-shift モデル (最大 -0.3) を latent パイプライン上で再現する。
-- 将来 Issue #38 の装備効果・消費効果も同じ latent vector の別投影として
-  導出する想定 (curion 本体 = latent、noun名や効果はそのラベル)。
+- Issue #38 の装備効果は同じ latent vector の別投影として導出される
+  (curion 本体 = latent、noun 名や効果はそのラベル)。詳細は次節を参照。
 
 実装: `src/latent.rs` (純粋関数群)、`src/generator.rs::generate_from_seed_bytes_with_bonus`。
+
+## Equipment & Semantic Effects (Issue #38)
+
+Player has a single equipment slot (`Player::equipment.curion_id: Option<String>`).
+Press `e` on the Collection > Owned list to equip the focused curion. Pressing `e`
+again on the same curion clears the slot (`Player::toggle_equip`).
+
+Each equipped curion derives a `SemanticProfile` from its source GUID via
+`latent_from_seed` (16-dim vector, Issue #39). The first 10 dimensions map to
+tags: Heat / Speed / Order / Chaos / Life / Machine / Dream / Violence / Luck /
+Purity (each in `[0.0, 1.0]`).
+
+`EquipmentEffect` is derived from the `SemanticProfile` (see
+`src/equipment.rs::EquipmentEffect::from_profile`):
+
+| Field | Formula | Range | Phase |
+|---|---|---|---|
+| `xp_multiplier` | `1.0 + (heat + speed) * 0.5`, clamped to `[1.0, 2.0]` | 1.0 – 2.0 | 1 (applied) |
+| `san_decay_modifier` | `1.0 - purity * 0.5`, clamped to `[0.5, 1.0]` | 0.5 – 1.0 | 1 (applied) |
+| `rare_probability_bonus` | `luck * 0.3`, clamped to `[0.0, 0.3]` | 0.0 – 0.3 | 2 (display only) |
+| `synthesis_success_bonus` | `order * 0.2`, clamped to `[0.0, 0.2]` | 0.0 – 0.2 | 2 (display only) |
+
+Phase 1 (this issue) wires only the first two:
+
+- `xp_multiplier` is multiplied into the XP value inside `Player::add_curion`.
+- `san_decay_modifier` is multiplied into the SAN decay step inside
+  `Player::add_play_time`.
+
+Phase 2 (future issue) will add `rare_probability_bonus` to
+`generate_with_bonus`'s `bonus` argument and add `synthesis_success_bonus` to
+`SynthesisRecipe::success_probability`. For now both values are computed and
+shown in the Dashboard summary line so the UX is already in place.
+
+If the equipped curion is removed from the collection (synthesis consumption or
+lifespan expiration), `Player::equipped_curion()` returns `None`,
+`current_equipment_effect()` falls back to `EquipmentEffect::none()` (a baseline
+that leaves every formula unchanged), and the Dashboard summary renders
+`装備: なし`.
+
+Save compatibility: `Player::equipment` uses `#[serde(default)]`, so legacy
+saves load as `EquipmentSlot { curion_id: None }`.
 
 ## Synthesis System
 
@@ -522,6 +563,7 @@ Right pane behavior:
 | Up/Down | Scroll or select content in the right pane (Collection > Encyclopedia: move category focus) |
 | PgUp/PgDn | Collection > Encyclopedia: scroll noun list within focused category |
 | Enter | Claim reward / start synthesis step |
+| e | Collection > Owned List: toggle equip on the focused curion (Issue #38). Re-pressing `e` on the same curion clears the slot. |
 | / | Collection: open regex filter input (Issue #31). Filters Owned List and Encyclopedia by noun / `{category} の {noun}` / rarity label (`COMMON`/`RARE`/`EPIC`/`LEGENDARY`) / category name. Type the pattern live; Enter keeps the filter and exits input mode; Esc clears the filter and exits input mode; Backspace deletes one character. Invalid regex shows a red error inline without crashing. |
 
 ## Visual Design

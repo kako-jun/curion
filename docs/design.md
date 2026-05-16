@@ -184,6 +184,20 @@ Right pane layout:
       - XP / 未解除実績の残量から最小値を選ぶ (`GameState::next_milestone`)
       - label=Label, ラベル本文=Epic+Bold, `(あと N)`=Legendary+Bold
       - 全達成なら `全マイルストーン達成済み` (Label color)
+    - Paragraph: 装備中サマリ (Issue #38, 1 行)
+      - 装備あり: `装備: {display_name}  XP +N% / SAN 減衰 -N% / レア +N% / 合成 +N%`
+        - `装備:` ラベルは COLOR_LABEL
+        - display_name は Epic 色 + Bold
+        - 効果サマリは `EquipmentEffect::summary_line()` の戻り値そのまま、COLOR_SUCCESS で表示
+        - 効果値がすべて baseline なら効果サマリ部分は `効果なし` に置き換わる
+      - 装備なし: `装備: なし` (両方とも COLOR_LABEL)
+      - 派生式は `EquipmentEffect::from_profile` で固定:
+        - `xp_multiplier        = clamp(1.0 + (heat + speed) * 0.5,   1.0..=2.0)`
+        - `san_decay_modifier   = clamp(1.0 - purity * 0.5,            0.5..=1.0)`
+        - `rare_probability_bonus = clamp(luck * 0.3,                  0.0..=0.3)` (Phase 2、表示のみ)
+        - `synthesis_success_bonus = clamp(order * 0.2,                0.0..=0.2)` (Phase 2、表示のみ)
+      - 装備中 curion が collection から消えた場合は `equipped_curion()` が `None` を返し、
+        この行は `装備: なし` にフォールバックする
     - Paragraph: 進化進捗 (Issue #36, 最大 3 行)
       - 「あと少し感」順 (`sort_progress_by_urgency`) で最大 3 系列を 1 行ずつ表示
       - 例: `進化: 魚 → 蛇 → 龍  Stage 2 (あと 蛇 ×2 で次段階)`
@@ -263,6 +277,12 @@ Right pane layout:
   - When feature #31 (Regex Filter) is added:
     - Filter input line at top of right pane
     - Filtered results below
+
+Owned List 内のキーバインド (Issue #38):
+  - `e`: 詳細ペインに表示中の Curion を装備 / 解除する (`Player::toggle_equip`)
+    - 装備中の Curion は所持一覧の詳細タイトルに `[装備中]` マーカーが付く
+    - Phase 1 効果 (XP 倍率 / SAN 減衰倍率) は装備した瞬間から `add_curion` /
+      `add_play_time` に反映される
 ```
 
 ### Achievements Tab
