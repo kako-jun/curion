@@ -103,6 +103,15 @@ Left pane sections:
 **Overview right pane:**
 - GUID generation countdown (progress bar)
 - XP bar with rarity-aligned warning colors
+- **Rare cooldown LineGauge** (Issue #25):
+  - Fills over 4 hours since the last collection
+  - Cyan while filling: `RARE COOLDOWN [████░░░░░░░░] 2:35 remaining`
+  - Yellow when full: `RARE COOLDOWN [████████████] ⚡ レア出現確率上昇中!`
+  - The progress (0.0..=1.0) is fed to `CurionGenerator::generate_with_bonus`, which
+    subtracts up to 0.3 from the rarity roll to shift Common rolls into Rare/Epic.
+  - `Player::last_collection_at` (`#[serde(default) = None]`) holds the timestamp;
+    `add_curion` refreshes it. `None` (= fresh save / legacy save) is treated as
+    fully charged so the very first acquisition starts with the bonus.
 - Quick stats: total collected, today's count, level, **COMBO: N**
   - Combo counts consecutive Rare/Epic/Legendary acquisitions; Common resets to 0
   - XP multiplier on `add_curion`: combo 2 = 1.5x, 3-4 = 2.0x, 5+ = 3.0x (XP is `(base * multiplier) as u32`, truncated)

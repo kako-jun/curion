@@ -137,6 +137,14 @@ pub struct Player {
     /// 旧セーブには無いため `#[serde(default)]` (= 0 で復元)。
     #[serde(default)]
     pub total_acquisitions: u32,
+
+    /// 最終収集時刻 (Issue #25 レア出現予告クールダウン)
+    ///
+    /// `add_curion` のたびに `Some(Utc::now())` に更新される。
+    /// `None` の間 (= 初回起動 or 旧セーブ) はフルボーナス扱い。
+    /// 旧セーブには無いため `#[serde(default)]` (= None で復元)。
+    #[serde(default)]
+    pub last_collection_at: Option<DateTime<Utc>>,
 }
 
 /// カテゴリ別統計
@@ -229,6 +237,7 @@ impl Player {
             combo_count: 0,
             max_combo: 0,
             total_acquisitions: 0,
+            last_collection_at: None,
         }
     }
 
@@ -285,6 +294,9 @@ impl Player {
         // 合成消費で collection.len() は減ることがあるため、別カウンタで管理する。
         self.total_acquisitions = self.total_acquisitions.saturating_add(1);
         curion.acquisition_index = Some(self.total_acquisitions);
+
+        // Issue #25: 最終収集時刻を更新 (レア出現予告クールダウンをリセット)
+        self.last_collection_at = Some(Utc::now());
 
         // コレクションに追加
         self.collection.push(curion.clone());
@@ -1352,6 +1364,53 @@ mod tests {
             detail.contains("2026-05-1"),
             "日付らしき文字列を含む: {detail}"
         );
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #25 レア出現予告クールダウン
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_add_curion_sets_last_collection_at() {
+        let mut player = Player::new();
+        assert!(
+            player.last_collection_at.is_none(),
+            "新規 Player は last_collection_at=None"
+        );
+        let before = Utc::now();
+        player.add_curion(history_test_curion(Rarity::Rare));
+        let after = Utc::now();
+        let stamp = player
+            .last_collection_at
+            .expect("add_curion 後は Some が設定される");
+        assert!(
+            stamp >= before && stamp <= after,
+            "stamp は呼び出し前後に挟まれる"
+        );
+    }
+
+    #[test]
+    fn test_legacy_save_last_collection_at_default_none() {
+        // 旧 Player JSON には last_collection_at フィールドが無い。
+        // それでも default で None が入る。
+        let legacy = json!({
+            "level": 1,
+            "xp": 0,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+        });
+        let player: Player = serde_json::from_value(legacy).expect("旧 Player JSON が読める");
+        assert_eq!(player.last_collection_at, None);
     }
 
     #[test]

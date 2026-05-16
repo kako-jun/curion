@@ -157,6 +157,12 @@ Right pane layout:
   Top 45% — Gauges + dense stats
     - Gauge: 次のキュリオン生成まで (Cyan)
     - Gauge: XP (color-shifts Cyan→Yellow→Red by ratio)
+    - LineGauge: RARE COOLDOWN (Issue #25)
+      - 4 時間で満タン。filling 中は Cyan、満タンで Yellow に変色
+      - filling: `RARE COOLDOWN [████░░░░░░░░] H:MM remaining`
+      - full:    `RARE COOLDOWN [████████████] ⚡ レア出現確率上昇中!`
+      - 進捗値は `CurionGenerator::generate_with_bonus` に渡されて roll を最大 0.3 だけ引き下げる
+      - `Player::last_collection_at` に最終収集時刻を記録 (旧セーブ・新規セーブは None=フルチャージ扱い)
     - Paragraph: 総獲得数 / 今日の獲得 / レベル / COMBO (one line, inline)
       - COMBO: N — Common でリセット、Rare 以上で +1
       - 表示色: 0/1=Label, 2=Rare, 3-4=Epic, 5+=Legendary + `🔥 コンボマスター!`

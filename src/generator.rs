@@ -117,6 +117,18 @@ impl CurionGenerator {
     /// - ハッシュの9〜12バイト目: 興味度
     /// - ハッシュの13〜16バイト目: 美しさ
     pub fn generate_from_guid(&self, guid: Uuid) -> Result<Curion> {
+        self.generate_with_bonus(guid, 0.0)
+    }
+
+    /// GUIDからキュリオンを生成し、`bonus_progress` (0.0..=1.0) に応じてレア確率を引き上げる。
+    ///
+    /// Issue #25: レア出現予告クールダウンが満ちると `bonus_progress == 1.0` になり、
+    /// レアリティ判定の roll 値を最大 0.3 だけ引き下げる (= レア以上に寄せる) ことで、
+    /// 「収集後 X 時間でレア出現率が段階的に上がる」体験を提供する。
+    ///
+    /// `bonus_progress == 0.0` のときは [`generate_from_guid`] と完全に同じ Curion を返す
+    /// (deterministic, 後方互換)。
+    pub fn generate_with_bonus(&self, guid: Uuid, bonus_progress: f64) -> Result<Curion> {
         // GUIDをSHA-256でハッシュ化
         let mut hasher = Sha256::new();
         hasher.update(guid.as_bytes());
@@ -132,7 +144,7 @@ impl CurionGenerator {
             hash_result[3],
             hash_result[4],
         ]);
-        let rarity = self.determine_rarity_from_seed(rarity_seed);
+        let rarity = self.determine_rarity_with_bonus(rarity_seed, bonus_progress.clamp(0.0, 1.0));
 
         // 名詞を選択（ハッシュの5〜8バイト目、重み付き）
         let noun_seed = u32::from_le_bytes([
@@ -181,10 +193,26 @@ impl CurionGenerator {
         categories[index].clone()
     }
 
-    /// シード値からレアリティを決定
+    /// シード値からレアリティを決定 (旧 API、テスト互換のため残置)
+    #[allow(dead_code)]
     fn determine_rarity_from_seed(&self, seed: u32) -> Rarity {
+        self.determine_rarity_with_bonus(seed, 0.0)
+    }
+
+    /// シード値 + クールダウンボーナス進捗からレアリティを決定する。
+    ///
+    /// `bonus_progress == 0.0` は従来挙動 (`determine_rarity_from_seed` と一致)。
+    /// `bonus_progress > 0.0` のとき roll 値から `bonus_progress * 0.3` を引いて
+    /// レア以上に押し上げる。`bonus_progress == 1.0` のとき最大 -0.3 シフト。
+    fn determine_rarity_with_bonus(&self, seed: u32, bonus_progress: f64) -> Rarity {
         // シードを0.0〜1.0に正規化
-        let roll = (seed as f64) / (u32::MAX as f64);
+        let mut roll = (seed as f64) / (u32::MAX as f64);
+
+        // クールダウンボーナス: roll を引き下げることでレア以上の累積確率帯に入りやすくする。
+        // 累積確率は `Legendary -> Epic -> Rare -> Common` の順に判定するので、
+        // roll が小さいほど高レアリティが出る。最大 -0.3 で十分にレアが伸びる。
+        let shift = bonus_progress.clamp(0.0, 1.0) * 0.3;
+        roll = (roll - shift).max(0.0);
 
         // 累積確率でレアリティを決定
         let mut cumulative = 0.0;
@@ -344,5 +372,74 @@ mod tests {
         let db = NounDatabase::load_embedded().expect("Failed to load noun database");
         assert!(db.flavor_for("魚").is_some(), "魚 should have a flavor");
         assert!(db.flavor_for("__not_exist__").is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #25 レア出現予告クールダウン (generate_with_bonus)
+    // -----------------------------------------------------------------
+
+    /// `bonus_progress = 0.0` のとき、`generate_with_bonus` は `generate_from_guid` と
+    /// 完全に同じ Curion を返す (deterministic, 後方互換)。
+    #[test]
+    fn test_generate_with_bonus_zero_matches_existing_generate_from_guid() {
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
+        for s in &[
+            "550e8400-e29b-41d4-a716-446655440000",
+            "00000000-0000-0000-0000-000000000001",
+            "ffffffff-ffff-4fff-bfff-ffffffffffff",
+            "12345678-1234-4234-9234-123456789abc",
+        ] {
+            let guid = Uuid::parse_str(s).unwrap();
+            let a = generator.generate_from_guid(guid).unwrap();
+            let b = generator.generate_with_bonus(guid, 0.0).unwrap();
+            assert_eq!(a.noun, b.noun);
+            assert_eq!(a.category, b.category);
+            assert_eq!(a.rarity, b.rarity);
+            assert!((a.interest - b.interest).abs() < 1e-12);
+            assert!((a.beauty - b.beauty).abs() < 1e-12);
+        }
+    }
+
+    /// `bonus_progress` を 0.0 → 1.0 と上げると、サンプル全体で
+    /// レア以上の出現割合が単調 (非減少) に増える。
+    ///
+    /// 個別 GUID では「同じレアリティのまま」もあり得るが、
+    /// 1000 サンプル単位で見ればレア確率の引き上げが効いていることを
+    /// 反映できる (= 「Common→Rare/Epic 化することがある」)。
+    #[test]
+    fn test_generate_with_bonus_higher_progress_shifts_rarity() {
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
+
+        let count_non_common = |progress: f64| -> usize {
+            (0..1000u32)
+                .filter(|i| {
+                    // 決定論的な GUID を生成 (sha256 から uuid_v4 を作る代わりに
+                    // 連番を埋める)
+                    let mut bytes = [0u8; 16];
+                    bytes[..4].copy_from_slice(&i.to_le_bytes());
+                    let guid = Uuid::from_bytes(bytes);
+                    let c = generator.generate_with_bonus(guid, progress).unwrap();
+                    !matches!(c.rarity, Rarity::Common)
+                })
+                .count()
+        };
+
+        let zero = count_non_common(0.0);
+        let half = count_non_common(0.5);
+        let full = count_non_common(1.0);
+
+        assert!(
+            zero <= half,
+            "progress 0.0 ({zero}) <= 0.5 ({half}) のレア以上数"
+        );
+        assert!(
+            half <= full,
+            "progress 0.5 ({half}) <= 1.0 ({full}) のレア以上数"
+        );
+        // 最終ボーナスは「明確に」効くこと。0.3 シフトで Common の確率帯がほぼ削れる。
+        assert!(
+            full > zero,
+            "progress 1.0 のレア以上数 ({full}) > 0.0 のレア以上数 ({zero})"
+        );
     }
 }
