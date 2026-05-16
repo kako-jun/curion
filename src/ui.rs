@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 
-use crate::cooldown::{cooldown_progress, remaining_seconds};
+use crate::cooldown::{cooldown_progress, current_rarity_probabilities, remaining_seconds};
 use crate::curion::{Category, Curion, Rarity};
 use crate::generator::CurionGenerator;
 use crate::player::{GameState, LoginBonusReward};
@@ -1349,11 +1349,12 @@ impl App {
                 Constraint::Length(3), // 0: GUID timer
                 Constraint::Length(3), // 1: XP gauge
                 Constraint::Length(1), // 2: Rare cooldown
-                Constraint::Length(2), // 3: stats (total/today/level/COMBO)
-                Constraint::Length(1), // 4: next milestone (Issue #32)
-                Constraint::Length(3), // 5: latest curion
-                Constraint::Length(6), // 6: rarity distribution
-                Constraint::Min(4),    // 7: category distribution
+                Constraint::Length(1), // 3: RARE 出現確率 (Issue #28)
+                Constraint::Length(2), // 4: stats (total/today/level/COMBO)
+                Constraint::Length(1), // 5: next milestone (Issue #32)
+                Constraint::Length(3), // 6: latest curion
+                Constraint::Length(6), // 7: rarity distribution
+                Constraint::Min(4),    // 8: category distribution
             ])
             .split(area);
 
@@ -1415,6 +1416,36 @@ impl App {
             .unfilled_style(Style::default().fg(COLOR_LABEL));
         f.render_widget(cooldown_gauge, chunks[2]);
 
+        // Issue #28: 行動前にレア出現確率を表示
+        // 現在の cooldown progress を反映した「現在の」レアリティ別確率を 1 行で出す。
+        // 例: `RARE出現確率: 12.3% (Common 60.0% / Rare 30.0% / Epic 9.0% / Legendary 1.0%)`
+        let rarity_probs = current_rarity_probabilities(cooldown_p);
+        let rare_pct = rarity_probs.rare_or_higher() * 100.0;
+        let rare_probability_line = Line::from(vec![
+            Span::styled("RARE出現確率: ", Style::default().fg(COLOR_LABEL)),
+            Span::styled(
+                format!("{:.1}%", rare_pct),
+                Style::default()
+                    .fg(if cooldown_p >= 1.0 {
+                        COLOR_EPIC
+                    } else {
+                        COLOR_RARE
+                    })
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(
+                    "  (Common {:.1}% / Rare {:.1}% / Epic {:.1}% / Legendary {:.1}%)",
+                    rarity_probs.common * 100.0,
+                    rarity_probs.rare * 100.0,
+                    rarity_probs.epic * 100.0,
+                    rarity_probs.legendary * 100.0,
+                ),
+                Style::default().fg(COLOR_LABEL),
+            ),
+        ]);
+        f.render_widget(Paragraph::new(rare_probability_line), chunks[3]);
+
         // Basic stats
         let player = &self.game_state.player;
         // COMBO 表示: コンボ中はレアリティ色で強調、5+ は Legendary + 称号アイコン
@@ -1464,7 +1495,7 @@ impl App {
         let stats = Paragraph::new(stats_text)
             .block(unfocused_block("統計"))
             .alignment(Alignment::Left);
-        f.render_widget(stats, chunks[3]);
+        f.render_widget(stats, chunks[4]);
 
         // Issue #32: 次のマイルストーン表示 (= 「あと少し感」を常時演出)
         // XP / 各種実績の残量から最も小さいものを 1 行で出す。
@@ -1489,7 +1520,7 @@ impl App {
             )])
         };
         let milestone_widget = Paragraph::new(vec![milestone_line]).alignment(Alignment::Left);
-        f.render_widget(milestone_widget, chunks[4]);
+        f.render_widget(milestone_widget, chunks[5]);
 
         // Latest curion
         if let Some(curion) = player.latest_curion() {
@@ -1512,7 +1543,7 @@ impl App {
                 ),
             ])];
             let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
-            f.render_widget(latest, chunks[5]);
+            f.render_widget(latest, chunks[6]);
         }
 
         // Rarity distribution
@@ -1543,7 +1574,7 @@ impl App {
             ]));
         }
         let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
-        f.render_widget(rarity_widget, chunks[6]);
+        f.render_widget(rarity_widget, chunks[7]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -1555,7 +1586,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[7]);
+        f.render_widget(category_widget, chunks[8]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
@@ -2644,6 +2675,33 @@ impl App {
                 } else {
                     "???".to_string()
                 };
+
+                // Issue #28: 合成成功確率を LineGauge 風に表示
+                let success_p = self
+                    .game_state
+                    .synthesis_manager
+                    .success_probability_for_recipe(recipe);
+                let success_pct = (success_p * 100.0).round() as u16;
+                let probability_color = if discovered {
+                    COLOR_SUCCESS
+                } else {
+                    COLOR_RARE
+                };
+                let probability_line = Line::from(vec![
+                    Span::raw("    "),
+                    Span::styled("合成確率: ", Style::default().fg(COLOR_LABEL)),
+                    Span::styled(
+                        format!("{success_pct:>3}% "),
+                        Style::default()
+                            .fg(probability_color)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("[{}]", bar(success_p, 10)),
+                        Style::default().fg(probability_color),
+                    ),
+                ]);
+
                 ListItem::new(vec![
                     Line::from(vec![
                         Span::styled(
@@ -2663,6 +2721,7 @@ impl App {
                         ),
                     ]),
                     Line::from(format!("    {} -> {}", recipe.description, preview)),
+                    probability_line,
                     Line::from(""),
                 ])
             })
@@ -2728,13 +2787,32 @@ impl App {
 
                 let discovered_mark = if candidate.is_discovered { "✓" } else { "?" };
 
+                // Issue #28: この候補で実際に通るレシピの成功確率を表示
+                // (first + candidate) が複数レシピにマッチする可能性もあるので、
+                // 「最初にヒットするレシピ」(try_synthesize の挙動と一致) の確率を見せる。
+                let probability_text = self
+                    .first_matching_recipe_for_pair(first_curion, &candidate.noun)
+                    .map(|recipe| {
+                        let p = self
+                            .game_state
+                            .synthesis_manager
+                            .success_probability_for_recipe(recipe);
+                        format!(
+                            " — 合成確率 {:>3}% [{}]",
+                            (p * 100.0).round() as u16,
+                            bar(p, 8)
+                        )
+                    })
+                    .unwrap_or_default();
+
                 ListItem::new(format!(
-                    "{} {} (×{}) {} {}",
+                    "{} {} (×{}) {} {}{}",
                     discovered_mark,
                     candidate.noun,
                     candidate.available_count,
                     result_text,
                     candidate.category.as_str(),
+                    probability_text,
                 ))
                 .style(style)
             })
@@ -2750,6 +2828,32 @@ impl App {
             );
 
         f.render_widget(list, area);
+    }
+
+    /// Issue #28: 1 つ目の材料と 2 つ目候補名詞のペアで最初にマッチするレシピを返す。
+    /// `SynthesisManager::try_synthesize` の挙動 (matching_recipes[0]) と一致する。
+    fn first_matching_recipe_for_pair(
+        &self,
+        first: &crate::curion::Curion,
+        second_noun: &str,
+    ) -> Option<&crate::synthesis::SynthesisRecipe> {
+        // 2 つ目候補のプレースホルダ Curion を作って find_matching_recipes に渡す。
+        // available_count などはチェックされないため、レアリティ/カテゴリは
+        // 「同名詞のうち代表」として collection から拾う。
+        let second_curion = self
+            .game_state
+            .player
+            .collection
+            .iter()
+            .find(|c| c.noun == second_noun)?;
+
+        let ingredients = vec![first.clone(), second_curion.clone()];
+        self.game_state
+            .synthesis_manager
+            .recipe_db()
+            .find_matching_recipes(&ingredients)
+            .into_iter()
+            .next()
     }
 }
 

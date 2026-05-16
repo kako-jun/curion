@@ -135,6 +135,14 @@ Left pane sections:
   - `Player::last_collection_at` (`#[serde(default) = None]`) holds the timestamp;
     `add_curion` refreshes it. `None` (= fresh save / legacy save) is treated as
     fully charged so the very first acquisition starts with the bonus.
+- **RARE 出現確率** (Issue #28):
+  - Cooldown progress 反映済みの現在のレアリティ別出現確率を 1 行で表示
+  - 例: `RARE出現確率: 12.3%  (Common 47.7% / Rare 30.0% / Epic 9.0% / Legendary 1.0%)`
+  - 「レア以上 = Rare + Epic + Legendary」を強調色で出す
+  - 計算ロジックは `crate::cooldown::current_rarity_probabilities(progress)` に閉じ込め、
+    UI は値を読み取って整形するだけ。
+  - generator の roll-shift モデルと整合: 累積確率境界 (0.01 / 0.10 / 0.40) に
+    `0.3 * progress` を加算 → クランプして 4 帯の確率を算出。
 - **Next milestone hint** (Issue #32):
   `next milestone: ⭐ コレクター Lv.3 (あと 4 個)` 形式の 1 行表示。
   XP / 未解除実績 (TotalCount / RarityCount / CategoryCount / SpecificNoun / ConsecutiveLogin
@@ -251,6 +259,17 @@ Left pane sections:
 Right pane behavior:
 - Recipe List: discovered/undiscovered recipe index
 - Synthesize: two-step ingredient selection flow
+
+**Synthesis success probability (Issue #28):**
+- Each recipe row in the Recipe List shows its success probability with a 10-cell bar:
+  - Undiscovered: cyan `合成確率:  78% [████████░░]` (= `discovery_rate`)
+  - Discovered:   green `合成確率: 100% [██████████]` (= 1.0)
+- During Ingredient 2 selection, each candidate is suffixed with the actual recipe's
+  success probability for the (Ingredient 1, candidate) pair, e.g.
+  `... 水 (×3) → 蒸気 元素 — 合成確率 78% [████████░░]`.
+- 確率は `SynthesisRecipe::success_probability(is_discovered)` /
+  `SynthesisManager::success_probability_for_recipe(&recipe)` がロジック層で確定し、
+  UI 層は値を整形するだけ。
 
 ## Key Bindings
 
