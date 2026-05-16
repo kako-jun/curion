@@ -326,8 +326,8 @@ def main() -> None:
                 if length < 30 or length > 90:
                     print(f"[warn] {name}: length={length} (40-80 推奨)")
                 if "flavor" not in entry:
+                    entry["flavor"] = flavor
                     added += 1
-                entry["flavor"] = flavor
             else:
                 missing.append(f"{json_path.name}:{name}")
         json_path.write_text(
