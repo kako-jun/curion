@@ -2004,3 +2004,198 @@ impl App {
         f.render_widget(list, area);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::curion::Curion;
+    use crate::synthesis::{RecipeDatabase, SynthesisManager};
+    use uuid::Uuid;
+
+    fn empty_app() -> App {
+        let recipe_db = RecipeDatabase::load_embedded().expect("Failed to load recipe database");
+        let synthesis_manager = SynthesisManager::new(recipe_db);
+        let game_state = GameState::new(synthesis_manager);
+        App::new(game_state)
+    }
+
+    fn make_curion(noun: &str, category: Category, rarity: Rarity) -> Curion {
+        Curion::new(Uuid::new_v4(), noun.to_string(), category, rarity, 0.5, 0.5)
+    }
+
+    /// 図鑑モード（Collection タブの section 1）に切り替えるヘルパー
+    fn enter_dictionary_mode(app: &mut App) {
+        app.set_tab(Tab::Collection);
+        app.next_section();
+        debug_assert!(app.is_collection_dictionary());
+    }
+
+    #[test]
+    fn test_rarity_rank_ordering() {
+        assert!(rarity_rank(&Rarity::Common) < rarity_rank(&Rarity::Rare));
+        assert!(rarity_rank(&Rarity::Rare) < rarity_rank(&Rarity::Epic));
+        assert!(rarity_rank(&Rarity::Epic) < rarity_rank(&Rarity::Legendary));
+    }
+
+    #[test]
+    fn test_dictionary_category_counts_empty_collection() {
+        let app = empty_app();
+        for category in ALL_CATEGORIES.iter() {
+            let (owned, total) = app.dictionary_category_counts(category);
+            assert_eq!(owned, 0, "empty collection should have owned=0");
+            assert!(
+                total > 0,
+                "category {category:?} should have at least one noun in DB"
+            );
+        }
+    }
+
+    #[test]
+    fn test_dictionary_category_counts_partial() {
+        let mut app = empty_app();
+        let curion = make_curion("テスト名詞A", Category::Animal, Rarity::Common);
+        app.game_state.player.collection.push(curion);
+        let (owned, _total) = app.dictionary_category_counts(&Category::Animal);
+        assert_eq!(owned, 1, "1 種獲得時 owned=1");
+
+        // 他のカテゴリは影響を受けない
+        let (other_owned, _) = app.dictionary_category_counts(&Category::Plant);
+        assert_eq!(other_owned, 0);
+    }
+
+    #[test]
+    fn test_dictionary_category_counts_unique_dedup() {
+        let mut app = empty_app();
+        // 同名詞を 3 個追加
+        for _ in 0..3 {
+            app.game_state.player.collection.push(make_curion(
+                "ダブり名詞",
+                Category::Animal,
+                Rarity::Common,
+            ));
+        }
+        let (owned, _total) = app.dictionary_category_counts(&Category::Animal);
+        assert_eq!(owned, 1, "同名詞 3 個でも unique 集計で owned=1");
+    }
+
+    #[test]
+    fn test_dictionary_total_counts_aggregates_all_categories() {
+        let app = empty_app();
+        let (total_owned, total_total) = app.dictionary_total_counts();
+
+        let mut sum_owned = 0usize;
+        let mut sum_total = 0usize;
+        for category in ALL_CATEGORIES.iter() {
+            let (o, t) = app.dictionary_category_counts(category);
+            sum_owned += o;
+            sum_total += t;
+        }
+        assert_eq!(total_owned, sum_owned);
+        assert_eq!(total_total, sum_total);
+        assert_eq!(total_total, sum_total, "全カテゴリ合計が個別合計と一致する");
+        assert!(total_total > 0);
+    }
+
+    #[test]
+    fn test_dictionary_total_counts_zero_division_safe() {
+        let app = empty_app();
+        let (owned, total) = app.dictionary_total_counts();
+        assert_eq!(owned, 0);
+        assert!(total > 0);
+        // pct を関数化していないので、(owned, total) から手動で計算してパニックしないことを確認
+        let pct = if total == 0 {
+            0.0
+        } else {
+            owned as f64 / total as f64
+        };
+        assert_eq!(pct, 0.0);
+    }
+
+    #[test]
+    fn test_scroll_down_resets_dictionary_scroll_on_category_change() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        app.dictionary_scroll = 7;
+        assert_eq!(app.dictionary_category_index, 0);
+
+        app.scroll_down();
+
+        assert_eq!(app.dictionary_category_index, 1);
+        assert_eq!(
+            app.dictionary_scroll, 0,
+            "カテゴリ移動で scroll が 0 にリセット"
+        );
+    }
+
+    #[test]
+    fn test_scroll_up_stops_at_first_category() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        assert_eq!(app.dictionary_category_index, 0);
+
+        app.scroll_up();
+
+        assert_eq!(app.dictionary_category_index, 0, "先頭で ↑ しても 0 のまま");
+    }
+
+    #[test]
+    fn test_scroll_down_stops_at_last_category() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        let last = ALL_CATEGORIES.len() - 1;
+        app.dictionary_category_index = last;
+
+        app.scroll_down();
+
+        assert_eq!(
+            app.dictionary_category_index, last,
+            "末尾で ↓ しても末尾のまま"
+        );
+    }
+
+    #[test]
+    fn test_page_down_advances_dictionary_scroll() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        let before = app.dictionary_scroll;
+
+        let quit = app
+            .handle_key(KeyCode::PageDown)
+            .expect("handle_key should succeed");
+        assert!(!quit);
+
+        assert_eq!(app.dictionary_scroll, before + 10, "PgDn で +10");
+    }
+
+    #[test]
+    fn test_page_up_saturates_at_zero() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        app.dictionary_scroll = 3;
+
+        let quit = app
+            .handle_key(KeyCode::PageUp)
+            .expect("handle_key should succeed");
+        assert!(!quit);
+
+        assert_eq!(app.dictionary_scroll, 0, "scroll=3 で PgUp なら 0 で飽和");
+    }
+
+    #[test]
+    fn test_page_keys_no_op_outside_dictionary() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Synthesis);
+        app.dictionary_scroll = 5;
+        assert!(!app.is_collection_dictionary());
+
+        let quit = app
+            .handle_key(KeyCode::PageDown)
+            .expect("handle_key should succeed");
+        assert!(!quit);
+
+        assert_eq!(
+            app.dictionary_scroll, 5,
+            "図鑑モード外では PgDn は dictionary_scroll を変えない"
+        );
+    }
+}
