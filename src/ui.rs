@@ -11,6 +11,7 @@ use ratatui::{
     Frame,
 };
 use std::time::{Duration, Instant};
+use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 
 use crate::curion::{Category, Rarity};
@@ -32,6 +33,7 @@ const COLOR_BAR_COLD: Color = Color::Gray;
 const COLOR_SUCCESS: Color = Color::Green;
 const RECENT_ACTIVITY_BUCKETS: usize = 16;
 
+// TODO: Category::iter() (strum) 化を将来検討
 const ALL_CATEGORIES: [Category; 9] = [
     Category::Animal,
     Category::Plant,
@@ -43,6 +45,22 @@ const ALL_CATEGORIES: [Category; 9] = [
     Category::Phenomenon,
     Category::Abstract,
 ];
+
+/// 文字列を表示幅 (East Asian Wide を 2 セル換算) で `target` セルまで右側を空白埋めする。
+/// 既に target 以上の幅があれば、入力をそのまま返す（切り詰めない）。
+fn pad_display(s: &str, target: usize) -> String {
+    let width = UnicodeWidthStr::width(s);
+    if width >= target {
+        s.to_string()
+    } else {
+        let mut out = String::with_capacity(s.len() + (target - width));
+        out.push_str(s);
+        for _ in 0..(target - width) {
+            out.push(' ');
+        }
+        out
+    }
+}
 
 fn rarity_color(rarity: &Rarity) -> Color {
     match rarity {
@@ -1230,6 +1248,7 @@ impl App {
 
         let panes = Layout::default()
             .direction(Direction::Horizontal)
+            // Categories pane width (DESIGN.md spec)
             .constraints([Constraint::Length(22), Constraint::Min(0)])
             .split(inner);
 
@@ -1255,11 +1274,9 @@ impl App {
                 } else {
                     Style::default().fg(Color::White)
                 };
-                ListItem::new(format!(
-                    "{prefix}{name:<6} {owned:>3}/{total:<3}",
-                    name = category.as_str(),
-                ))
-                .style(style)
+                // CJK 混在のためバイト幅ではなく表示セル幅でパディング
+                let name = pad_display(category.as_str(), 8);
+                ListItem::new(format!("{prefix}{name} {owned:>3}/{total:<3}")).style(style)
             })
             .collect();
 
@@ -1294,18 +1311,31 @@ impl App {
         let inner = block.inner(area);
         f.render_widget(block, area);
 
-        // 名詞リストを取得（DBの順序を維持）
-        let nouns = match self.generator.database().get_nouns(category) {
-            Some(nouns) => nouns,
-            None => return,
-        };
-
         let visible_height = inner.height as usize;
         if visible_height == 0 {
             return;
         }
 
-        let scroll = self.dictionary_scroll.min(nouns.len().saturating_sub(1));
+        // 名詞リストを取得（DBの順序を維持）。DB に無いカテゴリは空スライスとして扱う。
+        let nouns: &[crate::generator::NounEntry] = self
+            .generator
+            .database()
+            .get_nouns(category)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        if nouns.is_empty() {
+            let widget = Paragraph::new(vec![Line::from(Span::styled(
+                "(このカテゴリは未対応)",
+                Style::default().fg(COLOR_LABEL),
+            ))]);
+            f.render_widget(widget, inner);
+            return;
+        }
+
+        // 最後のページが収まる位置までクランプ。1ページに収まる場合は 0。
+        let max_scroll = nouns.len().saturating_sub(visible_height);
+        let scroll = self.dictionary_scroll.min(max_scroll);
 
         let lines: Vec<Line> = nouns
             .iter()
@@ -1340,7 +1370,7 @@ impl App {
         if count == 0 {
             // 未獲得
             Line::from(vec![Span::styled(
-                "？？？",
+                pad_display("？？？", 12),
                 Style::default().fg(COLOR_LABEL),
             )])
         } else {
@@ -1354,7 +1384,8 @@ impl App {
 
             Line::from(vec![
                 Span::styled(
-                    format!("{noun_name:<10}"),
+                    // CJK 混在のため表示セル幅でパディング
+                    pad_display(noun_name, 12),
                     Style::default()
                         .fg(Color::White)
                         .add_modifier(Modifier::BOLD),
@@ -1378,7 +1409,10 @@ impl App {
             .get_nouns(category)
             .map(|nouns| nouns.len())
             .unwrap_or(0);
-        let owned = self.collection_unique_count_by_category(category);
+        // DB に存在しない noun を collection が持っていても owned > total にならないようクランプ
+        let owned = self
+            .collection_unique_count_by_category(category)
+            .min(total);
         (owned, total)
     }
 
@@ -2091,7 +2125,6 @@ mod tests {
             sum_total += t;
         }
         assert_eq!(total_owned, sum_owned);
-        assert_eq!(total_total, sum_total);
         assert_eq!(total_total, sum_total, "全カテゴリ合計が個別合計と一致する");
         assert!(total_total > 0);
     }
@@ -2196,6 +2229,73 @@ mod tests {
         assert_eq!(
             app.dictionary_scroll, 5,
             "図鑑モード外では PgDn は dictionary_scroll を変えない"
+        );
+    }
+
+    #[test]
+    fn test_pad_display_ascii_only() {
+        // ASCII のみ: バイト数 == 表示幅
+        assert_eq!(pad_display("abc", 6), "abc   ");
+    }
+
+    #[test]
+    fn test_pad_display_cjk_only() {
+        // CJK のみ: 各文字 2 セル幅。3 文字 = 6 セル -> target 8 で残り 2 セル分の空白
+        let out = pad_display("動植物", 8);
+        assert_eq!(UnicodeWidthStr::width(out.as_str()), 8);
+        assert!(out.starts_with("動植物"));
+        assert!(out.ends_with("  "));
+    }
+
+    #[test]
+    fn test_pad_display_mixed() {
+        // 混在: "abc動物" = 3 + 4 = 7 セル -> target 10 で 3 セル空白
+        let out = pad_display("abc動物", 10);
+        assert_eq!(UnicodeWidthStr::width(out.as_str()), 10);
+        assert!(out.starts_with("abc動物"));
+    }
+
+    #[test]
+    fn test_pad_display_already_over_target() {
+        // 既に target 超え: 切り詰めずそのまま返す
+        let s = "abcdefghij";
+        assert_eq!(pad_display(s, 5), s);
+        // 表示幅で target == width の境界も同様
+        let cjk = "あい"; // 4 セル
+        assert_eq!(pad_display(cjk, 4), cjk);
+    }
+
+    #[test]
+    fn test_dictionary_owned_clamps_when_collection_has_unknown_noun() {
+        let mut app = empty_app();
+        // DB に存在しない名詞を含むコレクションを構築
+        app.game_state.player.collection.push(make_curion(
+            "存在しない名詞ZZZ",
+            Category::Animal,
+            Rarity::Common,
+        ));
+        let (owned, total) = app.dictionary_category_counts(&Category::Animal);
+        assert!(
+            owned <= total,
+            "owned ({owned}) は total ({total}) を超えてはならない (DB 外名詞は集計対象外)"
+        );
+    }
+
+    #[test]
+    fn test_scroll_up_resets_dictionary_scroll_on_category_change() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        // 末尾カテゴリへ移動してから ↑ で戻る
+        let last = ALL_CATEGORIES.len() - 1;
+        app.dictionary_category_index = last;
+        app.dictionary_scroll = 11;
+
+        app.scroll_up();
+
+        assert_eq!(app.dictionary_category_index, last - 1);
+        assert_eq!(
+            app.dictionary_scroll, 0,
+            "↑ でのカテゴリ移動でも scroll が 0 にリセット"
         );
     }
 }
