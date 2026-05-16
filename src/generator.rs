@@ -26,6 +26,10 @@ pub struct NounEntry {
     pub reading: String,
     pub english: String,
     pub weight: f64,
+    /// SF 寓話風のフレーバーテキスト（Issue #22）。
+    /// 既存 JSON との後方互換性のため `#[serde(default)]` で省略可能。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flavor: Option<String>,
 }
 
 /// 名詞データベース
@@ -67,6 +71,19 @@ impl NounDatabase {
     /// カテゴリに対応する名詞リストを取得
     pub fn get_nouns(&self, category: &Category) -> Option<&Vec<NounEntry>> {
         self.entries.get(category)
+    }
+
+    /// 名詞名から該当する NounEntry を検索する（フレーバー参照用）
+    pub fn find_entry(&self, noun_name: &str) -> Option<&NounEntry> {
+        self.entries
+            .values()
+            .flat_map(|v| v.iter())
+            .find(|e| e.name == noun_name)
+    }
+
+    /// 名詞名から該当するフレーバーテキストを取得する（未設定なら None）
+    pub fn flavor_for(&self, noun_name: &str) -> Option<&str> {
+        self.find_entry(noun_name).and_then(|e| e.flavor.as_deref())
     }
 
     /// 統計情報を取得
@@ -271,5 +288,61 @@ mod tests {
         for (category, count) in stats {
             assert!(count > 0, "Category {category:?} has no nouns");
         }
+    }
+
+    /// Issue #22: 全 268 名詞にフレーバーテキストが付与されていることを確認。
+    /// 空でなく、必ず日本語句点 `。` で終わる。
+    #[test]
+    fn test_flavor_field_loaded_for_all_nouns() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+
+        let mut total = 0usize;
+        for (category, nouns) in &db.entries {
+            for entry in nouns {
+                total += 1;
+                let flavor = entry
+                    .flavor
+                    .as_ref()
+                    .unwrap_or_else(|| panic!("{category:?}/{} has no flavor", entry.name));
+                assert!(
+                    !flavor.is_empty(),
+                    "{category:?}/{} flavor is empty",
+                    entry.name
+                );
+                assert!(
+                    flavor.ends_with('。'),
+                    "{category:?}/{} flavor does not end with 。: {flavor:?}",
+                    entry.name,
+                );
+            }
+        }
+        assert_eq!(total, 268, "Expected 268 nouns total, got {total}");
+    }
+
+    /// Issue #22: 既存 JSON（flavor フィールド無し）でも互換性を保つ。
+    #[test]
+    fn test_flavor_field_optional_for_serde_compat() {
+        let json = r#"{
+            "name": "テスト",
+            "reading": "てすと",
+            "english": "test",
+            "weight": 1.0
+        }"#;
+
+        let entry: NounEntry =
+            serde_json::from_str(json).expect("Failed to deserialize legacy NounEntry");
+        assert_eq!(entry.name, "テスト");
+        assert!(
+            entry.flavor.is_none(),
+            "flavor should default to None when omitted"
+        );
+    }
+
+    /// Issue #22: flavor_for ヘルパは存在しない名詞には None を返す。
+    #[test]
+    fn test_flavor_for_helper() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+        assert!(db.flavor_for("魚").is_some(), "魚 should have a flavor");
+        assert!(db.flavor_for("__not_exist__").is_none());
     }
 }

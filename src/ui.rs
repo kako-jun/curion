@@ -62,6 +62,28 @@ fn pad_display(s: &str, target: usize) -> String {
     }
 }
 
+/// 文字列を表示幅 `max_width` セル以内に収まるように切り詰め、超える場合は末尾に `…` を付与する。
+/// `max_width` が 1 以下なら入力をそのまま返す（フォールバック）。
+fn truncate_display(s: &str, max_width: usize) -> String {
+    if max_width <= 1 || UnicodeWidthStr::width(s) <= max_width {
+        return s.to_string();
+    }
+    // 末尾の "…" は表示幅 1
+    let budget = max_width.saturating_sub(1);
+    let mut acc = String::new();
+    let mut used = 0usize;
+    for ch in s.chars() {
+        let w = UnicodeWidthStr::width(ch.to_string().as_str());
+        if used + w > budget {
+            break;
+        }
+        acc.push(ch);
+        used += w;
+    }
+    acc.push('…');
+    acc
+}
+
 fn rarity_color(rarity: &Rarity) -> Color {
     match rarity {
         Rarity::Common => COLOR_COMMON,
@@ -1410,12 +1432,20 @@ impl App {
             return;
         }
 
+        // Issue #22: 上段=コレクションリスト、下段=選択中キュリオンのフレーバーテキスト詳細
+        let split = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(3), Constraint::Length(3)])
+            .split(area);
+        let list_area = split[0];
+        let detail_area = split[1];
+
         let items: Vec<ListItem> = collection
             .iter()
             .rev()
             .enumerate()
             .skip(self.detail_scroll)
-            .take(area.height as usize - 3)
+            .take((list_area.height as usize).saturating_sub(2).max(1))
             .map(|(i, curion)| {
                 let color = rarity_color(&curion.rarity);
                 let stars = rarity_stars(&curion.rarity);
@@ -1459,7 +1489,33 @@ impl App {
             collection.len(),
         )));
 
-        f.render_widget(list, area);
+        f.render_widget(list, list_area);
+
+        // 詳細ペイン: スクロール先頭（= 視野の最上段）にあるキュリオンのフレーバーを表示する
+        let focus_index_rev = self.detail_scroll.min(collection.len().saturating_sub(1));
+        // collection は古い順、表示は逆順 (newest first) なので index 変換
+        let focus_index = collection.len() - 1 - focus_index_rev;
+        let focused = collection.get(focus_index);
+
+        let flavor_text: String = focused
+            .and_then(|c| {
+                self.generator
+                    .database()
+                    .flavor_for(&c.noun)
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| "(フレーバー未登録)".to_string());
+        let title = focused
+            .map(|c| format!("詳細: {}", c.display_name()))
+            .unwrap_or_else(|| "詳細".to_string());
+
+        let paragraph = Paragraph::new(vec![Line::from(vec![Span::styled(
+            flavor_text,
+            Style::default().fg(Color::Gray),
+        )])])
+        .block(unfocused_block(title))
+        .wrap(ratatui::widgets::Wrap { trim: true });
+        f.render_widget(paragraph, detail_area);
     }
 
     fn render_collection_dictionary(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1555,18 +1611,62 @@ impl App {
         }
 
         // 最後のページが収まる位置までクランプ。1ページに収まる場合は 0。
+        // 1 エントリあたり 1〜2 行（獲得済みで flavor 付きなら 2 行）。
+        // 既存の挙動を維持するため、スクロール単位は引き続き「エントリ数」とする。
         let max_scroll = nouns.len().saturating_sub(visible_height);
         let scroll = self.dictionary_scroll.min(max_scroll);
 
-        let lines: Vec<Line> = nouns
-            .iter()
-            .skip(scroll)
-            .take(visible_height)
-            .map(|entry| self.render_dictionary_line(&entry.name))
-            .collect();
+        // 利用可能セル幅（罫線控除済み）から flavor の折り返し閾値を決める
+        let inner_width = inner.width as usize;
+        let mut lines: Vec<Line> = Vec::with_capacity(visible_height);
+        for entry in nouns.iter().skip(scroll) {
+            if lines.len() >= visible_height {
+                break;
+            }
+            let entry_lines = self.render_dictionary_entry(entry, inner_width);
+            for line in entry_lines {
+                if lines.len() >= visible_height {
+                    break;
+                }
+                lines.push(line);
+            }
+        }
 
         let widget = Paragraph::new(lines);
         f.render_widget(widget, inner);
+    }
+
+    /// Issue #22: 図鑑エントリを 1〜2 行で描画する。
+    /// 獲得済みでフレーバーがあれば 2 行目に flavor を表示し、行幅を超える場合は表示セル幅で
+    /// 切り詰めて末尾に `…` を付与する。`inner_width` は描画領域のセル幅。
+    fn render_dictionary_entry(
+        &self,
+        entry: &crate::generator::NounEntry,
+        inner_width: usize,
+    ) -> Vec<Line<'_>> {
+        let main_line = self.render_dictionary_line(&entry.name);
+
+        let acquired = self
+            .game_state
+            .player
+            .collection
+            .iter()
+            .any(|c| c.noun == entry.name);
+
+        let mut out: Vec<Line<'_>> = vec![main_line];
+        if acquired {
+            if let Some(flavor) = entry.flavor.as_deref() {
+                // インデント `  ` の表示幅を引いて切り詰める
+                let indent = "  ";
+                let budget = inner_width.saturating_sub(UnicodeWidthStr::width(indent));
+                let body = truncate_display(flavor, budget);
+                out.push(Line::from(vec![
+                    Span::raw(indent),
+                    Span::styled(body, Style::default().fg(COLOR_LABEL)),
+                ]));
+            }
+        }
+        out
     }
 
     fn render_dictionary_line(&self, noun_name: &str) -> Line<'_> {
@@ -2484,6 +2584,38 @@ mod tests {
         // 表示幅で target == width の境界も同様
         let cjk = "あい"; // 4 セル
         assert_eq!(pad_display(cjk, 4), cjk);
+    }
+
+    // ── Issue #22: truncate_display ─────────────────────────────────────
+
+    #[test]
+    fn test_truncate_with_ellipsis_basic_ascii() {
+        // 半角 ASCII。max_width = 5 なら 4 文字 + "…" で表示幅 5
+        let out = truncate_display("abcdefghij", 5);
+        assert_eq!(out, "abcd…");
+        assert_eq!(UnicodeWidthStr::width(out.as_str()), 5);
+    }
+
+    #[test]
+    fn test_truncate_with_ellipsis_cjk() {
+        // 全角は 1 文字 = 2 セル。max_width = 5 なら 全角 2 + "…"(1) = 5
+        let out = truncate_display("あいうえお", 5);
+        assert_eq!(out, "あい…");
+        assert_eq!(UnicodeWidthStr::width(out.as_str()), 5);
+    }
+
+    #[test]
+    fn test_truncate_noop_when_within_budget() {
+        // 表示幅 <= max_width なら入力そのまま
+        assert_eq!(truncate_display("abc", 10), "abc");
+        assert_eq!(truncate_display("あい", 4), "あい");
+    }
+
+    #[test]
+    fn test_truncate_with_tiny_budget_passthrough() {
+        // max_width <= 1 はフォールバック (切り詰めない)
+        assert_eq!(truncate_display("abcdef", 0), "abcdef");
+        assert_eq!(truncate_display("abcdef", 1), "abcdef");
     }
 
     #[test]
