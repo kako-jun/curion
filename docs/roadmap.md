@@ -64,6 +64,7 @@
 - [x] レア出現予告クールダウン (#25) — 収集後 4 時間でレア確率が段階的に上昇、Dashboard 概要に LineGauge 表示
 - [x] きりの悪い数字設計 (#32) — XP 閾値を非線形テーブル化、実績閾値を割り切れない値にずらし、Dashboard に「next milestone (あと N)」を常時表示
 - [x] 行動前に成功確率を表示する (#28) — Synthesis レシピ一覧と Ingredient 2 候補に「合成確率 NN% [████████░░]」を表示し、Dashboard 概要には cooldown 込みの現在のレアリティ別出現確率を 1 行で表示 (計算は `cooldown::current_rarity_probabilities` / `SynthesisRecipe::success_probability` でロジック層に閉じる)
+- [x] Stats タブ実装 (#26) — レアリティ BarChart (Gray/Cyan/Yellow/Red)、カテゴリ BarChart、時系列タブの直近 30 日 Sparkline。日次集計は `Player::daily_acquisition_counts(days, now)` の純粋関数に閉じてあり、UI 非依存にテスト可能
 - [ ] イベントシステム
 - [ ] ランキング
 

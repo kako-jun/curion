@@ -293,7 +293,7 @@ Right pane layout:
   - Paragraph SESSION: 初回/最終プレイ, 総プレイ時間
   - LineGauge: LOGIN STREAK (Green, X/30 days)
   - LineGauge: TODAY VS BEST (Cyan, today/max)
-  - Sparkline: COLLECTION RATE (16 buckets, Cyan)
+  - Sparkline: DAILY (last 30 days, Cyan) — `Player::daily_acquisition_counts(30, Utc::now())` の戻り値を表示
 ```
 
 ### Synthesis Tab

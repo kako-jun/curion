@@ -431,6 +431,43 @@ impl Player {
         (duration.num_days() + 1).max(1) as u32
     }
 
+    /// 直近 `days` 日分の日別獲得数を返す（昇順、長さは `days`）。
+    ///
+    /// `now` を引数で受け取り、テスト時には固定値で呼び出せるようにしている。
+    /// Issue #26: Stats タブ「時系列」の Sparkline 用ピュア関数。
+    ///
+    /// - 返り値 `v[i]` は「now の Local 日付から `(days - 1 - i)` 日前」の獲得数
+    /// - つまり `v[days - 1]` は今日（now の Local 日付）の獲得数
+    /// - `days == 0` のときは空の `Vec` を返す
+    /// - 集計対象は `now` の Local 日付を起点に過去 `days` 日のウィンドウ内のみ
+    pub fn daily_acquisition_counts(&self, days: usize, now: DateTime<Utc>) -> Vec<u64> {
+        if days == 0 {
+            return Vec::new();
+        }
+
+        let today = now.with_timezone(&Local).date_naive();
+        // window_start = today - (days - 1) 日。今日も含めて days 日分。
+        let offset = (days as i64).saturating_sub(1);
+        let window_start = today - Duration::days(offset);
+
+        let mut buckets = vec![0_u64; days];
+        for curion in &self.collection {
+            let acquired_date = curion.acquired_at.with_timezone(&Local).date_naive();
+            if acquired_date < window_start || acquired_date > today {
+                continue;
+            }
+            let diff = (acquired_date - window_start).num_days();
+            if diff < 0 {
+                continue;
+            }
+            let idx = diff as usize;
+            if idx < days {
+                buckets[idx] += 1;
+            }
+        }
+        buckets
+    }
+
     /// 今日のログインボーナス報酬
     pub fn current_login_bonus_reward(&self) -> LoginBonusReward {
         Self::login_bonus_reward_for_day(self.consecutive_login_days.max(1))
@@ -1783,6 +1820,97 @@ mod tests {
         assert!(
             has_cliffhanger,
             "TotalCount に新仕様のきりの悪い値 (27/51/103/247/501/1001) が無い: {total_counts:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #26: Stats タブ 時系列 / 直近 30 日 Sparkline 用 daily_acquisition_counts
+    // -----------------------------------------------------------------
+
+    /// テスト用 Curion を `acquired_at` 指定で生成。
+    fn dated_curion(acquired_at: DateTime<Utc>) -> Curion {
+        let mut c = Curion::new(
+            uuid::Uuid::new_v4(),
+            "日次テスト".to_string(),
+            Category::Concept,
+            Rarity::Common,
+            50.0,
+            50.0,
+        );
+        c.acquired_at = acquired_at;
+        c
+    }
+
+    /// `now` の Local 日付から `days_ago` 日前の 12:00 (UTC) を返す。
+    fn utc_days_ago(now: DateTime<Utc>, days_ago: i64) -> DateTime<Utc> {
+        let local_today = now.with_timezone(&Local).date_naive();
+        let target = local_today - Duration::days(days_ago);
+        target.and_hms_opt(12, 0, 0).unwrap().and_utc()
+    }
+
+    #[test]
+    fn test_daily_acquisition_counts_basic() {
+        let now = dt_hms(2026, 5, 15, 18, 0, 0);
+        let mut player = Player::new();
+        // 3 日前 / 1 日前 / 今日 にそれぞれ 1 件ずつ
+        player.collection.push(dated_curion(utc_days_ago(now, 3)));
+        player.collection.push(dated_curion(utc_days_ago(now, 1)));
+        player.collection.push(dated_curion(utc_days_ago(now, 0)));
+
+        let buckets = player.daily_acquisition_counts(5, now);
+        assert_eq!(buckets.len(), 5, "5 日分の長さで返る");
+
+        // index 順序: [4 日前, 3 日前, 2 日前, 1 日前, 今日]
+        assert_eq!(buckets[0], 0, "4 日前: 0");
+        assert_eq!(buckets[1], 1, "3 日前: 1");
+        assert_eq!(buckets[2], 0, "2 日前: 0");
+        assert_eq!(buckets[3], 1, "1 日前: 1");
+        assert_eq!(buckets[4], 1, "今日: 1");
+    }
+
+    #[test]
+    fn test_daily_acquisition_counts_empty_collection() {
+        let now = dt_hms(2026, 5, 15, 18, 0, 0);
+        let player = Player::new();
+        // Player::new() 直後でも default の curion を持っていないか確認しつつ
+        // collection が空のときは全ゼロ
+        let buckets = player.daily_acquisition_counts(30, now);
+        assert_eq!(buckets.len(), 30);
+        assert!(
+            buckets.iter().all(|&v| v == 0),
+            "collection 空 → 全 0 が返る: {buckets:?}"
+        );
+    }
+
+    #[test]
+    fn test_daily_acquisition_counts_ignores_outside_window() {
+        let now = dt_hms(2026, 5, 15, 18, 0, 0);
+        let mut player = Player::new();
+        // ウィンドウ外 (31 日前 / 100 日前) と ウィンドウ内 (10 日前) を混在
+        player.collection.push(dated_curion(utc_days_ago(now, 31)));
+        player.collection.push(dated_curion(utc_days_ago(now, 100)));
+        player.collection.push(dated_curion(utc_days_ago(now, 10)));
+
+        let buckets = player.daily_acquisition_counts(30, now);
+        let total: u64 = buckets.iter().sum();
+        assert_eq!(
+            total, 1,
+            "30 日ウィンドウ内に 1 件だけ集計される: {buckets:?}"
+        );
+        // 10 日前 = index 30 - 1 - 10 = 19
+        assert_eq!(buckets[19], 1);
+    }
+
+    #[test]
+    fn test_daily_acquisition_counts_days_zero() {
+        let now = dt_hms(2026, 5, 15, 18, 0, 0);
+        let mut player = Player::new();
+        player.collection.push(dated_curion(utc_days_ago(now, 0)));
+
+        let buckets = player.daily_acquisition_counts(0, now);
+        assert!(
+            buckets.is_empty(),
+            "days = 0 のときは空 Vec を返す: {buckets:?}"
         );
     }
 }
