@@ -169,6 +169,66 @@ as natural decay). Synthesizing a curion does **not** count as natural decay
   and does not interact with lifespan — using a curion for synthesis simply
   retires it before natural decay can occur.
 
+## Evolution Lines (Issue #36)
+
+Selected nouns form 3-stage evolution chains that act as a meta progression
+layer on top of the regular collection. Each chain is data-driven via
+`data/evolutions/lines.json` (embedded with `include_str!`).
+
+### Data shape
+
+```json
+{
+  "id": "fish_dragon",
+  "display_name": "魚 → 蛇 → 龍",
+  "stages": [
+    { "stage": 1, "noun": "魚", "required_count": 10 },
+    { "stage": 2, "noun": "蛇", "required_count": 3 },
+    { "stage": 3, "noun": "龍", "required_count": 1 }
+  ]
+}
+```
+
+- `noun` must match `Curion::noun` exactly (lookup is by string equality).
+- `required_count` on stage N is the **count of stage-N nouns** needed to
+  unlock stage N+1. The final stage's `required_count` represents the
+  number of stage-N curions needed to consider the chain "complete".
+- Stages are listed in ascending `stage` order (1..=N).
+
+### Progress calculation
+
+`EvolutionDatabase::calculate_progress(collection)` is a pure function over
+`&[Curion]`. For each line it returns:
+
+| Field | Meaning |
+|---|---|
+| `current_stage` | Highest stage reached (0 if no member nouns owned) |
+| `next_stage_required` | Count needed at the current stage to unlock the next stage (`None` once complete) |
+| `next_stage_noun` | Noun that unlocks at the next stage (`None` once complete) |
+| `remaining_to_next` | `required - owned`, saturating at 0 |
+| `progress_ratio` | `owned / required`, clamped to `[0.0, 1.0]` |
+
+Reaching stage k (for k ≥ 2) requires the prior stage's `required_count` to
+be met **and** at least one stage-k noun to be owned. Stage 1 is considered
+reached as soon as one stage-1 noun is owned.
+
+### Bundled evolution lines
+
+| ID | Chain |
+|---|---|
+| `fish_dragon` | 魚 (×10) → 蛇 (×3) → 龍 (×1) |
+| `bamboo_pine_forest` | 竹 (×8) → 松 (×3) → 森 (×1) |
+| `fire_flame_phoenix` | 火 (×7) → 炎 (×3) → 鳳凰 (×1) |
+| `water_ice_whale` | 水 (×9) → 氷 (×3) → 鯨 (×1) |
+| `light_star_sun` | 光 (×12) → 星 (×4) → 太陽 (×1) |
+
+### Out of scope (deferred)
+
+- Synthesis-success-triggers-evolution and time-based evolution are out of
+  scope for this issue. The current implementation is purely
+  collection-count driven. The `EvolutionLine` schema is forward-compatible
+  with adding such triggers later.
+
 ## Achievement System
 
 40+ achievements across 4 categories:

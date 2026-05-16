@@ -2,6 +2,7 @@ mod achievement;
 mod cooldown;
 mod curion;
 mod daily_mission;
+mod evolution;
 mod generator;
 mod interactive;
 mod nostr_identity;
