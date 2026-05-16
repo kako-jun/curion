@@ -3,120 +3,140 @@
     "name": "火",
     "reading": "ひ",
     "english": "fire",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "全てを変質させる、最古の興味の粒子。あたためる手にもなり奪う爪にもなる。"
   },
   {
     "name": "水",
     "reading": "みず",
     "english": "water",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "形を持たぬことで形を選び続ける、柔軟な興味の粒子。命と腐敗の両方を運ぶ。"
   },
   {
     "name": "土",
     "reading": "つち",
     "english": "earth",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "始まりと終わりを受け取る、母性の興味を宿す粒子。踏みしめれば思考が落ち着く。"
   },
   {
     "name": "風",
     "reading": "かぜ",
     "english": "wind",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "見えぬまま世界を巡る、伝令の興味を宿す粒子。記憶も匂いも全て運んでくれる。"
   },
   {
     "name": "雷",
     "reading": "かみなり",
     "english": "thunder",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "天から伸びる白い舌、神聖と恐怖の興味を宿す粒子。瞬間に世界を真実で割る。"
   },
   {
     "name": "氷",
     "reading": "こおり",
     "english": "ice",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "時間を凍らせる結晶、保存の興味を宿す粒子。冷たさの内側に静かな秩序を蔵す。"
   },
   {
     "name": "闇",
     "reading": "やみ",
     "english": "darkness",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "光が描けぬ世界を抱える、母性の興味の粒子。見えないからこそ可能性が無限大。"
   },
   {
     "name": "聖",
     "reading": "せい",
     "english": "holy",
-    "weight": 0.4
+    "weight": 0.4,
+    "flavor": "穢れを濾過する透き通った興味の粒子。触れた瞬間に空間の周波数が整っていく。"
   },
   {
     "name": "毒",
     "reading": "どく",
     "english": "poison",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "命を脅かすことで命の輪郭を引き、警告の興味を宿す粒子。薄めれば薬にも転じる。"
   },
   {
     "name": "鉄",
     "reading": "てつ",
     "english": "iron",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "硬さと重さで文明を支えた、骨格の興味を宿す粒子。錆びてなお歴史の証人となる。"
   },
   {
     "name": "銅",
     "reading": "どう",
     "english": "copper",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "緑青に化ける優しさを持つ、時を含む興味の粒子。十年経つほど深みを増していく。"
   },
   {
     "name": "銀",
     "reading": "ぎん",
     "english": "silver",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "月光を結晶化した、清廉な興味の粒子。汚れを写すことで持ち主の運を測る。"
   },
   {
     "name": "金",
     "reading": "きん",
     "english": "gold",
-    "weight": 0.3
+    "weight": 0.3,
+    "flavor": "永遠を象徴する、不変の興味を宿す粒子。元素の中で最も詩人に愛された輝き。"
   },
   {
     "name": "鉛",
     "reading": "なまり",
     "english": "lead",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "重く沈み込む、忍耐の興味を宿す粒子。錬金術師が金を夢見た出発点でもある。"
   },
   {
     "name": "錫",
     "reading": "すず",
     "english": "tin",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "柔らかく錆びにくい、控えめな興味の粒子。器となり酒を清らかに保ってきた。"
   },
   {
     "name": "水銀",
     "reading": "すいぎん",
     "english": "mercury",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "液体である金属、矛盾の興味を宿す粒子。掴めぬ流動性が世界の常識を揺らす。"
   },
   {
     "name": "硫黄",
     "reading": "いおう",
     "english": "sulfur",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "黄色く煙る、変容の興味を宿す粒子。香りそのものが警告と魔術を同時に運ぶ。"
   },
   {
     "name": "炭",
     "reading": "すみ",
     "english": "charcoal",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "燃えた残りこそ価値となる、再生の興味の粒子。黒の中に未来の熱が休んでいる。"
   },
   {
     "name": "塩",
     "reading": "しお",
     "english": "salt",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "結晶化した海、保存と清めの興味を宿す粒子。命の味を境界線として刻みつける。"
   },
   {
     "name": "砂",
     "reading": "すな",
     "english": "sand",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "石が時間に磨かれた終着点、無常の興味の粒子。一粒に世界の縮図が眠っている。"
   }
 ]

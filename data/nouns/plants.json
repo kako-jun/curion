@@ -3,150 +3,175 @@
     "name": "桜",
     "reading": "さくら",
     "english": "cherry blossom",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "短い満開に全てを賭ける、儚さの興味を司る粒子。散り際こそ最大の表現となる。"
   },
   {
     "name": "薔薇",
     "reading": "ばら",
     "english": "rose",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "棘とともに咲く、誇りと愛欲の興味を宿した粒子。色ごとに異なる感情を語る。"
   },
   {
     "name": "蓮",
     "reading": "はす",
     "english": "lotus",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "泥から立ち上がり清浄を保つ、悟りの興味を宿す粒子。水面の上で目覚めを誓う。"
   },
   {
     "name": "竹",
     "reading": "たけ",
     "english": "bamboo",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "節を重ねてしなやかに伸びる、忍耐の興味の粒子。中空の心は折れずに歌う。"
   },
   {
     "name": "松",
     "reading": "まつ",
     "english": "pine",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "千年を超えて変わらぬ、不変の興味を象徴する粒子。緑の常を雪にも貫き通す。"
   },
   {
     "name": "梅",
     "reading": "うめ",
     "english": "plum blossom",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "雪の中に先駆けて咲く、勇気の興味を宿す粒子。寒さに香り立つ最初の春。"
   },
   {
     "name": "菊",
     "reading": "きく",
     "english": "chrysanthemum",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "重なる花弁に皇統を宿す、清廉な興味の粒子。秋の終わりにこそ威厳を放つ。"
   },
   {
     "name": "蘭",
     "reading": "らん",
     "english": "orchid",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "深山にひっそりと咲く、洗練された興味の粒子。気高さは目立たぬ場所で磨かれる。"
   },
   {
     "name": "藤",
     "reading": "ふじ",
     "english": "wisteria",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "垂れ下がる紫房に時を編み込む、優美な興味の粒子。風が来れば波のように揺らぐ。"
   },
   {
     "name": "椿",
     "reading": "つばき",
     "english": "camellia",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "厳冬に首ごと落ちる、潔さの興味を宿す粒子。緋の輝きで雪の静けさを破る。"
   },
   {
     "name": "楓",
     "reading": "かえで",
     "english": "maple",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "秋にだけ赤く燃え上がる、変容の興味を司る粒子。落葉は別れの儀式となる。"
   },
   {
     "name": "柳",
     "reading": "やなぎ",
     "english": "willow",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "風に逆らわず流れる、しなやかな興味の粒子。垂れ下がる枝に水辺の物語を綴る。"
   },
   {
     "name": "檜",
     "reading": "ひのき",
     "english": "cypress",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "千年の社を支え続けた、清浄な興味の粒子。木目に祈りの記憶を刻んでいる。"
   },
   {
     "name": "杉",
     "reading": "すぎ",
     "english": "cedar",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "天を目指して直立する、誠実な興味の粒子。森の柱としてまっすぐ立ち続ける。"
   },
   {
     "name": "蔦",
     "reading": "つた",
     "english": "ivy",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "壁を緑で包み込む、執着と帰属の興味を宿す粒子。時を経るほど絡みが強くなる。"
   },
   {
     "name": "葦",
     "reading": "あし",
     "english": "reed",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "水辺で群れる、しなやかで詩的な興味の粒子。一本一本が世界の囁きを増幅する。"
   },
   {
     "name": "芒",
     "reading": "すすき",
     "english": "pampas grass",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "風になびく銀の穂を持つ、無常の興味を宿す粒子。月夜の野原に光の波を生む。"
   },
   {
     "name": "菫",
     "reading": "すみれ",
     "english": "violet",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "石垣の隙間に咲く、控えめな興味の粒子。小さくとも紫の誇りは確かにある。"
   },
   {
     "name": "桔梗",
     "reading": "ききょう",
     "english": "bellflower",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "五角の星形を秘めた、清らかな興味の粒子。雨の前にだけ蕾を結ぶ予言者。"
   },
   {
     "name": "牡丹",
     "reading": "ぼたん",
     "english": "peony",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "百花の王と呼ばれる、豪奢な興味の粒子。一輪で庭の主役を担う気品を持つ。"
   },
   {
     "name": "百合",
     "reading": "ゆり",
     "english": "lily",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "純白の鐘形に祈りを湛えた、聖なる興味の粒子。香りで空間を浄化していく。"
   },
   {
     "name": "紫陽花",
     "reading": "あじさい",
     "english": "hydrangea",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "土と空の対話で色を変える、移ろいの興味を宿す粒子。雨こそ最大の友となる。"
   },
   {
     "name": "向日葵",
     "reading": "ひまわり",
     "english": "sunflower",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "太陽を追って首を巡らす、明朗な興味の粒子。種の螺旋に宇宙の比率を蔵す。"
   },
   {
     "name": "朝顔",
     "reading": "あさがお",
     "english": "morning glory",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "夏の朝にだけ咲く、勤勉な興味の粒子。蔓を伸ばす方向に未来を読み取る。"
   },
   {
     "name": "彼岸花",
     "reading": "ひがんばな",
     "english": "red spider lily",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "彼岸の頃に突如咲く、境界の興味を宿す粒子。緋の群生は別世界の合図となる。"
   }
 ]

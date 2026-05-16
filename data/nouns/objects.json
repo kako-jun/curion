@@ -3,120 +3,140 @@
     "name": "本",
     "reading": "ほん",
     "english": "book",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "閉じた表紙に世界を畳み込む、知識の興味を宿す粒子。開けば時空が立ち上がる。"
   },
   {
     "name": "剣",
     "reading": "けん",
     "english": "sword",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "意志を鋼に変えた、決断の興味を宿す粒子。刃は持ち主の覚悟と等しく研がれる。"
   },
   {
     "name": "鏡",
     "reading": "かがみ",
     "english": "mirror",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "見られる側を見つめ返す、再帰の興味を宿す粒子。真実は表面ではなく裏にある。"
   },
   {
     "name": "鍵",
     "reading": "かぎ",
     "english": "key",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "閉ざされた可能性を開く、選択の興味を宿す粒子。形は答えそのものを写している。"
   },
   {
     "name": "時計",
     "reading": "とけい",
     "english": "clock",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "時間を刻むことで時間を縛る、矛盾した興味を宿す粒子。針が世界の鼓動を測る。"
   },
   {
     "name": "灯",
     "reading": "ひ",
     "english": "lamp",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "暗闇に小さな秩序を灯す、希望の興味を宿す粒子。揺らぎながら確かに導いてくる。"
   },
   {
     "name": "杯",
     "reading": "さかずき",
     "english": "cup",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "満たされることを待つ、受容の興味を宿す粒子。器であることそのものが祈りとなる。"
   },
   {
     "name": "箱",
     "reading": "はこ",
     "english": "box",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "中身を秘めることで価値を生む、期待の興味を宿す粒子。開ける前が一番眩しい。"
   },
   {
     "name": "扇",
     "reading": "おうぎ",
     "english": "fan",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "風を従えて舞う、所作の興味を宿す粒子。閉じた姿に物語をすべて畳み込む。"
   },
   {
     "name": "琴",
     "reading": "こと",
     "english": "koto",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "弦が空気を震わせる、調和の興味を宿す粒子。指先が触れて初めて魂を露わにする。"
   },
   {
     "name": "笛",
     "reading": "ふえ",
     "english": "flute",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "息を音に変換する、変質の興味を宿す粒子。誰のものでもない響きが世界を貫く。"
   },
   {
     "name": "太鼓",
     "reading": "たいこ",
     "english": "drum",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "皮の張力で大地を叩く、原始の興味を宿す粒子。心音の遠い親戚として鳴り続ける。"
   },
   {
     "name": "筆",
     "reading": "ふで",
     "english": "brush",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "墨と紙の間を取り持つ、表現の興味を宿す粒子。線一本に書き手の呼吸が宿る。"
   },
   {
     "name": "硯",
     "reading": "すずり",
     "english": "inkstone",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "墨をじっくり育てる、思索の興味を宿す粒子。摩擦と水で言葉を整える静かな器。"
   },
   {
     "name": "玉",
     "reading": "たま",
     "english": "jewel",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "球体に光を閉じ込めた、完全性の興味を宿す粒子。手のひらで世界の縮図を回す。"
   },
   {
     "name": "環",
     "reading": "わ",
     "english": "ring",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "終わりと始まりを結び直す、循環の興味を宿す粒子。閉じることで永遠を約束する。"
   },
   {
     "name": "冠",
     "reading": "かんむり",
     "english": "crown",
-    "weight": 0.3
+    "weight": 0.3,
+    "flavor": "頭上に責任を載せる、権威の興味を宿す粒子。輝きより重さこそが王の真実となる。"
   },
   {
     "name": "袋",
     "reading": "ふくろ",
     "english": "bag",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "中を見せずに運ぶ、可能性の興味を宿す粒子。膨らみの形が想像力を試してくる。"
   },
   {
     "name": "糸",
     "reading": "いと",
     "english": "thread",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "見えにくいほど世界を繋ぐ、結縁の興味を宿す粒子。撚れば布、断てば自由となる。"
   },
   {
     "name": "針",
     "reading": "はり",
     "english": "needle",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "極小の鋭さで運命を縫う、精密さの興味を宿す粒子。穴を通すたびに物語が結ばれる。"
   }
 ]

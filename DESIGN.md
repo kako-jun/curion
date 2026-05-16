@@ -197,13 +197,16 @@ Right pane layout:
 
 ```
 所持一覧 (section 0):
-  - Scrollable list of collected curions (newest first)
-  - Each item (3 lines):
+  - Vertical split: top = scrollable list (Constraint::Min(3)), bottom = detail pane (Constraint::Length(3))
+  - List: collected curions (newest first), each item is 3 lines:
     Line 1: #N  ★★  [RARE]  名前                 2025-01-01 12:00
     Line 2:       興味度: [██████░░░░]  60%  美しさ: [████░░░░░░]  40%
     Line 3: (blank separator)
   - Color: rarity color on stars and rarity label
   - Timestamp: DarkGray
+  - Detail pane (Issue #22): unfocused_block("詳細: {noun}") showing the SF flavor text
+    of the curion currently at the top of the visible list. `Wrap { trim: true }` is
+    applied; missing flavor falls back to `(フレーバー未登録)`.
 
 図鑑 (section 1):
   - Two-column layout inside the focused_block("図鑑")
@@ -215,7 +218,13 @@ Right pane layout:
         Acquired: "noun        ★★   [RARE] YYYY-MM-DD ×count"
                   (rarity color on stars+label, white bold noun, DarkGray date,
                    COLOR_SUCCESS count)
-        Locked:   "？？？" (COLOR_LABEL)
+                  Flavor line (Issue #22, only when acquired and flavor is present):
+                  "  {flavor}" (indented 2 cells, COLOR_LABEL = DarkGray).
+                  If the flavor exceeds inner width, it is truncated at display-cell
+                  width and `…` is appended (see `truncate_display`).
+        Locked:   "？？？" (COLOR_LABEL) — flavor hidden until acquired.
+      Each entry consumes 1 or 2 lines. dictionary_scroll counts entries (not lines);
+      the visible window is clipped at line granularity to fit `inner.height`.
   - Key bindings inside this section:
     - ↑/↓: move category focus (resets dictionary_scroll)
     - PgUp/PgDn: scroll noun list within focused category by 10

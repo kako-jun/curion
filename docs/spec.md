@@ -164,14 +164,17 @@ Left pane sections:
 - Scrollable list of all owned curions
 - Display format: `#ID stars [Rarity] Category Name  Date`
 - Attribute bars (interest, beauty) shown inline
+- Bottom detail pane (`Constraint::Length(3)`): SF flavor text of the curion currently at the top of the visible list (Issue #22). Wraps if the flavor exceeds the line width.
 
 **Encyclopedia right pane:**
 - Two-column layout: category list (left) + noun entries for the focused category (right)
 - Each category row shows `name owned/total` (unique count vs. database total)
 - Header above noun entries shows overall progress `総数: owned/total (NN.N%) | カテゴリ: owned/total (NN.N%)`
 - Acquired noun row: `name stars [Rarity] YYYY-MM-DD ×count` (uses highest acquired rarity and latest acquisition date)
-- Unacquired noun row: displays `？？？` only (encourages completion)
+  - Second line (small, `Color::DarkGray`): the noun's flavor text, indented two spaces. If the flavor exceeds the line width it is truncated by display width and `…` is appended (Issue #22).
+- Unacquired noun row: displays `？？？` only (encourages completion). Flavor is hidden until acquired.
 - Noun ordering follows the embedded JSON data order; no rearrangement based on ownership
+- Each entry consumes 1 line (locked) or 2 lines (acquired + flavor). The dictionary scroll unit remains the noun entry count; the visible window is clipped at the line level.
 - Key bindings inside this section:
   - `↑/↓` move focus between categories (resets noun scroll to 0)
   - `PgUp/PgDn` scroll the noun list within the focused category

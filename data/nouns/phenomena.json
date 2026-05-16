@@ -3,120 +3,140 @@
     "name": "朝",
     "reading": "あさ",
     "english": "morning",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "世界が再起動する瞬間に立ち昇る、希望の興味の粒子。最初の光が全てを書き直す。"
   },
   {
     "name": "昼",
     "reading": "ひる",
     "english": "noon",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "陰影が短くなる、活動の興味を宿す粒子。世界が最も明瞭に観測できる時間帯。"
   },
   {
     "name": "夕",
     "reading": "ゆう",
     "english": "evening",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "境界を金色に染める、郷愁の興味を宿す粒子。一日の終わりにだけ宿る独特の質感。"
   },
   {
     "name": "夜",
     "reading": "よる",
     "english": "night",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "活動の音が静まり想念が立ち上がる、内省の興味の粒子。眠りと夢の入り口となる。"
   },
   {
     "name": "春",
     "reading": "はる",
     "english": "spring",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "凍えていた可能性が芽吹く、再生の興味の粒子。気温と一緒に心も解凍されていく。"
   },
   {
     "name": "夏",
     "reading": "なつ",
     "english": "summer",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "命が最大出力で謳歌する、爆発の興味の粒子。汗と影と入道雲が記憶を濃く焼く。"
   },
   {
     "name": "秋",
     "reading": "あき",
     "english": "autumn",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "豊穣と離別が同居する、内省の興味を宿す粒子。葉の色が時間の経過を可視化する。"
   },
   {
     "name": "冬",
     "reading": "ふゆ",
     "english": "winter",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "全てが内側へ向かう、静寂の興味を宿す粒子。眠ることでしか進めぬ深さがある。"
   },
   {
     "name": "嵐",
     "reading": "あらし",
     "english": "storm",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "天が暴れる、解放の興味を宿す粒子。秩序を一度壊して新たな秩序を呼び寄せる。"
   },
   {
     "name": "凪",
     "reading": "なぎ",
     "english": "calm",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "風も波も止まる、緊張の興味を宿す粒子。完全な静けさは何かの予感に似ている。"
   },
   {
     "name": "潮",
     "reading": "しお",
     "english": "tide",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "月の引力で海が呼吸する、周期の興味を宿す粒子。満ちては引く律動が命を運ぶ。"
   },
   {
     "name": "波",
     "reading": "なみ",
     "english": "wave",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "繰り返しでありながら同じものは一つもない、揺らぎの興味の粒子。岸を磨き続ける。"
   },
   {
     "name": "渦",
     "reading": "うず",
     "english": "whirlpool",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "中心へ引き寄せる、求心の興味を宿す粒子。流れの中の特異点として記憶される。"
   },
   {
     "name": "煙",
     "reading": "けむり",
     "english": "smoke",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "燃え尽きた後にだけ立ち昇る、痕跡の興味の粒子。消えながら何かを伝え続ける。"
   },
   {
     "name": "炎",
     "reading": "ほのお",
     "english": "flame",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "形を持たぬまま踊る、変質の興味を宿す粒子。同じ色を二度と再現できない芸術。"
   },
   {
     "name": "露",
     "reading": "つゆ",
     "english": "dew",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "葉先に世界を一滴で映す、儚さの興味の粒子。朝日が昇るまでの限定芸術となる。"
   },
   {
     "name": "霜",
     "reading": "しも",
     "english": "frost",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "夜の冷気が地表に描く、結晶の興味を宿す粒子。歩けば崩れる繊細な美の建築。"
   },
   {
     "name": "雹",
     "reading": "ひょう",
     "english": "hail",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "天から降る氷の弾丸、衝撃の興味を宿す粒子。空が固体を放つという驚きの現象。"
   },
   {
     "name": "雷鳴",
     "reading": "らいめい",
     "english": "thunder",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "光の後に遅れて届く、轟きの興味を宿す粒子。距離を音速で測らせる古い時計。"
   },
   {
     "name": "地震",
     "reading": "じしん",
     "english": "earthquake",
-    "weight": 0.4
+    "weight": 0.4,
+    "flavor": "大地が震えて存在の前提を揺さぶる、根源の興味の粒子。立っている事実を問い直す。"
   }
 ]
