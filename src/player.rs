@@ -283,7 +283,7 @@ impl Player {
 
         // Issue #27: 通算入手回数を採番
         // 合成消費で collection.len() は減ることがあるため、別カウンタで管理する。
-        self.total_acquisitions += 1;
+        self.total_acquisitions = self.total_acquisitions.saturating_add(1);
         curion.acquisition_index = Some(self.total_acquisitions);
 
         // コレクションに追加
