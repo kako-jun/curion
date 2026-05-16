@@ -1213,10 +1213,7 @@ impl App {
             chrono::Utc::now(),
         );
         let (cd_color, cd_label) = if cooldown_p >= 1.0 {
-            (
-                COLOR_EPIC,
-                format!("RARE COOLDOWN [{}] ⚡ レア出現確率上昇中!", bar(1.0, 12)),
-            )
+            (COLOR_EPIC, "RARE COOLDOWN ⚡ レア出現確率上昇中!".to_string())
         } else {
             let secs = remaining_seconds(
                 self.game_state.player.last_collection_at,
@@ -1227,12 +1224,7 @@ impl App {
             let m_rem = mm % 60;
             (
                 COLOR_RARE,
-                format!(
-                    "RARE COOLDOWN [{}] {:>1}:{:02} remaining",
-                    bar(cooldown_p, 12),
-                    hh,
-                    m_rem
-                ),
+                format!("RARE COOLDOWN {hh}:{m_rem:02} remaining"),
             )
         };
         let cooldown_gauge = LineGauge::default()
