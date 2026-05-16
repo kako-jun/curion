@@ -3138,7 +3138,10 @@ mod tests {
             0.5,
             0.5,
         );
-        assert!(match_curion(re, &curion), "「動物 の 犬」が「動物」で match");
+        assert!(
+            match_curion(re, &curion),
+            "「動物 の 犬」が「動物」で match"
+        );
     }
 
     #[test]
