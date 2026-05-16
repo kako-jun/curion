@@ -36,6 +36,35 @@ Each curion has:
 
 Noun data is stored in `data/nouns/*.json` (one file per category).
 
+## Latent Vector Pipeline (Issue #39)
+
+Curion 生成は「文字列から直接 noun を引く」のではなく、潜在ベクトル経由の
+対称パイプラインで行う。
+
+```
+seed bytes  →  SHA-256 × 2 round  →  16-dim f32 latent vector  →  curion
+                                            │
+                                            ├─→  category  (dim 0)
+                                            ├─→  rarity    (dims 1..4)
+                                            ├─→  noun      (nearest noun prototype, 全 16-dim cosine × weight)
+                                            ├─→  interest  (dims 8..12)
+                                            └─→  beauty    (dims 12..16)
+```
+
+- 各 noun には `prototype_for_noun(name)` で deterministic に作られる prototype
+  vector があり、latent との cosine similarity が最大 (× noun.weight) の noun が
+  「最も近いラベル」として採用される。
+- `latent_from_seed(seed)` と `prototype_for_noun(name)` は異なるドメインタグ
+  (`curion:latent:seed:v1` / `curion:latent:noun_prototype:v1`) で hash するので、
+  seed と noun 名が偶然一致しても衝突しない。
+- `CurionGenerator::generate_from_guid(guid)` は `guid.as_bytes()` を seed として
+  この pipeline に委譲する後方互換 API。`generate_with_bonus(guid, bonus)` は
+  Issue #25 の roll-shift モデル (最大 -0.3) を latent パイプライン上で再現する。
+- 将来 Issue #38 の装備効果・消費効果も同じ latent vector の別投影として
+  導出する想定 (curion 本体 = latent、noun名や効果はそのラベル)。
+
+実装: `src/latent.rs` (純粋関数群)、`src/generator.rs::generate_from_seed_bytes_with_bonus`。
+
 ## Synthesis System
 
 Combine two owned curions to create a new one.

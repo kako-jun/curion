@@ -1,10 +1,9 @@
 use crate::curion::{Category, Curion, Rarity};
+use crate::latent::{
+    cosine_similarity, latent_from_seed, project_unit, prototype_for_noun, LatentVector,
+};
 use anyhow::{Context, Result};
-use rand::distributions::{Distribution, WeightedIndex};
-use rand::rngs::StdRng;
-use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -96,6 +95,32 @@ impl NounDatabase {
     }
 }
 
+/// latent から得た [0, 1] の roll 値とクールダウンボーナス進捗から Rarity を決定する。
+///
+/// `bonus_progress > 0.0` のとき roll 値から `bonus_progress * 0.3` を引いて
+/// レア以上に押し上げる (Issue #25 の roll-shift モデル)。
+/// 累積確率は `Legendary -> Epic -> Rare -> Common` の順に判定するので、
+/// roll が小さいほど高レアリティが出る。
+fn determine_rarity_with_bonus(roll_unit: f64, bonus_progress: f64) -> Rarity {
+    let shift = bonus_progress.clamp(0.0, 1.0) * 0.3;
+    let roll = (roll_unit - shift).max(0.0);
+
+    let mut cumulative = 0.0;
+    for rarity in &[
+        Rarity::Legendary,
+        Rarity::Epic,
+        Rarity::Rare,
+        Rarity::Common,
+    ] {
+        cumulative += rarity.probability();
+        if roll < cumulative {
+            return *rarity;
+        }
+    }
+
+    Rarity::Common
+}
+
 /// キュリオン生成器
 pub struct CurionGenerator {
     noun_db: NounDatabase,
@@ -108,14 +133,13 @@ impl CurionGenerator {
         Ok(Self { noun_db })
     }
 
-    /// GUIDからキュリオンを生成（バーコードバトラー的）
+    /// GUIDからキュリオンを生成（バーコードバトラー的）。
     ///
-    /// マッピングルール：
-    /// - ハッシュの0バイト目: カテゴリ決定
-    /// - ハッシュの1〜4バイト目: レアリティ決定
-    /// - ハッシュの5〜8バイト目: 名詞インデックス決定（重み付き）
-    /// - ハッシュの9〜12バイト目: 興味度
-    /// - ハッシュの13〜16バイト目: 美しさ
+    /// 内部的には [`generate_from_seed_bytes`] (Issue #39 の対称パイプライン)
+    /// に委譲する。GUID のバイト列を seed として渡すだけで、latent vector
+    /// 経由で noun/rarity/interest/beauty が決まる。
+    ///
+    /// [`generate_from_seed_bytes`]: Self::generate_from_seed_bytes
     pub fn generate_from_guid(&self, guid: Uuid) -> Result<Curion> {
         self.generate_with_bonus(guid, 0.0)
     }
@@ -129,54 +153,69 @@ impl CurionGenerator {
     /// `bonus_progress == 0.0` のときは [`generate_from_guid`] と完全に同じ Curion を返す
     /// (deterministic, 後方互換)。
     pub fn generate_with_bonus(&self, guid: Uuid, bonus_progress: f64) -> Result<Curion> {
-        // GUIDをSHA-256でハッシュ化
-        let mut hasher = Sha256::new();
-        hasher.update(guid.as_bytes());
-        let hash_result = hasher.finalize();
-
-        // カテゴリを決定（ハッシュの0バイト目）
-        let category = self.determine_category_from_hash(hash_result[0]);
-
-        // レアリティを決定（ハッシュの1〜4バイト目）
-        let rarity_seed = u32::from_le_bytes([
-            hash_result[1],
-            hash_result[2],
-            hash_result[3],
-            hash_result[4],
-        ]);
-        let rarity = self.determine_rarity_with_bonus(rarity_seed, bonus_progress.clamp(0.0, 1.0));
-
-        // 名詞を選択（ハッシュの5〜8バイト目、重み付き）
-        let noun_seed = u32::from_le_bytes([
-            hash_result[5],
-            hash_result[6],
-            hash_result[7],
-            hash_result[8],
-        ]);
-        let noun = self.select_noun_from_category(&category, noun_seed)?;
-
-        // 属性値を生成（ハッシュの9〜16バイト目）
-        let interest_seed = u32::from_le_bytes([
-            hash_result[9],
-            hash_result[10],
-            hash_result[11],
-            hash_result[12],
-        ]);
-        let interest = (interest_seed as f64) / (u32::MAX as f64);
-
-        let beauty_seed = u32::from_le_bytes([
-            hash_result[13],
-            hash_result[14],
-            hash_result[15],
-            hash_result[16],
-        ]);
-        let beauty = (beauty_seed as f64) / (u32::MAX as f64);
-
-        Ok(Curion::new(guid, noun, category, rarity, interest, beauty))
+        self.generate_from_seed_bytes_with_bonus(guid.as_bytes(), guid, bonus_progress)
     }
 
-    /// ハッシュバイトからカテゴリを決定
-    fn determine_category_from_hash(&self, hash_byte: u8) -> Category {
+    /// Issue #39: 任意の seed 文字列から Curion を生成する公開 API。
+    ///
+    /// 内部的に `seed.as_bytes()` を [`latent_from_seed`] に通し、
+    /// 16 次元 latent vector を経由して noun/rarity/interest/beauty を導出する。
+    ///
+    /// `source_guid` は Curion 構造体の `source_guid` フィールドに記録される
+    /// (Player の重複判定や履歴表示で使う)。seed と guid を別に渡せるのは、
+    /// 将来「同じ seed 文字列を別の generation 履歴で複数回 Curion 化したい」
+    /// (= ID は別で、内容は同じ) ような拡張のため。
+    ///
+    /// 現状ではテストとライブラリ的な公開 API としてのみ参照されている
+    /// (P2P 受信や任意文字列入力からの Curion 化など、将来の呼び出し元の前段)。
+    #[allow(dead_code)]
+    pub fn generate_from_seed(&self, seed: &str, source_guid: Uuid) -> Result<Curion> {
+        self.generate_from_seed_bytes_with_bonus(seed.as_bytes(), source_guid, 0.0)
+    }
+
+    /// Issue #39: 任意の seed バイト列から Curion を生成する主要 API。
+    ///
+    /// `seed_bytes` を hash → 16 次元 latent vector → nearest noun prototype の
+    /// 対称パイプラインで Curion を導出する。bonus_progress は rarity の roll-shift
+    /// にのみ作用する (Issue #25 の roll-shift モデルを latent パイプライン上で再現)。
+    pub fn generate_from_seed_bytes_with_bonus(
+        &self,
+        seed_bytes: &[u8],
+        source_guid: Uuid,
+        bonus_progress: f64,
+    ) -> Result<Curion> {
+        let latent = latent_from_seed(seed_bytes);
+
+        // カテゴリ: latent の dim 0 (= [-1, 1]) を [0, 1] に展開し 9 カテゴリに振り分け。
+        let category = self.determine_category(&latent);
+
+        // レアリティ: dims 1..4 を [0, 1] に投影した roll に bonus_progress を反映。
+        let rarity_roll = project_unit(&latent, &[1, 2, 3, 4]);
+        let rarity = determine_rarity_with_bonus(rarity_roll, bonus_progress.clamp(0.0, 1.0));
+
+        // 名詞: latent 全 16 次元と category 内 noun prototype のコサイン類似度 × weight
+        //       が最大になる noun を選ぶ (nearest-neighbor)。
+        let noun = self.nearest_noun_in_category(&category, &latent)?;
+
+        // interest / beauty: 直交する次元帯から投影。
+        let interest = project_unit(&latent, &[8, 9, 10, 11]);
+        let beauty = project_unit(&latent, &[12, 13, 14, 15]);
+
+        Ok(Curion::new(
+            source_guid,
+            noun,
+            category,
+            rarity,
+            interest,
+            beauty,
+        ))
+    }
+
+    /// latent vector から category を決定する。
+    ///
+    /// dim 0 を [0, 1] に展開して `(u * 9).floor()` で 9 カテゴリに振り分け。
+    /// dim 0 = 1.0 (= u = 1.0) のとき index = 9 にならないよう min クランプ。
+    fn determine_category(&self, latent: &LatentVector) -> Category {
         let categories = [
             Category::Animal,
             Category::Plant,
@@ -188,72 +227,44 @@ impl CurionGenerator {
             Category::Phenomenon,
             Category::Abstract,
         ];
-
-        let index = (hash_byte % 9) as usize;
-        categories[index].clone()
+        let u = project_unit(latent, &[0]);
+        let idx = ((u * categories.len() as f64) as usize).min(categories.len() - 1);
+        categories[idx].clone()
     }
 
-    /// シード値からレアリティを決定 (旧 API、テスト互換のため残置)
-    #[allow(dead_code)]
-    fn determine_rarity_from_seed(&self, seed: u32) -> Rarity {
-        self.determine_rarity_with_bonus(seed, 0.0)
-    }
-
-    /// シード値 + クールダウンボーナス進捗からレアリティを決定する。
+    /// category 内の全 noun について cosine_similarity(latent, prototype(noun)) × weight
+    /// を計算し、最大値の noun 名を返す (Issue #39 nearest-neighbor)。
     ///
-    /// `bonus_progress == 0.0` は従来挙動 (`determine_rarity_from_seed` と一致)。
-    /// `bonus_progress > 0.0` のとき roll 値から `bonus_progress * 0.3` を引いて
-    /// レア以上に押し上げる。`bonus_progress == 1.0` のとき最大 -0.3 シフト。
-    fn determine_rarity_with_bonus(&self, seed: u32, bonus_progress: f64) -> Rarity {
-        // シードを0.0〜1.0に正規化
-        let mut roll = (seed as f64) / (u32::MAX as f64);
-
-        // クールダウンボーナス: roll を引き下げることでレア以上の累積確率帯に入りやすくする。
-        // 累積確率は `Legendary -> Epic -> Rare -> Common` の順に判定するので、
-        // roll が小さいほど高レアリティが出る。最大 -0.3 で十分にレアが伸びる。
-        let shift = bonus_progress.clamp(0.0, 1.0) * 0.3;
-        roll = (roll - shift).max(0.0);
-
-        // 累積確率でレアリティを決定
-        let mut cumulative = 0.0;
-        for rarity in &[
-            Rarity::Legendary,
-            Rarity::Epic,
-            Rarity::Rare,
-            Rarity::Common,
-        ] {
-            cumulative += rarity.probability();
-            if roll < cumulative {
-                return *rarity;
-            }
-        }
-
-        Rarity::Common
-    }
-
-    /// カテゴリから名詞を選択（重み付き）
-    fn select_noun_from_category(&self, category: &Category, seed: u32) -> Result<String> {
+    /// weight は noun データに既に入っている「出やすさ」を継続使用。
+    /// similarity は [-1, 1] なので weight と素直に掛け算するとマイナス側で
+    /// 順序が壊れる (weight が大きいほど不利になる)。`(sim + 1.0) * 0.5` で
+    /// [0, 1] に正規化してから weight を掛ける。
+    fn nearest_noun_in_category(
+        &self,
+        category: &Category,
+        latent: &LatentVector,
+    ) -> Result<String> {
         let nouns = self
             .noun_db
             .get_nouns(category)
             .context("Category not found in noun database")?;
-
         if nouns.is_empty() {
             anyhow::bail!("No nouns available for category {category:?}");
         }
 
-        // 重みの配列を作成
-        let weights: Vec<f64> = nouns.iter().map(|n| n.weight).collect();
-
-        // シードからRNGを作成
-        let mut rng = StdRng::seed_from_u64(seed as u64);
-
-        // 重み付き選択
-        let dist =
-            WeightedIndex::new(&weights).context("Failed to create weighted distribution")?;
-        let index = dist.sample(&mut rng);
-
-        Ok(nouns[index].name.clone())
+        let mut best_idx = 0usize;
+        let mut best_score = f64::NEG_INFINITY;
+        for (i, entry) in nouns.iter().enumerate() {
+            let proto = prototype_for_noun(&entry.name);
+            let sim = cosine_similarity(latent, &proto) as f64;
+            let sim_unit = (sim + 1.0) * 0.5;
+            let score = sim_unit * entry.weight;
+            if score > best_score {
+                best_score = score;
+                best_idx = i;
+            }
+        }
+        Ok(nouns[best_idx].name.clone())
     }
 
     /// 名詞データベースへの参照を取得
@@ -441,5 +452,127 @@ mod tests {
             full > zero,
             "progress 1.0 のレア以上数 ({full}) > 0.0 のレア以上数 ({zero})"
         );
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #39 latent vector pipeline (generate_from_seed*)
+    // -----------------------------------------------------------------
+
+    /// Issue #39: 同じ seed bytes (+ 同じ source_guid + 同じ bonus) からは
+    /// 同じ Curion (noun / category / rarity / interest / beauty) が決定論的に生成される。
+    #[test]
+    fn test_generate_from_seed_bytes_deterministic() {
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
+        let guid = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let seed = b"my fixed seed";
+
+        let a = generator
+            .generate_from_seed_bytes_with_bonus(seed, guid, 0.0)
+            .unwrap();
+        let b = generator
+            .generate_from_seed_bytes_with_bonus(seed, guid, 0.0)
+            .unwrap();
+
+        assert_eq!(a.noun, b.noun);
+        assert_eq!(a.category, b.category);
+        assert_eq!(a.rarity, b.rarity);
+        assert!((a.interest - b.interest).abs() < 1e-12);
+        assert!((a.beauty - b.beauty).abs() < 1e-12);
+    }
+
+    /// Issue #39: `generate_from_seed(str, guid)` も同じ seed 文字列で deterministic。
+    #[test]
+    fn test_generate_from_seed_str_deterministic() {
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
+        let guid = Uuid::parse_str("12345678-1234-4234-9234-123456789abc").unwrap();
+
+        let a = generator.generate_from_seed("hello curion", guid).unwrap();
+        let b = generator.generate_from_seed("hello curion", guid).unwrap();
+        assert_eq!(a.noun, b.noun);
+        assert_eq!(a.category, b.category);
+        assert_eq!(a.rarity, b.rarity);
+
+        // 別 seed では (基本的には) 別の結果になる。
+        // 偶然 noun が一致するケースを許容するため、何かしらの属性で差を確認する。
+        let c = generator
+            .generate_from_seed("totally different", guid)
+            .unwrap();
+        let any_differ = a.noun != c.noun
+            || a.category != c.category
+            || a.rarity != c.rarity
+            || (a.interest - c.interest).abs() > 1e-9
+            || (a.beauty - c.beauty).abs() > 1e-9;
+        assert!(
+            any_differ,
+            "different seeds should produce different Curions in some dimension"
+        );
+    }
+
+    /// Issue #39: `generate_from_guid(guid)` は GUID のバイト列を seed として
+    /// `generate_from_seed_bytes_with_bonus` に委譲する。両者の結果は完全一致する
+    /// (= 新しい latent パイプライン経由で動いていることの検証)。
+    #[test]
+    fn test_generate_from_guid_uses_latent_pipeline() {
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
+        for s in &[
+            "550e8400-e29b-41d4-a716-446655440000",
+            "00000000-0000-0000-0000-000000000001",
+            "ffffffff-ffff-4fff-bfff-ffffffffffff",
+        ] {
+            let guid = Uuid::parse_str(s).unwrap();
+            let via_guid = generator.generate_from_guid(guid).unwrap();
+            let via_seed = generator
+                .generate_from_seed_bytes_with_bonus(guid.as_bytes(), guid, 0.0)
+                .unwrap();
+            assert_eq!(via_guid.noun, via_seed.noun);
+            assert_eq!(via_guid.category, via_seed.category);
+            assert_eq!(via_guid.rarity, via_seed.rarity);
+            assert!((via_guid.interest - via_seed.interest).abs() < 1e-12);
+            assert!((via_guid.beauty - via_seed.beauty).abs() < 1e-12);
+        }
+    }
+
+    /// Issue #39: latent パイプライン経由でも全 9 カテゴリが
+    /// (1000 サンプル中) 少なくとも 1 回は出現する (= 偏りで完全に出ないカテゴリがない)。
+    #[test]
+    fn test_latent_pipeline_covers_all_categories() {
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
+        let mut seen: std::collections::HashSet<Category> = std::collections::HashSet::new();
+        for i in 0..1000u32 {
+            let mut bytes = [0u8; 16];
+            bytes[..4].copy_from_slice(&i.to_le_bytes());
+            let guid = Uuid::from_bytes(bytes);
+            let c = generator.generate_from_guid(guid).unwrap();
+            seen.insert(c.category.clone());
+        }
+        assert_eq!(
+            seen.len(),
+            9,
+            "all 9 categories should appear; got {seen:?}"
+        );
+    }
+
+    /// Issue #39: latent パイプライン経由で生成された noun は、必ず
+    /// その Curion の category に属する noun データベースエントリと一致する
+    /// (= nearest-neighbor が「他カテゴリの noun を引いてしまう」事故を起こさない)。
+    #[test]
+    fn test_latent_pipeline_noun_belongs_to_its_category() {
+        let generator = CurionGenerator::new().expect("Failed to load noun database");
+        for i in 0..200u32 {
+            let mut bytes = [0u8; 16];
+            bytes[..4].copy_from_slice(&i.to_le_bytes());
+            let guid = Uuid::from_bytes(bytes);
+            let c = generator.generate_from_guid(guid).unwrap();
+            let nouns = generator
+                .noun_db
+                .get_nouns(&c.category)
+                .expect("category should be present");
+            assert!(
+                nouns.iter().any(|n| n.name == c.noun),
+                "noun {} should be in category {:?}",
+                c.noun,
+                c.category
+            );
+        }
     }
 }
