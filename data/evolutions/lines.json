@@ -1,0 +1,47 @@
+[
+  {
+    "id": "fish_dragon",
+    "display_name": "魚 → 蛇 → 龍",
+    "stages": [
+      { "stage": 1, "noun": "魚", "required_count": 10 },
+      { "stage": 2, "noun": "蛇", "required_count": 3 },
+      { "stage": 3, "noun": "龍", "required_count": 1 }
+    ]
+  },
+  {
+    "id": "bamboo_pine_forest",
+    "display_name": "竹 → 松 → 森",
+    "stages": [
+      { "stage": 1, "noun": "竹", "required_count": 8 },
+      { "stage": 2, "noun": "松", "required_count": 3 },
+      { "stage": 3, "noun": "森", "required_count": 1 }
+    ]
+  },
+  {
+    "id": "fire_flame_phoenix",
+    "display_name": "火 → 炎 → 鳳凰",
+    "stages": [
+      { "stage": 1, "noun": "火", "required_count": 7 },
+      { "stage": 2, "noun": "炎", "required_count": 3 },
+      { "stage": 3, "noun": "鳳凰", "required_count": 1 }
+    ]
+  },
+  {
+    "id": "water_ice_whale",
+    "display_name": "水 → 氷 → 鯨",
+    "stages": [
+      { "stage": 1, "noun": "水", "required_count": 9 },
+      { "stage": 2, "noun": "氷", "required_count": 3 },
+      { "stage": 3, "noun": "鯨", "required_count": 1 }
+    ]
+  },
+  {
+    "id": "light_star_sun",
+    "display_name": "光 → 星 → 太陽",
+    "stages": [
+      { "stage": 1, "noun": "光", "required_count": 12 },
+      { "stage": 2, "noun": "星", "required_count": 4 },
+      { "stage": 3, "noun": "太陽", "required_count": 1 }
+    ]
+  }
+]

@@ -184,6 +184,13 @@ Right pane layout:
       - XP / 未解除実績の残量から最小値を選ぶ (`GameState::next_milestone`)
       - label=Label, ラベル本文=Epic+Bold, `(あと N)`=Legendary+Bold
       - 全達成なら `全マイルストーン達成済み` (Label color)
+    - Paragraph: 進化進捗 (Issue #36, 最大 3 行)
+      - 「あと少し感」順 (`sort_progress_by_urgency`) で最大 3 系列を 1 行ずつ表示
+      - 例: `進化: 魚 → 蛇 → 龍  Stage 2 (あと 蛇 ×2 で次段階)`
+      - 完成: `進化: 魚 → 蛇 → 龍  ⭐ 完成` (Green+Bold)
+      - 残り 1 個は `(あと ○ ×1 で次段階)` を Cyan+Bold で強調
+      - Stage 表示は Stage 0 が Label color、Stage 1+ が Epic 色
+      - 計算は `crate::evolution::EvolutionDatabase::calculate_progress` に閉じる純粋関数
     - Paragraph: 最新キュリオン (rarity color)
     - Paragraph: レアリティ分布 (bar per rarity, per-rarity color)
     - Paragraph: カテゴリ分布 (compact one-liner)

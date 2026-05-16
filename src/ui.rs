@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 use crate::cooldown::{cooldown_progress, current_rarity_probabilities, remaining_seconds};
 use crate::curion::{Category, Curion, Rarity};
+use crate::evolution::{sort_progress_by_urgency, EvolutionDatabase};
 use crate::generator::CurionGenerator;
 use crate::player::{GameState, LoginBonusReward};
 use crate::san::{san_state, SanState, SAN_MAX};
@@ -327,12 +328,16 @@ pub struct App {
     pub filter_error: Option<String>,
     /// コンパイル成功した正規表現。`filter_text` が空 or 無効パターンのときは `None`
     pub compiled_filter: Option<regex::Regex>,
+    /// Issue #36: 段階進化ガチャの埋め込みデータベース。Dashboard の進化進捗表示で参照する。
+    pub evolution_db: EvolutionDatabase,
 }
 
 impl App {
     pub fn new(game_state: GameState) -> Self {
         let generator =
             CurionGenerator::new().unwrap_or_else(|e| panic!("Failed to load noun database: {e}"));
+        let evolution_db = EvolutionDatabase::load_embedded()
+            .unwrap_or_else(|e| panic!("Failed to load evolution database: {e}"));
 
         Self {
             game_state,
@@ -353,6 +358,7 @@ impl App {
             filter_text: String::new(),
             filter_error: None,
             compiled_filter: None,
+            evolution_db,
         }
     }
 
@@ -1434,9 +1440,10 @@ impl App {
                 Constraint::Length(2), // 5: stats (total/today/level/COMBO)
                 Constraint::Length(1), // 6: next milestone (Issue #32)
                 Constraint::Length(1), // 7: lifespan warning (Issue #30)
-                Constraint::Length(3), // 8: latest curion
-                Constraint::Length(6), // 9: rarity distribution
-                Constraint::Min(4),    // 10: category distribution
+                Constraint::Length(3), // 8: evolution progress top 3 (Issue #36)
+                Constraint::Length(3), // 9: latest curion
+                Constraint::Length(6), // 10: rarity distribution
+                Constraint::Min(4),    // 11: category distribution
             ])
             .split(area);
 
@@ -1657,6 +1664,69 @@ impl App {
         };
         f.render_widget(Paragraph::new(lifespan_line), chunks[7]);
 
+        // Issue #36: 段階進化ガチャ — 進化系列のトップ 3 を 1 行ずつ表示。
+        // 「あと N 個で次段階」の期待感を Dashboard に常時演出する。
+        // 計算ロジックは `crate::evolution::EvolutionDatabase::calculate_progress` に閉じ、
+        // UI 側は値を読んで色付けするだけ。
+        let mut evo_progress = self.evolution_db.calculate_progress(&player.collection);
+        sort_progress_by_urgency(&mut evo_progress);
+        let evo_lines: Vec<Line<'_>> = evo_progress
+            .iter()
+            .take(3)
+            .map(|p| {
+                if p.is_complete() {
+                    Line::from(vec![
+                        Span::styled("進化: ", Style::default().fg(COLOR_LABEL)),
+                        Span::styled(
+                            p.line.display_name.clone(),
+                            Style::default().fg(Color::White),
+                        ),
+                        Span::styled(
+                            "  ⭐ 完成",
+                            Style::default()
+                                .fg(Color::Green)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                    ])
+                } else {
+                    // 「あと 1 個」は強調色 (Cyan + Bold)、それ以外は Label color。
+                    let remaining_style = if p.is_almost_complete() {
+                        Style::default().fg(COLOR_RARE).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(COLOR_LABEL)
+                    };
+                    let stage_label = format!("Stage {}", p.current_stage);
+                    let stage_color = if p.current_stage == 0 {
+                        COLOR_LABEL
+                    } else {
+                        COLOR_EPIC
+                    };
+                    let next_text = match (p.next_stage_noun, p.next_stage_required) {
+                        (Some(noun), Some(_req)) => {
+                            format!(" (あと {} ×{} で次段階)", noun, p.remaining_to_next)
+                        }
+                        _ => String::new(),
+                    };
+                    Line::from(vec![
+                        Span::styled("進化: ", Style::default().fg(COLOR_LABEL)),
+                        Span::styled(
+                            p.line.display_name.clone(),
+                            Style::default().fg(Color::White),
+                        ),
+                        Span::raw("  "),
+                        Span::styled(stage_label, Style::default().fg(stage_color)),
+                        Span::styled(next_text, remaining_style),
+                    ])
+                }
+            })
+            .collect();
+        let evo_widget = if evo_lines.is_empty() {
+            Paragraph::new(Line::from(""))
+        } else {
+            Paragraph::new(evo_lines)
+        };
+        f.render_widget(evo_widget, chunks[8]);
+
         // Latest curion
         if let Some(curion) = player.latest_curion() {
             let color = rarity_color(&curion.rarity);
@@ -1678,7 +1748,7 @@ impl App {
                 ),
             ])];
             let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
-            f.render_widget(latest, chunks[8]);
+            f.render_widget(latest, chunks[9]);
         }
 
         // Rarity distribution
@@ -1709,7 +1779,7 @@ impl App {
             ]));
         }
         let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
-        f.render_widget(rarity_widget, chunks[9]);
+        f.render_widget(rarity_widget, chunks[10]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -1721,7 +1791,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[10]);
+        f.render_widget(category_widget, chunks[11]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
