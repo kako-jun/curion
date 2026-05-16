@@ -18,6 +18,23 @@ pub struct SynthesisRecipe {
     pub recipe_type: RecipeType,
 }
 
+impl SynthesisRecipe {
+    /// レシピの成功確率を返す (Issue #28)
+    ///
+    /// - `is_discovered == false`: 初見成功率 (`discovery_rate`) をそのまま返す
+    /// - `is_discovered == true`: 100% (1.0) — 発見済みレシピは確定成功
+    ///
+    /// 計算はロジック層に閉じており、UI 層は本メソッドを呼ぶだけで
+    /// 表示用の確率を得られる。
+    pub fn success_probability(&self, is_discovered: bool) -> f64 {
+        if is_discovered {
+            1.0
+        } else {
+            self.discovery_rate.clamp(0.0, 1.0)
+        }
+    }
+}
+
 /// レシピタイプ
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecipeType {
@@ -331,6 +348,16 @@ impl SynthesisManager {
     pub fn recipe_db(&self) -> &RecipeDatabase {
         &self.recipe_db
     }
+
+    /// 指定レシピの成功確率を返す (Issue #28)
+    ///
+    /// `SynthesisRecipe::success_probability` の薄いラッパー。
+    /// 発見状態を `SynthesisManager` 側で判定して返すので、
+    /// 呼び出し側 (UI) は発見済みかどうかを意識せず確率を取れる。
+    pub fn success_probability_for_recipe(&self, recipe: &SynthesisRecipe) -> f64 {
+        let is_discovered = self.is_discovered(&recipe.id);
+        recipe.success_probability(is_discovered)
+    }
 }
 
 /// 可能な2つ目の材料候補
@@ -398,5 +425,55 @@ mod tests {
             count: 1,
         };
         assert!(!req3.matches(&curion));
+    }
+
+    fn sample_recipe(discovery_rate: f64) -> SynthesisRecipe {
+        SynthesisRecipe {
+            id: "test_recipe".to_string(),
+            name: "テストレシピ".to_string(),
+            description: "for unit test".to_string(),
+            ingredients: vec![],
+            result: SynthesisResult {
+                noun: "結果".to_string(),
+                category: Category::Concept,
+                rarity: Rarity::Rare,
+                synthesis_only: true,
+                special_attributes: HashMap::new(),
+            },
+            discovery_rate,
+            recipe_type: RecipeType::Intuitive,
+        }
+    }
+
+    /// Issue #28: 未発見レシピの成功確率は `discovery_rate` と一致する
+    #[test]
+    fn test_success_probability_undiscovered_matches_discovery_rate() {
+        let recipe = sample_recipe(0.42);
+        assert!((recipe.success_probability(false) - 0.42).abs() < 1e-9);
+    }
+
+    /// Issue #28: 発見済みレシピの成功確率は常に 1.0 (確定成功)
+    #[test]
+    fn test_success_probability_discovered_is_one() {
+        let recipe = sample_recipe(0.10);
+        assert!((recipe.success_probability(true) - 1.0).abs() < 1e-9);
+    }
+
+    /// Issue #28: SynthesisManager 経由でも確率が一貫
+    #[test]
+    fn test_manager_success_probability_for_recipe() {
+        let recipe_db = RecipeDatabase::load_embedded().expect("recipes load");
+        let mut manager = SynthesisManager::new(recipe_db);
+        let recipe_id = manager.recipe_db().all_recipes()[0].id.clone();
+        let recipe = manager.recipe_db().all_recipes()[0].clone();
+
+        // 未発見: discovery_rate と一致
+        let undiscovered_p = manager.success_probability_for_recipe(&recipe);
+        assert!((undiscovered_p - recipe.discovery_rate).abs() < 1e-9);
+
+        // 発見済み: 1.0
+        manager.discover_recipe(recipe_id);
+        let discovered_p = manager.success_probability_for_recipe(&recipe);
+        assert!((discovered_p - 1.0).abs() < 1e-9);
     }
 }

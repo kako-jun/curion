@@ -163,6 +163,11 @@ Right pane layout:
       - full:    `RARE COOLDOWN [████████████] ⚡ レア出現確率上昇中!`
       - 進捗値は `CurionGenerator::generate_with_bonus` に渡されて roll を最大 0.3 だけ引き下げる
       - `Player::last_collection_at` に最終収集時刻を記録 (旧セーブ・新規セーブは None=フルチャージ扱い)
+    - Paragraph: RARE 出現確率 (Issue #28, 1 行)
+      - `RARE出現確率: 12.3%  (Common 47.7% / Rare 30.0% / Epic 9.0% / Legendary 1.0%)`
+      - cooldown progress 反映済み。レア以上は Cyan+Bold (満タン時は Epic 色)、内訳は Label color
+      - 確率は `crate::cooldown::current_rarity_probabilities(progress)` がロジック層で算出
+      - generator の roll-shift モデル (累積境界 0.01 / 0.10 / 0.40 + `0.3*progress` シフト) と整合
     - Paragraph: 総獲得数 / 今日の獲得 / レベル / COMBO (one line, inline)
       - COMBO: N — Common でリセット、Rare 以上で +1
       - 表示色: 0/1=Label, 2=Rare, 3-4=Epic, 5+=Legendary + `🔥 コンボマスター!`
@@ -300,10 +305,14 @@ Right pane layout:
 ```
 レシピ一覧 (section 0):
   - Scrollable list of all recipes
-  - Each item (3 lines):
+  - Each item (4 lines):
     Line 1: ✓/? RecipeName (bold White)
     Line 2:     Description -> ResultName (discovered) or ??? (undiscovered)
-    Line 3: (blank)
+    Line 3:     合成確率: NN% [████████░░] (Issue #28)
+              - undiscovered: Cyan ratio bar + cyan percentage (= discovery_rate)
+              - discovered:   Green 100% + green full bar (確定成功)
+              - 10-cell bar, percentage は `round()` で整数化
+    Line 4: (blank)
   - ✓ = Green (discovered), ? = DarkGray (undiscovered)
 
 合成実行 (section 1):
@@ -316,6 +325,9 @@ Right pane layout:
   Phase B — SelectingSecond:
     Left half: "Selected" (unfocused_block) — first ingredient details in Green
     Right half: "Select Ingredient 2" (focused_block) — candidate list
+      - 各候補行末尾に「合成確率 NN% [████████░░]」を 8-cell bar 付きで表示 (Issue #28)
+      - 確率値は (Ingredient 1, 候補) ペアで最初にマッチするレシピを基準
+      - 計算ロジックは `SynthesisManager::success_probability_for_recipe`
 
   Active selection highlight: bg(Cyan) fg(Black) Bold
   Empty state: fg(Red), "No curions / No possible combinations"

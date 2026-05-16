@@ -10,6 +10,7 @@
 //! 初回プレイヤーがダッシュボードを開いた瞬間にバーが満タンで表示され、
 //! 「最初の 1 個は当たりが出やすい」という体験を担保する。
 
+use crate::curion::Rarity;
 use chrono::{DateTime, Utc};
 
 /// クールダウン満了までの時間 (時間単位)。
@@ -48,6 +49,73 @@ pub fn remaining_seconds(last_collection_at: Option<DateTime<Utc>>, now: DateTim
             (full_secs - elapsed).max(0)
         }
         None => 0,
+    }
+}
+
+/// Issue #28: 現在のレアリティ別出現確率 (cooldown progress 反映済み)。
+///
+/// `crate::generator::CurionGenerator::generate_with_bonus` の roll-shift モデルに整合する。
+/// roll は `[0.0, 1.0)` の一様分布で、`shifted = (roll - 0.3 * progress).max(0.0)`。
+/// 累積確率は Legendary -> Epic -> Rare -> Common の順 (それぞれの基礎確率は 0.01 / 0.09 / 0.30 / 0.60)。
+///
+/// この関数は実機のサンプリングを介さず、確率密度を直接積分して返す。
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RarityProbabilities {
+    pub common: f64,
+    pub rare: f64,
+    pub epic: f64,
+    pub legendary: f64,
+}
+
+impl RarityProbabilities {
+    /// レア以上 (Rare + Epic + Legendary) の合算確率
+    pub fn rare_or_higher(&self) -> f64 {
+        self.rare + self.epic + self.legendary
+    }
+
+    /// レアリティ別確率を順に取り出すイテレータ (UI 用)
+    #[allow(dead_code)]
+    pub fn for_rarity(&self, rarity: Rarity) -> f64 {
+        match rarity {
+            Rarity::Common => self.common,
+            Rarity::Rare => self.rare,
+            Rarity::Epic => self.epic,
+            Rarity::Legendary => self.legendary,
+        }
+    }
+}
+
+/// 現在の cooldown progress を反映したレアリティ別出現確率を返す。
+///
+/// `progress = 0.0` → 基礎確率 (Common 0.60 / Rare 0.30 / Epic 0.09 / Legendary 0.01)。
+/// `progress = 1.0` → 最大シフト (-0.3)。Common 帯が削れ、Legendary 帯が +0.3 シフトの分だけ太る。
+///
+/// 計算は generator.rs の roll-shift モデルから積分で導出:
+/// - P(Legendary) = clamp(0.01 + 0.3 * p, 0, 1)
+/// - P(Epic)      = clamp(0.10 + 0.3 * p, 0, 1) - P(Legendary)
+/// - P(Rare)      = clamp(0.40 + 0.3 * p, 0, 1) - P(Legendary) - P(Epic)
+/// - P(Common)    = 1.0 - その他
+///
+/// 4 値はそれぞれ [0, 1] にクランプされ、総和は 1.0 になる。
+pub fn current_rarity_probabilities(progress: f64) -> RarityProbabilities {
+    let p = progress.clamp(0.0, 1.0);
+    let shift = 0.3 * p;
+
+    // 累積確率の境界 (shift 込み, clamp [0, 1])
+    let cum_legendary = (0.01 + shift).clamp(0.0, 1.0);
+    let cum_epic = (0.10 + shift).clamp(0.0, 1.0);
+    let cum_rare = (0.40 + shift).clamp(0.0, 1.0);
+
+    let legendary = cum_legendary;
+    let epic = (cum_epic - cum_legendary).max(0.0);
+    let rare = (cum_rare - cum_epic).max(0.0);
+    let common = (1.0 - cum_rare).max(0.0);
+
+    RarityProbabilities {
+        common,
+        rare,
+        epic,
+        legendary,
     }
 }
 
@@ -112,6 +180,80 @@ mod tests {
     #[test]
     fn test_rare_multiplier_at_full_is_2() {
         assert!((rare_probability_multiplier(1.0) - 2.0).abs() < 1e-9);
+    }
+
+    // ── Issue #28: current_rarity_probabilities ──────────────────────
+
+    fn sum(p: &RarityProbabilities) -> f64 {
+        p.common + p.rare + p.epic + p.legendary
+    }
+
+    /// progress 0 / 0.5 / 1.0 のいずれでも 4 値の総和は 1.0
+    #[test]
+    fn test_rarity_probabilities_sum_to_one() {
+        for &p in &[0.0_f64, 0.5, 1.0] {
+            let probs = current_rarity_probabilities(p);
+            assert!(
+                (sum(&probs) - 1.0).abs() < 1e-9,
+                "progress={p}: sum={} probs={probs:?}",
+                sum(&probs)
+            );
+        }
+    }
+
+    /// progress=0.0 のとき基礎確率 (60/30/9/1) と一致
+    #[test]
+    fn test_rarity_probabilities_at_zero_matches_base() {
+        let p = current_rarity_probabilities(0.0);
+        assert!((p.common - 0.60).abs() < 1e-9, "common={}", p.common);
+        assert!((p.rare - 0.30).abs() < 1e-9, "rare={}", p.rare);
+        assert!((p.epic - 0.09).abs() < 1e-9, "epic={}", p.epic);
+        assert!(
+            (p.legendary - 0.01).abs() < 1e-9,
+            "legendary={}",
+            p.legendary
+        );
+    }
+
+    /// progress が増えるとレア以上の合算確率は単調増加 (狭義)
+    #[test]
+    fn test_rare_or_higher_increases_with_progress() {
+        let p0 = current_rarity_probabilities(0.0).rare_or_higher();
+        let p_half = current_rarity_probabilities(0.5).rare_or_higher();
+        let p_full = current_rarity_probabilities(1.0).rare_or_higher();
+
+        assert!(p_half > p0, "p_half={p_half} should be > p0={p0}");
+        assert!(
+            p_full > p_half,
+            "p_full={p_full} should be > p_half={p_half}"
+        );
+        // 範囲確認
+        assert!((p0 - 0.40).abs() < 1e-9);
+        assert!(p_full <= 1.0);
+    }
+
+    /// 各値は [0, 1] にクランプされる (progress=1.0 でも負値や 1.0 超は出ない)
+    #[test]
+    fn test_rarity_probabilities_clamp_at_full_progress() {
+        let probs = current_rarity_probabilities(1.0);
+        for v in [probs.common, probs.rare, probs.epic, probs.legendary] {
+            assert!((0.0..=1.0).contains(&v), "value out of range: {v}");
+        }
+        // Legendary 帯は 0.01 + 0.3 = 0.31
+        assert!((probs.legendary - 0.31).abs() < 1e-9);
+        // Common 帯は 0.60 - 0.30 = 0.30
+        assert!((probs.common - 0.30).abs() < 1e-9);
+    }
+
+    /// 範囲外 (負・1超) の progress でも例外なくクランプ動作する
+    #[test]
+    fn test_rarity_probabilities_clamps_out_of_range_progress() {
+        let neg = current_rarity_probabilities(-0.5);
+        let over = current_rarity_probabilities(1.5);
+        let zero = current_rarity_probabilities(0.0);
+        let full = current_rarity_probabilities(1.0);
+        assert_eq!(neg, zero);
+        assert_eq!(over, full);
     }
 
     #[test]
