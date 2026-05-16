@@ -193,12 +193,22 @@ Right pane layout:
   - Timestamp: DarkGray
 
 図鑑 (section 1):
-  - Summary: 総所持数 (Legendary bold)
-  - Per-category: name (Cyan), count, unique count
+  - Two-column layout inside the focused_block("図鑑")
+    - Left (Constraint::Length(22)): unfocused_block("Categories"), one row per category
+      Row format: "> 名前    owned/total" (selected: COLOR_RARE bg, black fg, bold)
+    - Right (Constraint::Min(0)): unfocused_block titled
+      "全体: O/T (P.P%) | カテゴリ: o/t (p.p%)"
+      Body lists each noun in the focused category (DB order):
+        Acquired: "noun        ★★   [RARE] YYYY-MM-DD ×count"
+                  (rarity color on stars+label, white bold noun, DarkGray date,
+                   COLOR_SUCCESS count)
+        Locked:   "？？？" (COLOR_LABEL)
+  - Key bindings inside this section:
+    - ↑/↓: move category focus (resets dictionary_scroll)
+    - PgUp/PgDn: scroll noun list within focused category by 10
   - When feature #31 (Regex Filter) is added:
-    - Filter input line at top
+    - Filter input line at top of right pane
     - Filtered results below
-  - Future locked entries (未入手): fg(DarkGray), name = "???"
 ```
 
 ### Achievements Tab

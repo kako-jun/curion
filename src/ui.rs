@@ -62,6 +62,15 @@ fn rarity_stars(rarity: &Rarity) -> &'static str {
     }
 }
 
+fn rarity_rank(rarity: &Rarity) -> u8 {
+    match rarity {
+        Rarity::Common => 0,
+        Rarity::Rare => 1,
+        Rarity::Epic => 2,
+        Rarity::Legendary => 3,
+    }
+}
+
 fn rarity_label(rarity: &Rarity) -> &'static str {
     match rarity {
         Rarity::Common => "COM",
@@ -202,6 +211,10 @@ pub struct App {
     pub synthesis_state: SynthesisUIState,
     pub selected_first_curion: Option<usize>,
     pub synthesis_scroll: usize,
+    /// 図鑑モードでフォーカス中のカテゴリ index
+    pub dictionary_category_index: usize,
+    /// 図鑑モードで選択カテゴリ内の名詞リスト縦スクロール
+    pub dictionary_scroll: usize,
 }
 
 impl App {
@@ -221,6 +234,8 @@ impl App {
             synthesis_state: SynthesisUIState::SelectingFirst,
             selected_first_curion: None,
             synthesis_scroll: 0,
+            dictionary_category_index: 0,
+            dictionary_scroll: 0,
         }
     }
 
@@ -249,10 +264,16 @@ impl App {
             KeyCode::Char('j') => self.next_section(),
             KeyCode::Up => self.scroll_up(),
             KeyCode::Down => self.scroll_down(),
+            KeyCode::PageUp => self.page_up(),
+            KeyCode::PageDown => self.page_down(),
             KeyCode::Enter => self.handle_enter()?,
             _ => {}
         }
         Ok(false)
+    }
+
+    fn is_collection_dictionary(&self) -> bool {
+        self.current_tab == Tab::Collection && self.current_section_index() == 1
     }
 
     /// 手動セーブ用（SaveManager を持たないので呼び出し元で save してから呼ぶ）
@@ -285,7 +306,13 @@ impl App {
     }
 
     fn scroll_up(&mut self) {
-        if self.current_tab == Tab::Synthesis
+        if self.is_collection_dictionary() {
+            // 図鑑モード: ↑/↓ はカテゴリ移動
+            if self.dictionary_category_index > 0 {
+                self.dictionary_category_index -= 1;
+                self.dictionary_scroll = 0;
+            }
+        } else if self.current_tab == Tab::Synthesis
             && self.synthesis_state == SynthesisUIState::SelectingSecond
         {
             self.synthesis_scroll = self.synthesis_scroll.saturating_sub(1);
@@ -295,7 +322,14 @@ impl App {
     }
 
     fn scroll_down(&mut self) {
-        if self.current_tab == Tab::Synthesis
+        if self.is_collection_dictionary() {
+            // 図鑑モード: ↑/↓ はカテゴリ移動
+            let max_index = ALL_CATEGORIES.len().saturating_sub(1);
+            if self.dictionary_category_index < max_index {
+                self.dictionary_category_index += 1;
+                self.dictionary_scroll = 0;
+            }
+        } else if self.current_tab == Tab::Synthesis
             && self.synthesis_state == SynthesisUIState::SelectingSecond
         {
             self.synthesis_scroll = self.synthesis_scroll.saturating_add(1);
@@ -304,15 +338,25 @@ impl App {
         }
     }
 
+    fn page_up(&mut self) {
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = self.dictionary_scroll.saturating_sub(10);
+        }
+    }
+
+    fn page_down(&mut self) {
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = self.dictionary_scroll.saturating_add(10);
+        }
+    }
+
     fn handle_enter(&mut self) -> Result<()> {
         match self.current_tab {
-            Tab::Achievements => {
-                if self.current_section_index() == 0 {
-                    let achievable = self.game_state.achievement_manager.get_achievable();
-                    if let Some((achievement, _)) = achievable.get(self.detail_scroll) {
-                        let achievement_id = achievement.id.clone();
-                        self.game_state.claim_achievement_reward(&achievement_id);
-                    }
+            Tab::Achievements if self.current_section_index() == 0 => {
+                let achievable = self.game_state.achievement_manager.get_achievable();
+                if let Some((achievement, _)) = achievable.get(self.detail_scroll) {
+                    let achievement_id = achievement.id.clone();
+                    self.game_state.claim_achievement_reward(&achievement_id);
                 }
             }
             Tab::Synthesis => {
@@ -557,6 +601,31 @@ impl App {
 
     fn render_help_line(&self, f: &mut Frame<'_>, area: Rect) {
         let help = match self.current_tab {
+            Tab::Collection if self.current_section_index() == 1 => Line::from(vec![
+                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 左ペイン  "),
+                Span::styled(
+                    " ↑/↓ ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" カテゴリ移動  "),
+                Span::styled(
+                    " PgUp/PgDn ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" 名詞スクロール  "),
+                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 生成  "),
+                Span::styled(
+                    " Tab/1-5 ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" タブ  "),
+                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 保存  "),
+                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 終了"),
+            ]),
             Tab::Achievements if self.current_section_index() == 0 => Line::from(vec![
                 Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
                 Span::raw(" 左ペイン  "),
@@ -1155,38 +1224,175 @@ impl App {
     }
 
     fn render_collection_dictionary(&self, f: &mut Frame<'_>, area: Rect) {
-        let player = &self.game_state.player;
-        let mut lines = vec![
-            Line::from(vec![
-                Span::styled("総所持数", Style::default().fg(COLOR_LABEL)),
-                Span::raw("  "),
-                Span::styled(
-                    format!("{} 個", player.total_acquired()),
-                    Style::default()
-                        .fg(COLOR_LEGENDARY)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-        ];
+        let block = focused_block("図鑑");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
 
-        for category in ALL_CATEGORIES {
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("{:<8}", category.as_str()),
-                    Style::default().fg(COLOR_RARE),
-                ),
-                Span::raw(" "),
-                Span::raw(format!(
-                    "{:>3} 所持 / {:>3} 種類",
-                    self.collection_count_by_category(&category),
-                    self.collection_unique_count_by_category(&category)
-                )),
-            ]));
+        let panes = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Length(22), Constraint::Min(0)])
+            .split(inner);
+
+        self.render_dictionary_categories(f, panes[0]);
+        self.render_dictionary_entries(f, panes[1]);
+    }
+
+    fn render_dictionary_categories(&self, f: &mut Frame<'_>, area: Rect) {
+        let focused_index = self.dictionary_category_index.min(ALL_CATEGORIES.len() - 1);
+
+        let items: Vec<ListItem> = ALL_CATEGORIES
+            .iter()
+            .enumerate()
+            .map(|(i, category)| {
+                let (owned, total) = self.dictionary_category_counts(category);
+                let is_selected = i == focused_index;
+                let prefix = if is_selected { "> " } else { "  " };
+                let style = if is_selected {
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(COLOR_RARE)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+                ListItem::new(format!(
+                    "{prefix}{name:<6} {owned:>3}/{total:<3}",
+                    name = category.as_str(),
+                ))
+                .style(style)
+            })
+            .collect();
+
+        let list = List::new(items).block(unfocused_block("Categories"));
+        f.render_widget(list, area);
+    }
+
+    fn render_dictionary_entries(&self, f: &mut Frame<'_>, area: Rect) {
+        let focused_index = self.dictionary_category_index.min(ALL_CATEGORIES.len() - 1);
+        let category = &ALL_CATEGORIES[focused_index];
+
+        let (total_owned, total_entries) = self.dictionary_total_counts();
+        let total_pct = if total_entries > 0 {
+            (total_owned as f64 / total_entries as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let (cat_owned, cat_total) = self.dictionary_category_counts(category);
+        let cat_pct = if cat_total > 0 {
+            (cat_owned as f64 / cat_total as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let title = format!(
+            "全体: {total_owned}/{total_entries} ({total_pct:.1}%) | {cat_name}: {cat_owned}/{cat_total} ({cat_pct:.1}%)",
+            cat_name = category.as_str(),
+        );
+
+        let block = unfocused_block(title);
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        // 名詞リストを取得（DBの順序を維持）
+        let nouns = match self.generator.database().get_nouns(category) {
+            Some(nouns) => nouns,
+            None => return,
+        };
+
+        let visible_height = inner.height as usize;
+        if visible_height == 0 {
+            return;
         }
 
-        let widget = Paragraph::new(lines).block(focused_block("図鑑"));
-        f.render_widget(widget, area);
+        let scroll = self.dictionary_scroll.min(nouns.len().saturating_sub(1));
+
+        let lines: Vec<Line> = nouns
+            .iter()
+            .skip(scroll)
+            .take(visible_height)
+            .map(|entry| self.render_dictionary_line(&entry.name))
+            .collect();
+
+        let widget = Paragraph::new(lines);
+        f.render_widget(widget, inner);
+    }
+
+    fn render_dictionary_line(&self, noun_name: &str) -> Line<'_> {
+        let player = &self.game_state.player;
+        // この名詞の獲得済みインスタンスを集約
+        let mut count: usize = 0;
+        let mut highest_rarity: Option<Rarity> = None;
+        let mut latest: Option<chrono::DateTime<chrono::Utc>> = None;
+
+        for curion in player.collection.iter().filter(|c| c.noun == noun_name) {
+            count += 1;
+            highest_rarity = Some(match highest_rarity {
+                Some(r) if rarity_rank(&r) >= rarity_rank(&curion.rarity) => r,
+                _ => curion.rarity,
+            });
+            latest = Some(match latest {
+                Some(d) if d >= curion.acquired_at => d,
+                _ => curion.acquired_at,
+            });
+        }
+
+        if count == 0 {
+            // 未獲得
+            Line::from(vec![
+                Span::styled("？？？", Style::default().fg(COLOR_LABEL)),
+            ])
+        } else {
+            let rarity = highest_rarity.unwrap_or(Rarity::Common);
+            let color = rarity_color(&rarity);
+            let stars = rarity_stars(&rarity);
+            let label = rarity_label(&rarity);
+            let date = latest
+                .map(|d| d.format("%Y-%m-%d").to_string())
+                .unwrap_or_else(|| "-".to_string());
+
+            Line::from(vec![
+                Span::styled(
+                    format!("{noun_name:<10}"),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" "),
+                Span::styled(format!("{stars:<4}"), Style::default().fg(color)),
+                Span::raw(" "),
+                Span::styled(format!("[{label:<4}]"), Style::default().fg(color)),
+                Span::raw(" "),
+                Span::styled(date, Style::default().fg(Color::DarkGray)),
+                Span::raw(" "),
+                Span::styled(
+                    format!("×{count}"),
+                    Style::default().fg(COLOR_SUCCESS),
+                ),
+            ])
+        }
+    }
+
+    fn dictionary_category_counts(&self, category: &Category) -> (usize, usize) {
+        let total = self
+            .generator
+            .database()
+            .get_nouns(category)
+            .map(|nouns| nouns.len())
+            .unwrap_or(0);
+        let owned = self.collection_unique_count_by_category(category);
+        (owned, total)
+    }
+
+    fn dictionary_total_counts(&self) -> (usize, usize) {
+        let mut total = 0;
+        let mut owned = 0;
+        for category in ALL_CATEGORIES.iter() {
+            let (o, t) = self.dictionary_category_counts(category);
+            owned += o;
+            total += t;
+        }
+        (owned, total)
     }
 
     fn render_achievements_section(&self, f: &mut Frame<'_>, area: Rect) {

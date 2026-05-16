@@ -146,8 +146,15 @@ Left pane sections:
 - Attribute bars (interest, beauty) shown inline
 
 **Encyclopedia right pane:**
-- Category-by-category total / unique counts
-- Placeholder for future filterable compendium view
+- Two-column layout: category list (left) + noun entries for the focused category (right)
+- Each category row shows `name owned/total` (unique count vs. database total)
+- Header above noun entries shows overall progress `総数: owned/total (NN.N%) | カテゴリ: owned/total (NN.N%)`
+- Acquired noun row: `name stars [Rarity] YYYY-MM-DD ×count` (uses highest acquired rarity and latest acquisition date)
+- Unacquired noun row: displays `？？？` only (encourages completion)
+- Noun ordering follows the embedded JSON data order; no rearrangement based on ownership
+- Key bindings inside this section:
+  - `↑/↓` move focus between categories (resets noun scroll to 0)
+  - `PgUp/PgDn` scroll the noun list within the focused category
 
 ### Tab 3: Achievements
 
@@ -203,7 +210,8 @@ Right pane behavior:
 ### Collection / Achievements / Stats / Synthesis
 | Key | Action |
 |---|---|
-| Up/Down | Scroll or select content in the right pane |
+| Up/Down | Scroll or select content in the right pane (Collection > Encyclopedia: move category focus) |
+| PgUp/PgDn | Collection > Encyclopedia: scroll noun list within focused category |
 | Enter | Claim reward / start synthesis step |
 
 ## Visual Design
