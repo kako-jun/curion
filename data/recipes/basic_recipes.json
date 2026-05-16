@@ -444,5 +444,74 @@
     },
     "discovery_rate": 0.3,
     "recipe_type": "ChaosMix"
+  },
+  {
+    "id": "recipe_016",
+    "name": "禁断の神",
+    "description": "混沌と秩序を無理やり融合させ、神なるものを呼び寄せる",
+    "ingredients": [
+      {
+        "specific_noun": "混沌",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "秩序",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "神",
+      "category": "Abstract",
+      "rarity": "Legendary",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.3,
+        "beauty": 0.3
+      }
+    },
+    "discovery_rate": 0.5,
+    "recipe_type": "Advanced",
+    "success_rate": 0.25,
+    "failure_mode": { "type": "LoseAll" }
+  },
+  {
+    "id": "recipe_017",
+    "name": "黒い太陽",
+    "description": "光と影を強引に結合する。失敗すれば残骸の灰だけが残る",
+    "ingredients": [
+      {
+        "specific_noun": "光",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      },
+      {
+        "specific_noun": "影",
+        "category": null,
+        "rarity": null,
+        "count": 1
+      }
+    ],
+    "result": {
+      "noun": "黒い太陽",
+      "category": "Phenomenon",
+      "rarity": "Epic",
+      "synthesis_only": true,
+      "special_attributes": {
+        "interest": 0.2,
+        "beauty": 0.15
+      }
+    },
+    "discovery_rate": 0.6,
+    "recipe_type": "Conceptual",
+    "success_rate": 0.50,
+    "failure_mode": {
+      "type": "Salvage",
+      "fallback_rarity": "Common"
+    }
   }
 ]

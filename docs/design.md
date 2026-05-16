@@ -458,15 +458,59 @@ Collection Owned List 表示:
   - 寿命なし: `寿命: --`
 ```
 
-### High-risk Synthesis (Issue #35)
+### High-risk Synthesis (Issue #35) — IMPLEMENTED
 
 ```
-New section in Synthesis tab: "高リスク合成"
+高リスクレシピは既存の Synthesis タブにインライン表示する (専用 section は作らない)。
 
-Layout:
-  - Show success probability as Gauge (Red when <30%, Yellow <60%, Green ≥60%)
-  - Failure consequence: "失敗時: 素材ロスト" in Red
-  - Confirm dialog before execution: "本当に合成しますか？ (y/n)"
+Data model (src/synthesis.rs):
+  SynthesisRecipe に 2 フィールドを追加 (どちらも #[serde(default)] で後方互換)
+    - success_rate: f64       // 実行時成功率。発見済みでも毎回 roll
+                              //   省略時 1.0 (既存レシピは挙動不変)
+    - failure_mode: FailureMode
+        - NoLoss                       (保険: 失敗しても素材を失わない、既存互換 = default)
+        - LoseAll                      (素材全消滅)
+        - Salvage { fallback_rarity }  (素材を失い、代わりに低レアの残骸 curion 1 個獲得)
+
+  HIGH_RISK_THRESHOLD = 0.95
+  is_high_risk(): success_rate < 0.95
+  success_probability(is_discovered):
+    base = if is_discovered { 1.0 } else { discovery_rate }
+    return base * success_rate    // discovery と success_rate の AND
+
+Execution flow (try_synthesize / try_synthesize_with_rolls):
+  1. find_matching_recipes → 最初の 1 件を採用
+  2. !is_discovered なら discovery_roll で discovery_rate 判定
+     失敗 → DiscoveryFailed (素材は消費しない、risk roll まで到達しない)
+     成功 → discover_recipe で発見済みに昇格
+  3. success_rate < 1.0 かつ risk_roll > success_rate → HighRiskFailure を返す
+     - failure_mode に応じて lost_ingredients / salvage を構築:
+         NoLoss   → lost_ingredients = [], salvage = None
+         LoseAll  → lost_ingredients = ingredients 全件, salvage = None
+         Salvage  → lost_ingredients = ingredients 全件,
+                    salvage = Some(最初の材料の名詞+カテゴリを継承 + 「〜の残骸」, fallback_rarity)
+  4. 上記をすべて通過 → Success
+
+UI side (handle_synthesis_enter):
+  HighRiskFailure を受け取ったら
+    - lost_ingredients を id 一致で player.collection から削除
+    - salvage があれば add_curion で追加 (収集系ミッション進捗にも乗る)
+    - 失敗モード別トースト:
+        LoseAll → "💥 失敗: <recipe_name> (素材消滅)"
+        Salvage → "💔 失敗: <recipe_name> (残骸を獲得)"
+        NoLoss  → "⚠ 失敗: <recipe_name> (保険発動)"
+    - synthesis_state を SelectingFirst に戻す
+
+Display (render_recipe_list / render_second_ingredient_candidates):
+  - SAFE   バッジ: 緑 (COLOR_SUCCESS)
+  - RISKY  バッジ: 赤 (COLOR_BAR_HOT) + "失敗時: 素材消滅 / 残骸獲得 / 保険" の付記
+  - 合成確率バーも RISKY なら赤系で表示し、視覚的に "危険" を強調
+
+Sample recipes in data/recipes/basic_recipes.json:
+  recipe_016 「禁断の神」 混沌 + 秩序 → 神 (Legendary)
+    discovery_rate 0.5 / success_rate 0.25 / failure_mode LoseAll
+  recipe_017 「黒い太陽」 光 + 影 → 黒い太陽 (Epic)
+    discovery_rate 0.6 / success_rate 0.50 / failure_mode Salvage(Common)
 ```
 
 ### Stage Evolution Gacha (Issue #36)

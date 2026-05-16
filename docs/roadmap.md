@@ -67,6 +67,7 @@
 - [x] Stats タブ実装 (#26) — レアリティ BarChart (Gray/Cyan/Yellow/Red)、カテゴリ BarChart、時系列タブの直近 30 日 Sparkline。日次集計は `Player::daily_acquisition_counts(days, now)` の純粋関数に閉じてあり、UI 非依存にテスト可能
 - [x] SAN 値パラメータ (#29) — 正気度 (0.0..=100.0) を `Player::san` に追加。Common +0.5 / Rare +2.0 / Epic +5.0 / Legendary +15.0 / 合成成功 +3.0 / 時間経過 -0.1/min。Dashboard 概要に LineGauge を常時表示し、>= 80 Cyan / 50..80 Yellow / 30..50 Red / < 30 Magenta + `⚠ 異常状態` で警告。変動ロジックは `src/san.rs` のピュア関数 (`san_gain_for_acquisition` / `apply_decay` / `apply_gain` / `san_state`) に閉じて UI 非依存
 - [x] 寿命システム (#30) — レアリティ別寿命 (Common 3 / Rare 7 / Epic 14 / Legendary 30 日) を `Curion::lifespan_days: Option<u32>` で保持し、起動時に `Player::prune_expired` で期限切れキュリオンを自動削除。削除分は TUI トースト (6 秒) / --plain / interactive モードで通知。Collection 一覧の各行に残り寿命を表示 (残 ≤ 0 = 赤、≤ 3 = 黄、それ以上 = グレー、寿命なし = `--`)。Dashboard 概要に「⚠ 期限切れ間近 (残り 1 日以下): N 個」を常時表示 (0 個なら空行)。合成消費は寿命を見ず「使ってあげること = 供養」として扱う。旧セーブは `lifespan_days = None` で復元され永遠扱い (後方互換)
+- [x] 高リスク合成 (#35) — `SynthesisRecipe` に `success_rate` (実行時成功率、デフォルト 1.0) と `failure_mode` (`NoLoss` / `LoseAll` / `Salvage{fallback_rarity}`、デフォルト `NoLoss`) を追加。発見済みでも `success_rate < 1.0` なら毎回 risk roll が走り、失敗時は `SynthesisAttemptResult::HighRiskFailure` を返す。`try_synthesize_with_rolls(ingredients, discovery_roll, risk_roll)` を内部 API として切り出し、UI 非依存にテスト可能。Synthesis レシピ一覧と Ingredient 2 候補に `[SAFE]` / `[RISKY:失敗時挙動]` バッジを併記し、`success_probability(is_discovered)` は discovery × success_rate の積を返す。`basic_recipes.json` に「禁断の神」(混沌+秩序、25% LoseAll Legendary) と「黒い太陽」(光+影、50% Salvage Common) を追加
 - [ ] イベントシステム
 - [ ] ランキング
 

@@ -650,6 +650,45 @@ impl App {
                                         self.save_message =
                                             Some(("No recipe found".to_string(), Instant::now()));
                                     }
+                                    // Issue #35: 高リスク合成失敗の処理。
+                                    // - lost_ingredients を collection から id 一致で除去
+                                    // - salvage curion があれば add_curion で追加 (Curion 加算系
+                                    //   ミッションも record_curion_acquired 経由で進捗する)
+                                    // - 失敗モードに応じた赤系トーストを表示
+                                    SynthesisAttemptResult::HighRiskFailure {
+                                        recipe_name,
+                                        lost_ingredients,
+                                        salvage,
+                                        failure_mode,
+                                    } => {
+                                        for ci in &lost_ingredients {
+                                            self.game_state
+                                                .player
+                                                .collection
+                                                .retain(|c| c.id != ci.id);
+                                        }
+                                        if let Some(s) = salvage {
+                                            self.game_state.add_curion(s);
+                                            self.flush_daily_mission_rewards();
+                                        }
+                                        let msg = match failure_mode {
+                                            crate::synthesis::FailureMode::LoseAll => {
+                                                format!("💥 失敗: {recipe_name} (素材消滅)")
+                                            }
+                                            crate::synthesis::FailureMode::Salvage { .. } => {
+                                                format!("💔 失敗: {recipe_name} (残骸を獲得)")
+                                            }
+                                            crate::synthesis::FailureMode::NoLoss => {
+                                                format!("⚠ 失敗: {recipe_name} (保険発動)")
+                                            }
+                                        };
+                                        self.save_message = Some((msg, Instant::now()));
+
+                                        self.synthesis_state = SynthesisUIState::SelectingFirst;
+                                        self.selected_first_curion = None;
+                                        self.synthesis_scroll = 0;
+                                        self.detail_scroll = 0;
+                                    }
                                 }
                             }
                         }
@@ -2783,18 +2822,44 @@ impl App {
                 };
 
                 // Issue #28: 合成成功確率を LineGauge 風に表示
+                // Issue #35: 高リスクレシピは赤系で SAFE/RISKY バッジを併記する
                 let success_p = self
                     .game_state
                     .synthesis_manager
                     .success_probability_for_recipe(recipe);
                 let success_pct = (success_p * 100.0).round() as u16;
-                let probability_color = if discovered {
+                let is_risky = recipe.is_high_risk();
+                let probability_color = if is_risky {
+                    COLOR_BAR_HOT
+                } else if discovered {
                     COLOR_SUCCESS
                 } else {
                     COLOR_RARE
                 };
+                let (badge_text, badge_color) = if is_risky {
+                    ("[RISKY]", COLOR_BAR_HOT)
+                } else {
+                    ("[SAFE]", COLOR_SUCCESS)
+                };
+                // 失敗時挙動の説明文 (RISKY のみ表示)
+                let failure_hint = if is_risky {
+                    match &recipe.failure_mode {
+                        crate::synthesis::FailureMode::LoseAll => " 失敗時: 素材消滅",
+                        crate::synthesis::FailureMode::Salvage { .. } => " 失敗時: 残骸獲得",
+                        crate::synthesis::FailureMode::NoLoss => " 失敗時: 保険",
+                    }
+                } else {
+                    ""
+                };
                 let probability_line = Line::from(vec![
                     Span::raw("    "),
+                    Span::styled(
+                        badge_text,
+                        Style::default()
+                            .fg(badge_color)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw(" "),
                     Span::styled("合成確率: ", Style::default().fg(COLOR_LABEL)),
                     Span::styled(
                         format!("{success_pct:>3}% "),
@@ -2806,6 +2871,7 @@ impl App {
                         format!("[{}]", bar(success_p, 10)),
                         Style::default().fg(probability_color),
                     ),
+                    Span::styled(failure_hint, Style::default().fg(COLOR_BAR_HOT)),
                 ]);
 
                 ListItem::new(vec![
@@ -2896,6 +2962,7 @@ impl App {
                 // Issue #28: この候補で実際に通るレシピの成功確率を表示
                 // (first + candidate) が複数レシピにマッチする可能性もあるので、
                 // 「最初にヒットするレシピ」(try_synthesize の挙動と一致) の確率を見せる。
+                // Issue #35: 高リスクレシピは [RISKY] バッジ + 失敗時挙動も併記。
                 let probability_text = self
                     .first_matching_recipe_for_pair(first_curion, &candidate.noun)
                     .map(|recipe| {
@@ -2903,10 +2970,21 @@ impl App {
                             .game_state
                             .synthesis_manager
                             .success_probability_for_recipe(recipe);
+                        let badge = if recipe.is_high_risk() {
+                            let mode = match &recipe.failure_mode {
+                                crate::synthesis::FailureMode::LoseAll => "素材消滅",
+                                crate::synthesis::FailureMode::Salvage { .. } => "残骸獲得",
+                                crate::synthesis::FailureMode::NoLoss => "保険",
+                            };
+                            format!(" [RISKY:{mode}]")
+                        } else {
+                            " [SAFE]".to_string()
+                        };
                         format!(
-                            " — 合成確率 {:>3}% [{}]",
+                            " — 合成確率 {:>3}% [{}]{}",
                             (p * 100.0).round() as u16,
-                            bar(p, 8)
+                            bar(p, 8),
+                            badge,
                         )
                     })
                     .unwrap_or_default();

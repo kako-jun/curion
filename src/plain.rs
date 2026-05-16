@@ -143,6 +143,32 @@ pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Resu
                 SynthesisAttemptResult::NoRecipe => {
                     println!("[NO RECIPE] no matching recipe for {a_noun} + {b_noun}");
                 }
+                SynthesisAttemptResult::HighRiskFailure {
+                    recipe_name,
+                    lost_ingredients,
+                    salvage,
+                    failure_mode,
+                } => {
+                    // Issue #35: 高リスク失敗。LoseAll/Salvage の場合は素材を削除する。
+                    // インデックスベースで削除すると順序が変わるので、id ベースで除去する。
+                    for ci in &lost_ingredients {
+                        game_state.player.collection.retain(|c| c.id != ci.id);
+                    }
+                    let mode_label = match &failure_mode {
+                        crate::synthesis::FailureMode::LoseAll => "lose_all",
+                        crate::synthesis::FailureMode::Salvage { .. } => "salvage",
+                        crate::synthesis::FailureMode::NoLoss => "no_loss",
+                    };
+                    println!(
+                        "[HIGH-RISK FAIL] {} + {} => x (recipe: {}, mode: {})",
+                        a_noun, b_noun, recipe_name, mode_label
+                    );
+                    if let Some(s) = salvage {
+                        println!("  Salvage: {} [{}]", s.noun, rarity_tag(s.rarity),);
+                        game_state.add_curion(s);
+                    }
+                    save_manager.save(&game_state)?;
+                }
             }
         }
 
