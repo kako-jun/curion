@@ -27,6 +27,43 @@ pub struct SynthesisRecipe {
     /// 既存レシピの挙動 (素材は消費しない / 副作用なし) と一致する。
     #[serde(default)]
     pub failure_mode: FailureMode,
+
+    /// Issue #37: レシピの公開状態。プレイヤーがまだ発見していない時の
+    /// 表示制御に使う。`#[serde(default)]` で `Public` 扱いになるので、
+    /// 既存レシピ JSON は変更不要で完全公開のまま残る。
+    ///
+    /// - `Public`:  材料も結果も最初から完全に見える
+    /// - `Partial`: 一部の材料だけ見える ("水 + ? → ?")
+    /// - `Unknown`: 存在だけ分かる ("未確認レシピ #07")
+    ///
+    /// 発見済みになったレシピは `visibility` に関わらず常に完全表示する。
+    #[serde(default)]
+    pub visibility: RecipeVisibility,
+}
+
+/// Issue #37: レシピの公開状態。未発見時のヒント量を 3 段階で制御する。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum RecipeVisibility {
+    /// 材料も結果も最初から完全公開。既存レシピの挙動。
+    #[default]
+    Public,
+    /// 材料の一部だけ見える。最低 1 つの材料は名前表示され、残りと結果は `?` で隠す。
+    Partial,
+    /// 存在しか分からない。全てが `???`、レシピ自体は番号で識別。
+    Unknown,
+}
+
+/// Issue #37: プレイヤーが手元のキュリオンでこのレシピの材料要件を
+/// どこまで満たしているかを表す進捗。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IngredientProgress {
+    /// 充足した `IngredientRequirement` の数
+    pub satisfied: usize,
+    /// 必要な `IngredientRequirement` の数
+    pub total: usize,
+    /// 全要件を満たしているか (= `satisfied == total`)
+    pub all_satisfied: bool,
 }
 
 fn default_success_rate() -> f64 {
@@ -75,6 +112,119 @@ impl SynthesisRecipe {
     pub fn is_high_risk(&self) -> bool {
         self.success_rate < HIGH_RISK_THRESHOLD
     }
+
+    /// Issue #37: プレイヤーの所持キュリオン `collection` で、このレシピの
+    /// 材料要件を何個満たしているかを返す。`count > 1` の要件も「個数まで揃って 1 充足」とカウントする。
+    ///
+    /// 内部実装は `RecipeDatabase::can_synthesize` と同じ材料一致ロジックを使うが、
+    /// 「途中で打ち切らずに全要件を見る」点だけが異なる。
+    pub fn ingredient_progress(&self, collection: &[Curion]) -> IngredientProgress {
+        let mut remaining = collection.to_vec();
+        let total = self.ingredients.len();
+        let mut satisfied = 0;
+
+        for requirement in &self.ingredients {
+            let mut found_count = 0;
+            remaining.retain(|curion| {
+                if found_count < requirement.count && requirement.matches(curion) {
+                    found_count += 1;
+                    false
+                } else {
+                    true
+                }
+            });
+            if found_count >= requirement.count {
+                satisfied += 1;
+            }
+        }
+
+        IngredientProgress {
+            satisfied,
+            total,
+            all_satisfied: satisfied == total && total > 0,
+        }
+    }
+
+    /// Issue #37: あと何種類の材料要件を満たせば合成できるかを返す。
+    /// (= `total - satisfied`)
+    pub fn remaining_categories(&self, collection: &[Curion]) -> usize {
+        let p = self.ingredient_progress(collection);
+        p.total.saturating_sub(p.satisfied)
+    }
+
+    /// Issue #37: レシピ一覧に出す 1 行表示用ラベルを返す。
+    ///
+    /// - `is_discovered == true` なら `visibility` に関係なく完全表示 ("水 + 火 → 蒸気")
+    /// - `Public` も完全表示
+    /// - `Partial` は最初の材料を名前で見せ、残り材料と結果を `?` で隠す
+    /// - `Unknown` は全部 `???` + `未確認レシピ #{index:02}` で識別
+    ///
+    /// `index` は呼び出し側 (UI) が一覧上の表示順から渡す 0-origin の値。
+    /// `Unknown` のラベルは `#01` から表示されるよう内部で +1 する。
+    pub fn display_label(
+        &self,
+        _collection: &[Curion],
+        is_discovered: bool,
+        index: usize,
+    ) -> String {
+        // 発見済みは常に完全表示。
+        if is_discovered || self.visibility == RecipeVisibility::Public {
+            return format!(
+                "{} → {}",
+                join_ingredient_labels(&self.ingredients, &[]),
+                self.result.noun
+            );
+        }
+
+        match self.visibility {
+            RecipeVisibility::Public => unreachable!("handled above"),
+            RecipeVisibility::Partial => {
+                // 最初の材料だけ名前表示、残りは `?`、結果も `?` で隠す。
+                // 「最低 1 つは見せて残りを隠す」戦略。
+                let mut parts: Vec<String> = Vec::with_capacity(self.ingredients.len());
+                for (i, req) in self.ingredients.iter().enumerate() {
+                    if i == 0 {
+                        parts.push(ingredient_label(req));
+                    } else {
+                        parts.push("?".to_string());
+                    }
+                }
+                format!("{} → ?", parts.join(" + "))
+            }
+            RecipeVisibility::Unknown => {
+                format!("未確認レシピ #{:02}", index + 1)
+            }
+        }
+    }
+}
+
+/// `IngredientRequirement` 1 つを人間向けに 1 トークンで表示する。
+/// `specific_noun` があれば名詞、それ以外はカテゴリ / レアリティの大枠を出す。
+fn ingredient_label(req: &IngredientRequirement) -> String {
+    let core = if let Some(noun) = &req.specific_noun {
+        noun.clone()
+    } else if let Some(cat) = &req.category {
+        format!("{:?}", cat)
+    } else if let Some(rar) = &req.rarity {
+        format!("{:?}", rar)
+    } else {
+        "?".to_string()
+    };
+    if req.count > 1 {
+        format!("{} ×{}", core, req.count)
+    } else {
+        core
+    }
+}
+
+/// 材料要件のリストを `A + B + C` 形式で連結する。
+/// 第二引数 `_hidden_mask` は将来 partial の細粒度制御を入れるための予約だが、
+/// 今は使わない (Public / 発見済みは全部見せる)。
+fn join_ingredient_labels(reqs: &[IngredientRequirement], _hidden_mask: &[bool]) -> String {
+    reqs.iter()
+        .map(ingredient_label)
+        .collect::<Vec<_>>()
+        .join(" + ")
 }
 
 /// レシピタイプ
@@ -563,6 +713,7 @@ mod tests {
             recipe_type: RecipeType::Intuitive,
             success_rate: 1.0,
             failure_mode: FailureMode::NoLoss,
+            visibility: RecipeVisibility::Public,
         }
     }
 
@@ -604,6 +755,7 @@ mod tests {
             recipe_type: RecipeType::Advanced,
             success_rate,
             failure_mode,
+            visibility: RecipeVisibility::Public,
         }
     }
 
@@ -876,5 +1028,194 @@ mod tests {
         // 発見済み: 1.0 * 0.40 = 0.40
         let discovered = recipe.success_probability(true);
         assert!((discovered - 0.40).abs() < 1e-9);
+    }
+
+    // ---------- Issue #37: 部分公開レシピ ----------
+
+    /// Issue #37: `RecipeVisibility` のデフォルトは `Public` (既存挙動を維持)。
+    #[test]
+    fn test_recipe_visibility_default_is_public() {
+        let r = sample_recipe(1.0);
+        assert_eq!(r.visibility, RecipeVisibility::Public);
+        assert_eq!(RecipeVisibility::default(), RecipeVisibility::Public);
+    }
+
+    /// Issue #37: JSON で `visibility` フィールドを 3 値とも往復できる。
+    /// 省略時は `Public` にフォールバックする (後方互換)。
+    #[test]
+    fn test_recipe_visibility_serde_roundtrip() {
+        // visibility 省略 → Public
+        let legacy_json = r#"{
+            "id": "legacy",
+            "name": "legacy",
+            "description": "",
+            "ingredients": [],
+            "result": {
+                "noun": "x",
+                "category": "Concept",
+                "rarity": "Common",
+                "synthesis_only": false,
+                "special_attributes": {}
+            },
+            "discovery_rate": 1.0,
+            "recipe_type": "Intuitive"
+        }"#;
+        let r: SynthesisRecipe = serde_json::from_str(legacy_json).expect("legacy parse");
+        assert_eq!(r.visibility, RecipeVisibility::Public);
+
+        // visibility を 3 値とも逐次 deserialize できる
+        for (raw, expected) in [
+            ("\"public\"", RecipeVisibility::Public),
+            ("\"partial\"", RecipeVisibility::Partial),
+            ("\"unknown\"", RecipeVisibility::Unknown),
+        ] {
+            let v: RecipeVisibility = serde_json::from_str(raw).expect("visibility parse");
+            assert_eq!(v, expected, "raw={raw}");
+        }
+
+        // round trip: serialize → deserialize で同一値
+        for v in [
+            RecipeVisibility::Public,
+            RecipeVisibility::Partial,
+            RecipeVisibility::Unknown,
+        ] {
+            let s = serde_json::to_string(&v).expect("ser");
+            let back: RecipeVisibility = serde_json::from_str(&s).expect("de");
+            assert_eq!(v, back);
+        }
+    }
+
+    /// Issue #37: 全要件を満たす場合、satisfied == total かつ all_satisfied == true。
+    #[test]
+    fn test_ingredient_progress_full() {
+        let recipe = make_pair_recipe("p_full", "結果", "水", "火", 1.0, FailureMode::NoLoss);
+        let collection = vec![make_curion("水"), make_curion("火"), make_curion("土")];
+        let p = recipe.ingredient_progress(&collection);
+        assert_eq!(p.total, 2);
+        assert_eq!(p.satisfied, 2);
+        assert!(p.all_satisfied);
+    }
+
+    /// Issue #37: 一部だけ揃っている場合、satisfied < total。
+    #[test]
+    fn test_ingredient_progress_partial() {
+        let recipe = make_pair_recipe("p_part", "結果", "水", "火", 1.0, FailureMode::NoLoss);
+        let collection = vec![make_curion("水")]; // 火 が無い
+        let p = recipe.ingredient_progress(&collection);
+        assert_eq!(p.total, 2);
+        assert_eq!(p.satisfied, 1);
+        assert!(!p.all_satisfied);
+    }
+
+    /// Issue #37: 何も持っていない場合、satisfied == 0。
+    #[test]
+    fn test_ingredient_progress_empty() {
+        let recipe = make_pair_recipe("p_empty", "結果", "水", "火", 1.0, FailureMode::NoLoss);
+        let collection: Vec<Curion> = vec![];
+        let p = recipe.ingredient_progress(&collection);
+        assert_eq!(p.total, 2);
+        assert_eq!(p.satisfied, 0);
+        assert!(!p.all_satisfied);
+    }
+
+    /// Issue #37: `remaining_categories` は total - satisfied と一致する。
+    #[test]
+    fn test_remaining_categories_calculation() {
+        let recipe = make_pair_recipe("p_remain", "結果", "水", "火", 1.0, FailureMode::NoLoss);
+
+        // 何もない: 2 種残り
+        assert_eq!(recipe.remaining_categories(&[]), 2);
+
+        // 1 つ持っている: 1 種残り
+        assert_eq!(recipe.remaining_categories(&[make_curion("水")]), 1);
+
+        // 全部揃ってる: 0
+        assert_eq!(
+            recipe.remaining_categories(&[make_curion("水"), make_curion("火")]),
+            0
+        );
+    }
+
+    /// Issue #37: Public レシピは未発見でも完全表示される。
+    #[test]
+    fn test_display_label_public_uses_full_names() {
+        let recipe = make_pair_recipe("p_pub", "蒸気", "水", "火", 1.0, FailureMode::NoLoss);
+        // visibility は make_pair_recipe で Public がデフォルト
+        let label = recipe.display_label(&[], false, 0);
+        assert!(label.contains("水"), "label={label}");
+        assert!(label.contains("火"), "label={label}");
+        assert!(label.contains("蒸気"), "label={label}");
+        assert!(label.contains("→"));
+    }
+
+    /// Issue #37: Partial レシピは最初の材料は名前、残りと結果は `?` で隠す。
+    #[test]
+    fn test_display_label_partial_hides_inputs_after_first() {
+        let mut recipe = make_pair_recipe(
+            "p_part_lbl",
+            "黒い太陽",
+            "光",
+            "影",
+            0.5,
+            FailureMode::NoLoss,
+        );
+        recipe.visibility = RecipeVisibility::Partial;
+
+        let label = recipe.display_label(&[], false, 5);
+        assert!(
+            label.contains("光"),
+            "first ingredient should be shown: {label}"
+        );
+        assert!(
+            !label.contains("影"),
+            "second ingredient should be hidden: {label}"
+        );
+        assert!(
+            !label.contains("黒い太陽"),
+            "result must be hidden: {label}"
+        );
+        assert!(label.contains("?"));
+    }
+
+    /// Issue #37: Unknown レシピは存在のみ。中身は `??? + ??? = ???` ではなく
+    /// 「未確認レシピ #NN」形式で index 表示する。
+    #[test]
+    fn test_display_label_unknown_shows_index_only() {
+        let mut recipe =
+            make_pair_recipe("p_unk", "禁断", "混沌", "秩序", 0.25, FailureMode::LoseAll);
+        recipe.visibility = RecipeVisibility::Unknown;
+
+        // index 6 → "#07" (0-origin +1, 2 桁 0 埋め)
+        let label = recipe.display_label(&[], false, 6);
+        assert!(label.contains("未確認レシピ"), "label={label}");
+        assert!(
+            label.contains("#07"),
+            "should be 0-padded 2 digits: {label}"
+        );
+        assert!(
+            !label.contains("混沌"),
+            "ingredient names must be hidden: {label}"
+        );
+        assert!(!label.contains("秩序"), "label={label}");
+        assert!(!label.contains("禁断"), "result must be hidden: {label}");
+    }
+
+    /// Issue #37: 発見済みレシピは visibility に関わらず完全表示。
+    /// Partial / Unknown でも is_discovered=true なら全部見える。
+    #[test]
+    fn test_display_label_discovered_recipe_always_public() {
+        for vis in [RecipeVisibility::Partial, RecipeVisibility::Unknown] {
+            let mut recipe =
+                make_pair_recipe("p_d", "黒い太陽", "光", "影", 0.5, FailureMode::NoLoss);
+            recipe.visibility = vis;
+            let label = recipe.display_label(&[], true, 9);
+            assert!(label.contains("光"), "vis={:?} label={}", vis, label);
+            assert!(label.contains("影"), "vis={:?} label={}", vis, label);
+            assert!(label.contains("黒い太陽"), "vis={:?} label={}", vis, label);
+            assert!(
+                !label.contains("未確認レシピ"),
+                "discovered should not be Unknown: {label}"
+            );
+        }
     }
 }

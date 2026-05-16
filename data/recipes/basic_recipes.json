@@ -412,7 +412,8 @@
       }
     },
     "discovery_rate": 0.2,
-    "recipe_type": "Advanced"
+    "recipe_type": "Advanced",
+    "visibility": "partial"
   },
   {
     "id": "recipe_015",
@@ -476,7 +477,8 @@
     "discovery_rate": 0.5,
     "recipe_type": "Advanced",
     "success_rate": 0.25,
-    "failure_mode": { "type": "LoseAll" }
+    "failure_mode": { "type": "LoseAll" },
+    "visibility": "unknown"
   },
   {
     "id": "recipe_017",
@@ -512,6 +514,7 @@
     "failure_mode": {
       "type": "Salvage",
       "fallback_rarity": "Common"
-    }
+    },
+    "visibility": "partial"
   }
 ]
