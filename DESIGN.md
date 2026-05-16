@@ -380,17 +380,31 @@ Dashboard tab section 2 で 3 本のデイリーミッションを表示する�
 日付ベース seed (SHA256(`curion-daily-mission/YYYY-MM-DD`)) で 4 テンプレから 3 つを抽選し、
 報酬は達成時に自動付与される。
 
-### Collection 図鑑 Filter (Issue #31)
+### Collection 図鑑 Filter (Issue #31) — IMPLEMENTED
 
 ```
-Section in Collection tab, section index 1.
-Current state: category summary only.
+Applied to both Owned List (section 0) and Encyclopedia (section 1) in the Collection tab.
 
-Full implementation target:
-  - Top: filter input line (fg White, bg DarkGray input box)
-  - Below: filtered curion list or category breakdown
-  - Unknown entries: fg(DarkGray), name = "???"
-  - Match highlight: bold
+Input mode:
+  - Enter with `/`. The input line appears above the list with style fg(White) bg(DarkGray)
+    and prefix " / ". A reversed-background space acts as the caret while typing.
+  - Backspace deletes one char. Enter exits input mode but keeps the filter active.
+  - Esc exits input mode AND clears the filter completely.
+
+Filter targets (per curion / noun):
+  - noun (e.g. `魚`)
+  - display_name `{category} の {noun}` (e.g. `動物 の 魚`)
+  - rarity label `COMMON` / `RARE` / `EPIC` / `LEGENDARY`
+  - category name (e.g. `動物`)
+
+Behaviour:
+  - Owned list title becomes `コレクション [N matched / M total]` while filter is active.
+  - Encyclopedia hides nouns that don't match; categories list stays as-is so the
+    overall completion percentage remains comparable.
+  - Locked nouns (`？？？`) still appear when their noun name / display_name / category
+    matches; they cannot match by rarity since none has been acquired yet.
+  - Invalid regex (e.g. `[`) shows `! invalid regex: …` in red on the prompt line
+    without applying any filter and without crashing.
 ```
 
 ### High-risk Synthesis (Issue #35)
@@ -416,17 +430,19 @@ Layout:
   - Success: flash Magenta on right pane for one tick
 ```
 
-### Regex Filter (Issue #31)
+### Regex Filter (Issue #31) — IMPLEMENTED for Collection tab
 
 ```
-Applied in Collection tab 図鑑 and potentially Synthesis レシピ一覧.
+Applied in Collection tab Owned List + 図鑑. See "Collection 図鑑 Filter (Issue #31)" above
+for the canonical spec. Synthesis レシピ一覧 への展開は今後の課題。
 
 Input line style:
   - fg(White) bg(DarkGray)
   - Prefix: " / " (vim-style search prompt)
-  - Clear with Esc
+  - Caret = reversed-background space while in input mode
+  - Inline error in red (fg Red, bold) for invalid regex
 
-Result highlight: Bold on matched text portion.
+Esc behaviour: clears the filter and exits input mode at the same time.
 ```
 
 ---

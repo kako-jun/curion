@@ -15,7 +15,7 @@ use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 
 use crate::cooldown::{cooldown_progress, remaining_seconds};
-use crate::curion::{Category, Rarity};
+use crate::curion::{Category, Curion, Rarity};
 use crate::generator::CurionGenerator;
 use crate::player::{GameState, LoginBonusReward};
 
@@ -119,6 +119,43 @@ fn rarity_label(rarity: &Rarity) -> &'static str {
         Rarity::Epic => "EPIC",
         Rarity::Legendary => "LEG",
     }
+}
+
+/// Issue #31: 正規表現フィルタの長尺レアリティラベル。
+///
+/// `rarity_label` は `[COM ]` 等の固定 4 桁表示用に短縮されているため、ユーザーが
+/// `RARE` `COMMON` `EPIC` `LEGENDARY` のような自然なキーワードで絞り込める語彙で
+/// マッチさせる。
+fn rarity_filter_label(rarity: &Rarity) -> &'static str {
+    match rarity {
+        Rarity::Common => "COMMON",
+        Rarity::Rare => "RARE",
+        Rarity::Epic => "EPIC",
+        Rarity::Legendary => "LEGENDARY",
+    }
+}
+
+/// Issue #31: キュリオン 1 件が正規表現にマッチするか判定する。
+///
+/// 対象フィールド:
+/// - `noun` (日本語名)
+/// - `display_name()` (例: `動物 の 魚`)
+/// - レアリティラベル (`COMMON` / `RARE` / `EPIC` / `LEGENDARY`)
+/// - カテゴリ名 (`動物` 等)
+fn match_curion(re: &regex::Regex, curion: &Curion) -> bool {
+    if re.is_match(&curion.noun) {
+        return true;
+    }
+    if re.is_match(&curion.display_name()) {
+        return true;
+    }
+    if re.is_match(rarity_filter_label(&curion.rarity)) {
+        return true;
+    }
+    if re.is_match(curion.category.as_str()) {
+        return true;
+    }
+    false
 }
 
 fn progress_color(ratio: f64) -> Color {
@@ -259,6 +296,18 @@ pub struct App {
     pub dictionary_category_index: usize,
     /// 図鑑モードで選択カテゴリ内の名詞リスト縦スクロール
     pub dictionary_scroll: usize,
+    /// Issue #31: Collection タブの正規表現フィルタ
+    ///
+    /// `/` キーで `filter_mode = true` に入り、入力モードになる。Esc で抜けて
+    /// `filter_text` と `compiled_filter` も両方クリアする。Enter で入力モードだけ
+    /// 抜けて、フィルタ自体は維持する。
+    pub filter_mode: bool,
+    /// Collection タブの正規表現フィルタの入力中文字列
+    pub filter_text: String,
+    /// Collection タブの正規表現フィルタが無効パターンだったときのエラーメッセージ
+    pub filter_error: Option<String>,
+    /// コンパイル成功した正規表現。`filter_text` が空 or 無効パターンのときは `None`
+    pub compiled_filter: Option<regex::Regex>,
 }
 
 impl App {
@@ -281,6 +330,10 @@ impl App {
             synthesis_scroll: 0,
             dictionary_category_index: 0,
             dictionary_scroll: 0,
+            filter_mode: false,
+            filter_text: String::new(),
+            filter_error: None,
+            compiled_filter: None,
         }
     }
 
@@ -288,8 +341,17 @@ impl App {
 
     /// キー入力を処理する。`true` を返したらアプリ終了。
     pub fn handle_key(&mut self, key: KeyCode) -> Result<bool> {
+        // Issue #31: Collection タブで正規表現フィルタ入力中はキー入力をフィルタ専用に取る。
+        // 入力モード中は `q`/`1`-`5` 等の通常キーもフィルタ文字として扱う必要があるため、
+        // 通常ハンドラより前に分岐する。
+        if self.filter_mode {
+            return self.handle_filter_key(key);
+        }
         match key {
             KeyCode::Char('q') => return Ok(true),
+            KeyCode::Char('/') if self.current_tab == Tab::Collection => {
+                self.enter_filter_mode();
+            }
             KeyCode::Esc => {
                 self.handle_escape();
                 if self.current_tab != Tab::Synthesis
@@ -315,6 +377,78 @@ impl App {
             _ => {}
         }
         Ok(false)
+    }
+
+    /// Issue #31: 正規表現フィルタ入力モード中のキー処理。
+    ///
+    /// - Esc: 入力モードを抜け、フィルタも全クリア (filter_text / compiled / error)
+    /// - Enter: 入力モードのみ抜ける。フィルタは維持
+    /// - Backspace: 1 文字削除
+    /// - 印字可能文字: filter_text に追記
+    fn handle_filter_key(&mut self, key: KeyCode) -> Result<bool> {
+        match key {
+            KeyCode::Esc => {
+                self.exit_filter_mode_and_clear();
+            }
+            KeyCode::Enter => {
+                // フィルタは維持したまま入力モードだけ抜ける
+                self.filter_mode = false;
+            }
+            KeyCode::Backspace => {
+                self.filter_text.pop();
+                self.recompile_filter();
+            }
+            KeyCode::Char(c) => {
+                self.filter_text.push(c);
+                self.recompile_filter();
+            }
+            _ => {}
+        }
+        Ok(false)
+    }
+
+    /// Issue #31: `/` キーでフィルタ入力モードに入る。入力初期化のため
+    /// `filter_text` / `compiled_filter` / `filter_error` はすべてクリアする。
+    fn enter_filter_mode(&mut self) {
+        self.filter_mode = true;
+        self.filter_text.clear();
+        self.compiled_filter = None;
+        self.filter_error = None;
+    }
+
+    /// Issue #31: フィルタ入力モードを抜け、適用中のフィルタもすべて解除する。
+    fn exit_filter_mode_and_clear(&mut self) {
+        self.filter_mode = false;
+        self.filter_text.clear();
+        self.compiled_filter = None;
+        self.filter_error = None;
+    }
+
+    /// Issue #31: `filter_text` を Regex にコンパイルし直す。
+    ///
+    /// - 空文字列: フィルタ無効 (None)
+    /// - コンパイル成功: `compiled_filter = Some(re)`, `filter_error = None`
+    /// - コンパイル失敗: `compiled_filter = None`, `filter_error = Some(msg)`
+    fn recompile_filter(&mut self) {
+        // フィルタが変わるたび、表示中スクロールを先頭に戻す。
+        // フィルタで件数が減ったあと前のスクロール位置のまま空表示にしないため。
+        self.detail_scroll = 0;
+        self.dictionary_scroll = 0;
+        if self.filter_text.is_empty() {
+            self.compiled_filter = None;
+            self.filter_error = None;
+            return;
+        }
+        match regex::Regex::new(&self.filter_text) {
+            Ok(re) => {
+                self.compiled_filter = Some(re);
+                self.filter_error = None;
+            }
+            Err(e) => {
+                self.compiled_filter = None;
+                self.filter_error = Some(format!("invalid regex: {e}"));
+            }
+        }
     }
 
     fn is_collection_dictionary(&self) -> bool {
@@ -706,6 +840,25 @@ impl App {
     }
 
     fn render_help_line(&self, f: &mut Frame<'_>, area: Rect) {
+        // Issue #31: フィルタ入力中は専用ヘルプを出す
+        if self.filter_mode {
+            let help = Line::from(vec![
+                Span::styled(" filter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
+                Span::raw(" 正規表現入力中  "),
+                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 入力確定 (フィルタ維持)  "),
+                Span::styled(" Esc ", Style::default().fg(Color::Black).bg(Color::Gray)),
+                Span::raw(" 解除  "),
+                Span::styled(
+                    " Backspace ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" 1 文字削除"),
+            ]);
+            let help_widget = Paragraph::new(help).style(Style::default().bg(Color::Black));
+            f.render_widget(help_widget, area);
+            return;
+        }
         let help = match self.current_tab {
             Tab::Collection if self.current_section_index() == 1 => Line::from(vec![
                 Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
@@ -720,6 +873,30 @@ impl App {
                     Style::default().fg(Color::Black).bg(Color::DarkGray),
                 ),
                 Span::raw(" 名詞スクロール  "),
+                Span::styled(" / ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
+                Span::raw(" 絞り込み  "),
+                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 生成  "),
+                Span::styled(
+                    " Tab/1-5 ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" タブ  "),
+                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 保存  "),
+                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 終了"),
+            ]),
+            Tab::Collection if self.current_section_index() == 0 => Line::from(vec![
+                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 左ペイン  "),
+                Span::styled(
+                    " ↑/↓ ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" スクロール  "),
+                Span::styled(" / ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
+                Span::raw(" 絞り込み  "),
                 Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
                 Span::raw(" 生成  "),
                 Span::styled(
@@ -1213,7 +1390,10 @@ impl App {
             chrono::Utc::now(),
         );
         let (cd_color, cd_label) = if cooldown_p >= 1.0 {
-            (COLOR_EPIC, "RARE COOLDOWN ⚡ レア出現確率上昇中!".to_string())
+            (
+                COLOR_EPIC,
+                "RARE COOLDOWN ⚡ レア出現確率上昇中!".to_string(),
+            )
         } else {
             let secs = remaining_seconds(
                 self.game_state.player.last_collection_at,
@@ -1471,24 +1651,66 @@ impl App {
         // Issue #27 で詳細ペインにフレーバー + 入手履歴の 2 行構成にしたため、
         // 旧 Length(3) では 1 行しか入らない。Length(4) に拡張する
         // (上下 border 各 1 + 中身 2 行)。
-        let split = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(3), Constraint::Length(4)])
-            .split(area);
-        let list_area = split[0];
-        let detail_area = split[1];
+        // Issue #31: 正規表現フィルタ入力中 or フィルタ適用中はリストの上に 1 行
+        // 検索プロンプトを表示する。
+        let show_filter_line =
+            self.filter_mode || self.compiled_filter.is_some() || self.filter_error.is_some();
+        let outer_split = if show_filter_line {
+            Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(1),
+                    Constraint::Min(3),
+                    Constraint::Length(4),
+                ])
+                .split(area)
+        } else {
+            Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(0),
+                    Constraint::Min(3),
+                    Constraint::Length(4),
+                ])
+                .split(area)
+        };
+        let filter_area = outer_split[0];
+        let list_area = outer_split[1];
+        let detail_area = outer_split[2];
 
-        let items: Vec<ListItem> = collection
+        if show_filter_line {
+            self.render_filter_input(f, filter_area);
+        }
+
+        // Issue #31: 適用中の正規表現でフィルタ。
+        // フィルタが None ならフルコレクションをそのまま使う。
+        let filtered: Vec<&Curion> = match &self.compiled_filter {
+            Some(re) => collection.iter().filter(|c| match_curion(re, c)).collect(),
+            None => collection.iter().collect(),
+        };
+
+        let list_title = if self.compiled_filter.is_some() {
+            format!(
+                "コレクション [{} matched / {} total]",
+                filtered.len(),
+                collection.len(),
+            )
+        } else {
+            format!("コレクション [{} 個]", collection.len())
+        };
+
+        let items: Vec<ListItem> = filtered
             .iter()
             .rev()
             .enumerate()
             .skip(self.detail_scroll)
             .take((list_area.height as usize).saturating_sub(2).max(1))
             .map(|(i, curion)| {
+                let curion = *curion;
                 let color = rarity_color(&curion.rarity);
                 let stars = rarity_stars(&curion.rarity);
                 let label = rarity_label(&curion.rarity);
-                let index = collection.len() - i;
+                let index = filtered.len() - i;
 
                 ListItem::new(vec![
                     Line::from(vec![
@@ -1522,18 +1744,20 @@ impl App {
             })
             .collect();
 
-        let list = List::new(items).block(focused_block(format!(
-            "コレクション [{} 個]",
-            collection.len(),
-        )));
+        let list = List::new(items).block(focused_block(list_title));
 
         f.render_widget(list, list_area);
 
         // 詳細ペイン: スクロール先頭（= 視野の最上段）にあるキュリオンのフレーバーを表示する
-        let focus_index_rev = self.detail_scroll.min(collection.len().saturating_sub(1));
-        // collection は古い順、表示は逆順 (newest first) なので index 変換
-        let focus_index = collection.len() - 1 - focus_index_rev;
-        let focused = collection.get(focus_index);
+        // Issue #31: フィルタ適用中はフィルタ後リストの先頭を詳細対象にする
+        let focused: Option<&Curion> = if filtered.is_empty() {
+            None
+        } else {
+            let focus_index_rev = self.detail_scroll.min(filtered.len().saturating_sub(1));
+            // filtered も collection と同様「古い順」のままなので、表示は逆順 (newest first)
+            let focus_index = filtered.len() - 1 - focus_index_rev;
+            filtered.get(focus_index).copied()
+        };
 
         let flavor_text: String = focused
             .and_then(|c| {
@@ -1569,9 +1793,26 @@ impl App {
     }
 
     fn render_collection_dictionary(&self, f: &mut Frame<'_>, area: Rect) {
+        // Issue #31: 図鑑側にも検索プロンプトを表示する
+        let show_filter_line =
+            self.filter_mode || self.compiled_filter.is_some() || self.filter_error.is_some();
+        let (filter_area, body_area) = if show_filter_line {
+            let split = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(1), Constraint::Min(0)])
+                .split(area);
+            (Some(split[0]), split[1])
+        } else {
+            (None, area)
+        };
+
+        if let Some(area) = filter_area {
+            self.render_filter_input(f, area);
+        }
+
         let block = focused_block("図鑑");
-        let inner = block.inner(area);
-        f.render_widget(block, area);
+        let inner = block.inner(body_area);
+        f.render_widget(block, body_area);
 
         let panes = Layout::default()
             .direction(Direction::Horizontal)
@@ -1581,6 +1822,42 @@ impl App {
 
         self.render_dictionary_categories(f, panes[0]);
         self.render_dictionary_entries(f, panes[1]);
+    }
+
+    /// Issue #31: 正規表現フィルタの入力プロンプト 1 行を描画する。
+    ///
+    /// 表示形式:
+    /// - 入力モード中: `/{filter_text}_`
+    /// - 入力モード外でフィルタ適用中: `/{filter_text}  (Esc 解除)`
+    /// - 無効パターン: 末尾に赤字で `! invalid regex: <reason>` を続ける
+    fn render_filter_input(&self, f: &mut Frame<'_>, area: Rect) {
+        let mut spans: Vec<Span> = Vec::new();
+        let prompt_style = Style::default().fg(Color::White).bg(Color::DarkGray);
+        let cursor_style = Style::default()
+            .fg(Color::White)
+            .bg(Color::DarkGray)
+            .add_modifier(Modifier::REVERSED);
+
+        spans.push(Span::styled(" / ", prompt_style));
+        spans.push(Span::styled(self.filter_text.clone(), prompt_style));
+        if self.filter_mode {
+            spans.push(Span::styled(" ", cursor_style));
+        } else if self.compiled_filter.is_some() || self.filter_error.is_some() {
+            spans.push(Span::styled(
+                "  (Esc 解除)",
+                Style::default().fg(COLOR_LABEL),
+            ));
+        }
+        if let Some(err) = &self.filter_error {
+            spans.push(Span::raw("  "));
+            spans.push(Span::styled(
+                format!("! {err}"),
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ));
+        }
+
+        let widget = Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
+        f.render_widget(widget, area);
     }
 
     fn render_dictionary_categories(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1660,16 +1937,25 @@ impl App {
             return;
         }
 
+        // Issue #31: フィルタ適用中は match した名詞だけに絞る。
+        let filtered_nouns: Vec<&crate::generator::NounEntry> = match &self.compiled_filter {
+            Some(re) => nouns
+                .iter()
+                .filter(|e| self.match_noun_for_dictionary(re, category, &e.name))
+                .collect(),
+            None => nouns.iter().collect(),
+        };
+
         // 最後のページが収まる位置までクランプ。1ページに収まる場合は 0。
         // 1 エントリあたり 1〜2 行（獲得済みで flavor 付きなら 2 行）。
         // 既存の挙動を維持するため、スクロール単位は引き続き「エントリ数」とする。
-        let max_scroll = nouns.len().saturating_sub(visible_height);
+        let max_scroll = filtered_nouns.len().saturating_sub(visible_height);
         let scroll = self.dictionary_scroll.min(max_scroll);
 
         // 利用可能セル幅（罫線控除済み）から flavor の折り返し閾値を決める
         let inner_width = inner.width as usize;
         let mut lines: Vec<Line> = Vec::with_capacity(visible_height);
-        for entry in nouns.iter().skip(scroll) {
+        for entry in filtered_nouns.iter().skip(scroll) {
             if lines.len() >= visible_height {
                 break;
             }
@@ -1684,6 +1970,37 @@ impl App {
 
         let widget = Paragraph::new(lines);
         f.render_widget(widget, inner);
+    }
+
+    /// Issue #31: 図鑑モードで名詞 1 個が正規表現にマッチするか判定する。
+    ///
+    /// 対象:
+    /// - 名詞名
+    /// - `{category} の {noun}` (display_name 相当)
+    /// - カテゴリ名
+    /// - 所持している場合: その名詞で所持しているキュリオンのレアリティラベル
+    fn match_noun_for_dictionary(
+        &self,
+        re: &regex::Regex,
+        category: &Category,
+        noun_name: &str,
+    ) -> bool {
+        if re.is_match(noun_name) {
+            return true;
+        }
+        if re.is_match(&format!("{} の {}", category.as_str(), noun_name)) {
+            return true;
+        }
+        if re.is_match(category.as_str()) {
+            return true;
+        }
+        // 所持していればレアリティラベルでもマッチさせる
+        for curion in self.game_state.player.collection.iter() {
+            if curion.noun == noun_name && re.is_match(rarity_filter_label(&curion.rarity)) {
+                return true;
+            }
+        }
+        false
     }
 
     /// Issue #22: 図鑑エントリを 1〜2 行で描画する。
@@ -2699,6 +3016,196 @@ mod tests {
         assert_eq!(
             app.dictionary_scroll, 0,
             "↑ でのカテゴリ移動でも scroll が 0 にリセット"
+        );
+    }
+
+    // ── Issue #31: Collection 正規表現フィルタ ──────────────────────
+
+    #[test]
+    fn test_match_curion_by_noun() {
+        let curion = make_curion("魚", Category::Animal, Rarity::Common);
+        let re = regex::Regex::new("^魚$").unwrap();
+        assert!(match_curion(&re, &curion), "noun が完全一致でマッチする");
+    }
+
+    #[test]
+    fn test_match_curion_by_display_name() {
+        let curion = make_curion("猫", Category::Animal, Rarity::Common);
+        let re = regex::Regex::new("動物 の").unwrap();
+        assert!(
+            match_curion(&re, &curion),
+            "display_name `動物 の 猫` の部分文字列でマッチする"
+        );
+    }
+
+    #[test]
+    fn test_match_curion_by_rarity_label() {
+        let rare = make_curion("X", Category::Animal, Rarity::Rare);
+        let common = make_curion("Y", Category::Animal, Rarity::Common);
+        let re = regex::Regex::new("RARE").unwrap();
+        assert!(match_curion(&re, &rare), "RARE は match");
+        // "RARE" は "COMMON" にはマッチしないが、"RARE" だけにマッチさせるため
+        // common の他フィールドにヒットしないことも確認
+        assert!(!match_curion(&re, &common), "COMMON にはマッチしない");
+    }
+
+    #[test]
+    fn test_match_curion_by_category() {
+        let curion = make_curion("X", Category::Animal, Rarity::Common);
+        let re = regex::Regex::new("動物").unwrap();
+        assert!(match_curion(&re, &curion), "カテゴリ名 `動物` でマッチする");
+    }
+
+    #[test]
+    fn test_match_curion_no_match() {
+        let curion = make_curion("猫", Category::Animal, Rarity::Common);
+        // 名詞 / display_name / rarity / category のどれにもヒットしないパターン
+        let re = regex::Regex::new("XYZ_NOT_PRESENT").unwrap();
+        assert!(
+            !match_curion(&re, &curion),
+            "全フィールドにマッチしないパターンは false"
+        );
+    }
+
+    #[test]
+    fn test_match_curion_invalid_pattern_is_rejected() {
+        // `[` は閉じ括弧がないので不正。clippy::invalid_regex を避けるため動的文字列で渡す。
+        let invalid_pat = String::from("[");
+        let result = regex::Regex::new(&invalid_pat);
+        assert!(result.is_err(), "不正な正規表現は Regex::new でエラー");
+
+        // App 側で compiled_filter = None, filter_error = Some になることを確認
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.filter_mode = true;
+        app.filter_text = invalid_pat;
+        app.recompile_filter();
+        assert!(
+            app.compiled_filter.is_none(),
+            "不正パターンで compiled_filter は None"
+        );
+        assert!(
+            app.filter_error.is_some(),
+            "不正パターンで filter_error が立つ"
+        );
+    }
+
+    #[test]
+    fn test_filter_mode_key_flow() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        assert!(!app.filter_mode);
+
+        // `/` で入力モード
+        let quit = app
+            .handle_key(KeyCode::Char('/'))
+            .expect("handle_key should succeed");
+        assert!(!quit);
+        assert!(app.filter_mode, "`/` で filter_mode = true");
+
+        // 何か文字を入れる
+        app.handle_key(KeyCode::Char('R')).unwrap();
+        app.handle_key(KeyCode::Char('A')).unwrap();
+        assert_eq!(app.filter_text, "RA");
+        assert!(app.compiled_filter.is_some(), "正規表現コンパイル成功");
+
+        // Esc で全クリア
+        app.handle_key(KeyCode::Esc).unwrap();
+        assert!(!app.filter_mode, "Esc で filter_mode = false");
+        assert_eq!(app.filter_text, "", "Esc で filter_text もクリア");
+        assert!(
+            app.compiled_filter.is_none(),
+            "Esc で compiled_filter もクリア"
+        );
+        assert!(app.filter_error.is_none());
+    }
+
+    #[test]
+    fn test_filter_mode_accepts_japanese() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        for c in ['動', '物'] {
+            app.handle_key(KeyCode::Char(c)).unwrap();
+        }
+        assert_eq!(app.filter_text, "動物");
+        let re = app.compiled_filter.as_ref().expect("regex compiled");
+        let curion = crate::curion::Curion::new(
+            uuid::Uuid::nil(),
+            "犬".to_string(),
+            crate::curion::Category::Animal,
+            crate::curion::Rarity::Common,
+            0.5,
+            0.5,
+        );
+        assert!(
+            match_curion(re, &curion),
+            "「動物 の 犬」が「動物」で match"
+        );
+    }
+
+    #[test]
+    fn test_filter_mode_s_key_is_typed_not_save() {
+        // フィルタ入力モード中の `s` はフィルタテキストに入る (main.rs 側で save を抑止する想定)。
+        // ui レイヤーの handle_key は filter_mode 中の `s` を普通の文字として処理する。
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        app.handle_key(KeyCode::Char('s')).unwrap();
+        assert_eq!(app.filter_text, "s");
+    }
+
+    #[test]
+    fn test_filter_mode_backspace() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+
+        for c in ['A', 'B', 'C'] {
+            app.handle_key(KeyCode::Char(c)).unwrap();
+        }
+        assert_eq!(app.filter_text, "ABC");
+
+        app.handle_key(KeyCode::Backspace).unwrap();
+        assert_eq!(app.filter_text, "AB", "Backspace で 1 文字削除");
+
+        app.handle_key(KeyCode::Backspace).unwrap();
+        app.handle_key(KeyCode::Backspace).unwrap();
+        assert_eq!(app.filter_text, "", "Backspace で全部消える");
+
+        // 空文字列ではコンパイル無効化
+        assert!(app.compiled_filter.is_none());
+        assert!(app.filter_error.is_none());
+    }
+
+    #[test]
+    fn test_filter_mode_slash_only_on_collection_tab() {
+        // Collection 以外のタブでは `/` キーは filter_mode を起動しない
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        assert!(
+            !app.filter_mode,
+            "Dashboard タブでは `/` でも filter_mode に入らない"
+        );
+    }
+
+    #[test]
+    fn test_filter_enter_keeps_filter_but_exits_input_mode() {
+        // Enter は入力モードだけ抜ける。フィルタは維持。
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        app.handle_key(KeyCode::Char('R')).unwrap();
+        app.handle_key(KeyCode::Char('A')).unwrap();
+        assert!(app.compiled_filter.is_some());
+
+        app.handle_key(KeyCode::Enter).unwrap();
+        assert!(!app.filter_mode, "Enter で filter_mode = false");
+        assert_eq!(app.filter_text, "RA", "Enter では filter_text は維持");
+        assert!(
+            app.compiled_filter.is_some(),
+            "Enter では compiled_filter も維持"
         );
     }
 }

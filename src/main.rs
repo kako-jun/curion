@@ -137,8 +137,9 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                // 's' is handled separately because it needs save_manager
-                if key.code == KeyCode::Char('s') {
+                // 's' is handled separately because it needs save_manager,
+                // but only outside filter input (otherwise 's' can't be typed in regex).
+                if key.code == KeyCode::Char('s') && !app.filter_mode {
                     save_manager.save(&app.game_state)?;
                     app.handle_save_key();
                 } else if app.handle_key(key.code)? {
