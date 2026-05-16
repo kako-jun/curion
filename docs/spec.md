@@ -103,7 +103,13 @@ Left pane sections:
 **Overview right pane:**
 - GUID generation countdown (progress bar)
 - XP bar with rarity-aligned warning colors
-- Quick stats: total collected, today's count, level
+- Quick stats: total collected, today's count, level, **COMBO: N**
+  - Combo counts consecutive Rare/Epic/Legendary acquisitions; Common resets to 0
+  - XP multiplier on `add_curion`: combo 2 = 1.5x, 3-4 = 2.0x, 5+ = 3.0x (XP is `(base * multiplier) as u32`, truncated)
+  - At combo 5 the title `コンボマスター` is granted once (no duplicates)
+  - `combo_count` is shown in label color when 0/1, Rare color at 2, Epic color at 3-4, Legendary color + `🔥 コンボマスター!` at 5+
+  - `max_combo` is recorded for future stats display
+  - Save compatibility: `combo_count` / `max_combo` use `#[serde(default)]`
 - Latest curion acquired
 - Rarity distribution (horizontal text bars)
 - Category distribution (compact text summary)
