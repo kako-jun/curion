@@ -1,4 +1,4 @@
-# DESIGN.md
+# Design
 
 curion — Design System
 

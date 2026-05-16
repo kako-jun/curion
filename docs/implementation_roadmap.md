@@ -42,7 +42,7 @@
 - `src/ui.rs` - TUI実装
 - `src/achievement.rs` - 実績管理
 - `src/save.rs` - データ永続化
-- `UI_DESIGN.md` - UI設計書
+- `docs/design.md` - UI設計書
 
 ---
 
@@ -64,7 +64,7 @@
 - `src/synthesis.rs` - 合成システム
 - `data/recipes/basic_recipes.json` - レシピDB
 - `data/nouns/abstracts.json` - 抽象概念
-- `.claude/synthesis_and_p2p_design.md` - 設計書
+- `docs/synthesis_and_p2p_design.md` - 設計書
 
 #### 技術的成果
 - 候補提案アルゴリズム
@@ -141,7 +141,7 @@
 - `src/nostr_relay.rs` - Relay接続管理
 - `src/trade.rs` - トレードシステム
 - `src/p2p_ui.rs` - P2P用UI
-- `.claude/p2p_detailed_design.md` - 詳細設計
+- `docs/p2p_detailed_design.md` - 詳細設計
 
 #### 技術課題
 - Nostr Eventの署名・検証
@@ -233,7 +233,7 @@
 **状態**: 📋 アイデア段階
 **優先度**: ⭐ 低
 
-参照: `.claude/addictive_ideas.md`
+参照: `docs/addictive_ideas.md`
 
 #### 候補機能
 - [ ] デイリーミッション
