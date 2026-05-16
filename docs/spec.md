@@ -51,13 +51,24 @@ Combine two owned curions to create a new one.
 40+ achievements across 4 categories:
 
 ### Collection achievements
-- Total count milestones: 10, 50, 100, 250, 500, 1000
-- Rarity milestones: 10, 50, 100 per rarity tier
+- Total count milestones (Issue #32 cliffhanger numbers): **10, 27, 51, 103, 247, 501, 1001**
+- Rarity milestones (Issue #32):
+  - Rare: 10 / 47 / 103
+  - Epic: 5 / 23 / 51
+  - Legendary: 1 / 7 / 23 / 47 / 101
 - Category completion: collect all nouns in a category
 
 ### Streak achievements
-- Consecutive login: 3, 7, 14, 30, 100 days
-- Play time: 1h, 10h, 50h, 100h, 500h
+- Consecutive login (Issue #32): 3, 7, 14, **33**, **101** days
+- Play time (Issue #32): 1h, **11h**, **47h**, **103h**, **503h**
+
+### Cliffhanger numbers (Issue #32 backward compatibility)
+- 実績進捗は `HashMap<AchievementId, AchievementProgress>` で保存される。
+- 旧セーブに残った `total_50` `total_100` 等の ID は新版では再評価されない (実害なし、
+  解除済みフラグは無視されたまま放置)。
+- 新規 ID (`total_27` 等) は起動時に `register_default_achievements` から空 Progress として
+  作成され、現在の所持数で再判定される。
+- マイグレーション不要。旧解除フラグは消えるが、現在のカウントで即時再達成される。
 
 ### Special achievements
 - "Gold Rush": 10 Gold curions
@@ -80,7 +91,19 @@ Combine two owned curions to create a new one.
 | Achievement unlock | Per-achievement reward |
 | Daily login | 50-1500+ (streak escalates) |
 
-Level N -> N+1 requires N * 100 XP.
+Level N → N+1 XP requirement uses a **non-linear "cliffhanger" table** (Issue #32):
+
+| Lv | XP   | Lv | XP    | Lv | XP    | Lv | XP    |
+|----|------|----|-------|----|-------|----|-------|
+| 1  | 100  | 6  | 1820  | 11 | 6170  | 16 | 13680 |
+| 2  | 270  | 7  | 2450  | 12 | 7400  | 17 | 15600 |
+| 3  | 510  | 8  | 3210  | 13 | 8770  | 18 | 17680 |
+| 4  | 870  | 9  | 4080  | 14 | 10260 | 19 | 19920 |
+| 5  | 1280 | 10 | 5060  | 15 | 11900 | 20 | 22320 |
+
+- Lv.21 以降は `last + (last / 10) * 1.18` 風の漸近指数で外挿される。
+- 旧式の `level * 100` (キリのいい等差) は廃止。「あと 50 で切りがいい所まで」を意図的に避け、
+  常に半端な残量にして「あと少し感」を維持する。
 
 ## TUI Layout
 
@@ -112,6 +135,11 @@ Left pane sections:
   - `Player::last_collection_at` (`#[serde(default) = None]`) holds the timestamp;
     `add_curion` refreshes it. `None` (= fresh save / legacy save) is treated as
     fully charged so the very first acquisition starts with the bonus.
+- **Next milestone hint** (Issue #32):
+  `next milestone: ⭐ コレクター Lv.3 (あと 4 個)` 形式の 1 行表示。
+  XP / 未解除実績 (TotalCount / RarityCount / CategoryCount / SpecificNoun / ConsecutiveLogin
+  / PlayTime) のうち、残量が最も小さい候補を 1 つ選ぶ。残量 0 は除外。
+  全マイルストーン達成済みなら `全マイルストーン達成済み` を表示する。
 - Quick stats: total collected, today's count, level, **COMBO: N**
   - Combo counts consecutive Rare/Epic/Legendary acquisitions; Common resets to 0
   - XP multiplier on `add_curion`: combo 2 = 1.5x, 3-4 = 2.0x, 5+ = 3.0x (XP is `(base * multiplier) as u32`, truncated)

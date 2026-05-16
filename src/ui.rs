@@ -1346,13 +1346,14 @@ impl App {
             .direction(Direction::Vertical)
             .margin(1)
             .constraints([
-                Constraint::Length(3),
-                Constraint::Length(3),
-                Constraint::Length(1),
-                Constraint::Length(2),
-                Constraint::Length(3),
-                Constraint::Length(6),
-                Constraint::Min(4),
+                Constraint::Length(3), // 0: GUID timer
+                Constraint::Length(3), // 1: XP gauge
+                Constraint::Length(1), // 2: Rare cooldown
+                Constraint::Length(2), // 3: stats (total/today/level/COMBO)
+                Constraint::Length(1), // 4: next milestone (Issue #32)
+                Constraint::Length(3), // 5: latest curion
+                Constraint::Length(6), // 6: rarity distribution
+                Constraint::Min(4),    // 7: category distribution
             ])
             .split(area);
 
@@ -1465,6 +1466,31 @@ impl App {
             .alignment(Alignment::Left);
         f.render_widget(stats, chunks[3]);
 
+        // Issue #32: 次のマイルストーン表示 (= 「あと少し感」を常時演出)
+        // XP / 各種実績の残量から最も小さいものを 1 行で出す。
+        let milestone_line = if let Some(hint) = self.game_state.next_milestone() {
+            Line::from(vec![
+                Span::styled("next milestone: ", Style::default().fg(COLOR_LABEL)),
+                Span::styled(
+                    hint.label.clone(),
+                    Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" (あと {})", hint.remaining),
+                    Style::default()
+                        .fg(COLOR_LEGENDARY)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ])
+        } else {
+            Line::from(vec![Span::styled(
+                "next milestone: 全マイルストーン達成済み",
+                Style::default().fg(COLOR_LABEL),
+            )])
+        };
+        let milestone_widget = Paragraph::new(vec![milestone_line]).alignment(Alignment::Left);
+        f.render_widget(milestone_widget, chunks[4]);
+
         // Latest curion
         if let Some(curion) = player.latest_curion() {
             let color = rarity_color(&curion.rarity);
@@ -1486,7 +1512,7 @@ impl App {
                 ),
             ])];
             let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
-            f.render_widget(latest, chunks[4]);
+            f.render_widget(latest, chunks[5]);
         }
 
         // Rarity distribution
@@ -1517,7 +1543,7 @@ impl App {
             ]));
         }
         let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
-        f.render_widget(rarity_widget, chunks[5]);
+        f.render_widget(rarity_widget, chunks[6]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -1529,7 +1555,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[6]);
+        f.render_widget(category_widget, chunks[7]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
