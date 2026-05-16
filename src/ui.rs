@@ -430,6 +430,10 @@ impl App {
     /// - コンパイル成功: `compiled_filter = Some(re)`, `filter_error = None`
     /// - コンパイル失敗: `compiled_filter = None`, `filter_error = Some(msg)`
     fn recompile_filter(&mut self) {
+        // フィルタが変わるたび、表示中スクロールを先頭に戻す。
+        // フィルタで件数が減ったあと前のスクロール位置のまま空表示にしないため。
+        self.detail_scroll = 0;
+        self.dictionary_scroll = 0;
         if self.filter_text.is_empty() {
             self.compiled_filter = None;
             self.filter_error = None;
@@ -3114,6 +3118,38 @@ mod tests {
             "Esc で compiled_filter もクリア"
         );
         assert!(app.filter_error.is_none());
+    }
+
+    #[test]
+    fn test_filter_mode_accepts_japanese() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        for c in ['動', '物'] {
+            app.handle_key(KeyCode::Char(c)).unwrap();
+        }
+        assert_eq!(app.filter_text, "動物");
+        let re = app.compiled_filter.as_ref().expect("regex compiled");
+        let curion = crate::curion::Curion::new(
+            uuid::Uuid::nil(),
+            "犬".to_string(),
+            crate::curion::Category::Animal,
+            crate::curion::Rarity::Common,
+            0.5,
+            0.5,
+        );
+        assert!(match_curion(re, &curion), "「動物 の 犬」が「動物」で match");
+    }
+
+    #[test]
+    fn test_filter_mode_s_key_is_typed_not_save() {
+        // フィルタ入力モード中の `s` はフィルタテキストに入る (main.rs 側で save を抑止する想定)。
+        // ui レイヤーの handle_key は filter_mode 中の `s` を普通の文字として処理する。
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        app.handle_key(KeyCode::Char('s')).unwrap();
+        assert_eq!(app.filter_text, "s");
     }
 
     #[test]
