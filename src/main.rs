@@ -2,6 +2,7 @@ mod achievement;
 mod cooldown;
 mod curion;
 mod daily_mission;
+mod equipment;
 mod evolution;
 mod generator;
 mod interactive;
@@ -11,6 +12,7 @@ mod plain;
 mod player;
 mod san;
 mod save;
+mod semantic;
 mod synthesis;
 mod ui;
 

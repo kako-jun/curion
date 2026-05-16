@@ -1,6 +1,7 @@
 use crate::achievement::{AchievementManager, AchievementProgress};
 use crate::curion::{Category, Curion, Rarity};
 use crate::daily_mission::{DailyMission, DailyMissionManager};
+use crate::equipment::{EquipmentEffect, EquipmentSlot};
 use crate::san::{apply_decay, apply_gain, san_gain_for_acquisition, SAN_GAIN_SYNTHESIS, SAN_MAX};
 use crate::synthesis::SynthesisManager;
 use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
@@ -192,6 +193,17 @@ pub struct Player {
     /// 旧セーブには無いため `#[serde(default = "default_san")]` (= 100.0 で復元)。
     #[serde(default = "default_san")]
     pub san: f64,
+
+    /// 装備スロット (Issue #38)
+    ///
+    /// 装備中 Curion の id を 1 つだけ保持する。装備中の Curion から導出される
+    /// [`EquipmentEffect`] が `add_curion` の XP 計算と `add_play_time` の SAN 減衰に
+    /// 常時適用される。装備なし、または装備対象が `collection` から消えていた場合
+    /// (合成消費や寿命切れ) は `EquipmentEffect::none()` 扱いになり、振る舞いは変化しない。
+    ///
+    /// 旧セーブには無いため `#[serde(default)]` (= 空スロットで復元)。
+    #[serde(default)]
+    pub equipment: EquipmentSlot,
 }
 
 /// 旧セーブに `san` フィールドが無い場合のデフォルト値 (Issue #29)。
@@ -292,6 +304,7 @@ impl Player {
             total_acquisitions: 0,
             last_collection_at: None,
             san: SAN_MAX,
+            equipment: EquipmentSlot::default(),
         }
     }
 
@@ -391,7 +404,11 @@ impl Player {
             3 | 4 => 2.0,
             _ => 3.0,
         };
-        let xp = (base_xp as f64 * multiplier) as u32;
+
+        // Issue #38: 装備中 Curion から導出される XP 倍率を乗算する
+        // (未装備 or 装備対象が collection から消えていれば 1.0 = 影響なし)。
+        let equipment_xp_multiplier = self.current_equipment_effect().xp_multiplier;
+        let xp = (base_xp as f64 * multiplier * equipment_xp_multiplier) as u32;
 
         if self.combo_count == 5 && prev_combo < 5 {
             self.add_title("コンボマスター".to_string());
@@ -639,12 +656,17 @@ impl Player {
     ///
     /// Issue #29: 経過時間に応じて SAN 値も減少させる。
     /// 1 分あたり `SAN_DECAY_PER_MINUTE` (= 0.1) ずつ減らし、0 でクランプ。
+    /// Issue #38: 装備中 Curion の `san_decay_modifier` を経過分に乗算する
+    /// (= purity 高い curion を装備すると放置による減りが緩む)。
     pub fn add_play_time(&mut self, seconds: u64) {
         self.total_play_time += seconds;
 
-        // Issue #29: 時間経過による SAN 減少 (放置で減る)
+        // Issue #29 + #38: 時間経過による SAN 減少 (放置で減る)。
+        // 装備中の curion から得た san_decay_modifier (1.0 = 変化なし、0.5 = 半減) を
+        // 経過分にそのまま乗算する。未装備なら 1.0 で振る舞いは旧来と同じ。
         let minutes_elapsed = (seconds as f64) / 60.0;
-        self.san = apply_decay(self.san, minutes_elapsed);
+        let san_decay_modifier = self.current_equipment_effect().san_decay_modifier;
+        self.san = apply_decay(self.san, minutes_elapsed * san_decay_modifier);
     }
 
     /// 称号を追加
@@ -678,6 +700,57 @@ impl Player {
     /// 最新のキュリオンを取得
     pub fn latest_curion(&self) -> Option<&Curion> {
         self.collection.last()
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #38: 装備システム
+    // -----------------------------------------------------------------
+
+    /// 装備中の Curion を取得する (`equipment.curion_id` に対応する collection 要素)。
+    ///
+    /// 装備されていない、または装備対象の id が collection に無い (合成消費・
+    /// 寿命切れで消えた) 場合は `None`。
+    pub fn equipped_curion(&self) -> Option<&Curion> {
+        let id = self.equipment.curion_id.as_deref()?;
+        self.collection.iter().find(|c| c.id == id)
+    }
+
+    /// 現在装備中の Curion から導出される効果を返す。
+    ///
+    /// 装備なし or 装備対象不在のときは [`EquipmentEffect::none`] (= baseline)。
+    /// 呼び出し側はこの値を「ロジックに乗算しても変化しない値」として扱える。
+    pub fn current_equipment_effect(&self) -> EquipmentEffect {
+        match self.equipped_curion() {
+            Some(c) => EquipmentEffect::from_curion(c),
+            None => EquipmentEffect::none(),
+        }
+    }
+
+    /// 指定 id の Curion を装備する。
+    ///
+    /// - `curion_id` が collection に無い場合は何もしない (= 装備状態は変わらない)。
+    /// - 既に同じ id を装備しているなら no-op。
+    /// - 既に別の curion を装備していたなら自動で取り替え。
+    pub fn equip(&mut self, curion_id: &str) {
+        if !self.collection.iter().any(|c| c.id == curion_id) {
+            return;
+        }
+        self.equipment.curion_id = Some(curion_id.to_string());
+    }
+
+    /// 装備を解除する (slot を空にする)。
+    pub fn unequip(&mut self) {
+        self.equipment.curion_id = None;
+    }
+
+    /// 同じ id なら解除、違う id なら装備し直すトグル。
+    /// `curion_id` が collection に無い場合は無視 (`equip` と同じ)。
+    pub fn toggle_equip(&mut self, curion_id: &str) {
+        if self.equipment.curion_id.as_deref() == Some(curion_id) {
+            self.unequip();
+        } else {
+            self.equip(curion_id);
+        }
     }
 
     /// 次のレベルまでの XP マイルストーンを返す (Issue #32)。
@@ -2220,6 +2293,259 @@ mod tests {
         assert_eq!(player.collection.len(), 1);
         assert!(player.collection[0].lifespan_days.is_none());
     }
+
+    // -----------------------------------------------------------------
+    // Issue #38 装備システム
+    // -----------------------------------------------------------------
+
+    /// 装備テスト用 Curion: source_guid を指定して latent / SemanticProfile を制御。
+    fn equip_test_curion(rarity: Rarity, source_guid: uuid::Uuid) -> Curion {
+        let mut c = Curion::new(
+            source_guid,
+            "装備テスト".to_string(),
+            Category::Concept,
+            rarity,
+            0.5,
+            0.5,
+        );
+        c.id = format!("equip-id-{source_guid}");
+        c
+    }
+
+    /// Issue #38: equip(id) は curion_id を slot に立てる。
+    #[test]
+    fn test_equip_sets_curion_id() {
+        let mut player = Player::new();
+        let c = equip_test_curion(Rarity::Rare, uuid::Uuid::new_v4());
+        let id = c.id.clone();
+        player.collection.push(c);
+
+        player.equip(&id);
+        assert_eq!(player.equipment.curion_id.as_deref(), Some(id.as_str()));
+        assert!(player.equipment.is_equipped());
+        // equipped_curion() でも取れる
+        assert_eq!(
+            player.equipped_curion().map(|c| c.id.clone()),
+            Some(id.clone())
+        );
+    }
+
+    /// Issue #38: unequip() で slot がクリアされる。
+    #[test]
+    fn test_unequip_clears() {
+        let mut player = Player::new();
+        let c = equip_test_curion(Rarity::Rare, uuid::Uuid::new_v4());
+        let id = c.id.clone();
+        player.collection.push(c);
+        player.equip(&id);
+
+        player.unequip();
+        assert!(player.equipment.curion_id.is_none());
+        assert!(player.equipped_curion().is_none());
+        // 効果は baseline に戻る
+        let e = player.current_equipment_effect();
+        assert_eq!(e.xp_multiplier, 1.0);
+        assert_eq!(e.san_decay_modifier, 1.0);
+    }
+
+    /// Issue #38: 存在しない id を渡しても crash しない (no-op)。
+    #[test]
+    fn test_equip_invalid_id_does_nothing() {
+        let mut player = Player::new();
+        // collection が空でも引数 id が無くてもパニックしない
+        player.equip("nonexistent-curion-id");
+        assert!(player.equipment.curion_id.is_none());
+
+        // すでに別の curion を装備していたら、無効 id では装備は変更されない
+        let c = equip_test_curion(Rarity::Rare, uuid::Uuid::new_v4());
+        let id = c.id.clone();
+        player.collection.push(c);
+        player.equip(&id);
+        assert_eq!(player.equipment.curion_id.as_deref(), Some(id.as_str()));
+        player.equip("still-nonexistent");
+        assert_eq!(
+            player.equipment.curion_id.as_deref(),
+            Some(id.as_str()),
+            "無効な id を渡しても元の装備は維持される"
+        );
+    }
+
+    /// Issue #38: 装備中の curion から導出される xp_multiplier が add_curion に反映される。
+    ///
+    /// 装備対象は profile.heat + profile.speed が高い source_guid を探して使う。
+    /// 装備時の XP が未装備時より多いことを検証する (具体値は latent 依存)。
+    #[test]
+    fn test_xp_multiplier_applies_on_acquisition() {
+        use crate::equipment::EquipmentEffect;
+        use crate::semantic::SemanticProfile;
+
+        // heat + speed が高い (= xp_multiplier > 1.0) source_guid を探索する。
+        // ランダムに見える uuid を試して xp_multiplier が一定以上のものを採用。
+        let mut equip_guid = None;
+        for _ in 0..200 {
+            let g = uuid::Uuid::new_v4();
+            let p = SemanticProfile::from_curion(&equip_test_curion(Rarity::Common, g));
+            let e = EquipmentEffect::from_profile(&p);
+            if e.xp_multiplier > 1.3 {
+                equip_guid = Some((g, e.xp_multiplier));
+                break;
+            }
+        }
+        let (equip_guid, multiplier) =
+            equip_guid.expect("200 回試して heat+speed の高い source_guid が見つからない");
+
+        // 装備候補を作って collection に追加
+        let equip_curion = equip_test_curion(Rarity::Common, equip_guid);
+        let equip_id = equip_curion.id.clone();
+
+        // ベースケース: 未装備で Rare を取得 → 25 XP (combo=1 倍率 1.0)
+        let mut base = Player::new();
+        base.collection.push(equip_curion.clone());
+        let base_xp_gained = base.add_curion(equip_test_curion(Rarity::Rare, uuid::Uuid::new_v4()));
+
+        // 装備ケース: 同じ装備状態で同じ Rare を取得
+        let mut equipped = Player::new();
+        equipped.collection.push(equip_curion.clone());
+        equipped.equip(&equip_id);
+        let equipped_xp_gained =
+            equipped.add_curion(equip_test_curion(Rarity::Rare, uuid::Uuid::new_v4()));
+
+        // 期待値: 25 * multiplier を切り捨て
+        let expected = (25.0 * multiplier) as u32;
+        assert_eq!(
+            equipped_xp_gained, expected,
+            "装備時 XP = 25 * {multiplier}"
+        );
+        assert!(
+            equipped_xp_gained > base_xp_gained,
+            "装備で XP が増える (base {base_xp_gained}, equipped {equipped_xp_gained})"
+        );
+    }
+
+    /// Issue #38: 装備中の curion から導出される san_decay_modifier が add_play_time に反映される。
+    ///
+    /// purity が高い source_guid を探して装備し、未装備ケースより SAN 減衰が小さいことを検証する。
+    #[test]
+    fn test_san_decay_modifier_applies() {
+        use crate::equipment::EquipmentEffect;
+        use crate::semantic::SemanticProfile;
+
+        // purity が 0.5 以上 (= san_decay_modifier < 0.75) になる source_guid を探索。
+        let mut equip_guid = None;
+        for _ in 0..200 {
+            let g = uuid::Uuid::new_v4();
+            let p = SemanticProfile::from_curion(&equip_test_curion(Rarity::Common, g));
+            let e = EquipmentEffect::from_profile(&p);
+            if e.san_decay_modifier < 0.75 {
+                equip_guid = Some((g, e.san_decay_modifier));
+                break;
+            }
+        }
+        let (equip_guid, modifier) =
+            equip_guid.expect("200 回試して purity の高い source_guid が見つからない");
+
+        let equip_curion = equip_test_curion(Rarity::Common, equip_guid);
+        let equip_id = equip_curion.id.clone();
+
+        // 未装備: 600 秒 = 10 分 → -1.0
+        let mut base = Player::new();
+        base.collection.push(equip_curion.clone());
+        let san_before = base.san;
+        base.add_play_time(600);
+        let base_decay = san_before - base.san;
+        assert!((base_decay - 1.0).abs() < 1e-9, "未装備: 10 分で -1.0");
+
+        // 装備: 600 秒 → -1.0 * modifier
+        let mut equipped = Player::new();
+        equipped.collection.push(equip_curion.clone());
+        equipped.equip(&equip_id);
+        let san_before_eq = equipped.san;
+        equipped.add_play_time(600);
+        let eq_decay = san_before_eq - equipped.san;
+        let expected = 1.0 * modifier;
+        assert!(
+            (eq_decay - expected).abs() < 1e-6,
+            "装備: 10 分で -{expected} (modifier={modifier}) got -{eq_decay}"
+        );
+        assert!(eq_decay < base_decay, "装備時の方が減衰が少ない");
+    }
+
+    /// Issue #38: 旧セーブ (equipment フィールド無し) でも空 slot で復元される。
+    #[test]
+    fn test_legacy_save_equipment_defaults_empty() {
+        let legacy = json!({
+            "level": 1,
+            "xp": 0,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+        });
+        let player: Player = serde_json::from_value(legacy).expect("旧 Player JSON が読める");
+        assert!(player.equipment.curion_id.is_none());
+        assert!(!player.equipment.is_equipped());
+        // current_equipment_effect は baseline
+        let e = player.current_equipment_effect();
+        assert_eq!(e.xp_multiplier, 1.0);
+        assert_eq!(e.san_decay_modifier, 1.0);
+    }
+
+    /// Issue #38: 装備中 Curion が collection から消えた場合 (合成消費・寿命切れ等) は
+    /// `equipped_curion = None` になり、効果は baseline に戻る。
+    #[test]
+    fn test_equipped_curion_disappears_after_removal() {
+        let mut player = Player::new();
+        let c = equip_test_curion(Rarity::Rare, uuid::Uuid::new_v4());
+        let id = c.id.clone();
+        player.collection.push(c);
+        player.equip(&id);
+        assert!(player.equipped_curion().is_some());
+
+        // 合成消費等で collection から削除
+        player.collection.retain(|c| c.id != id);
+        assert!(player.equipped_curion().is_none());
+        // slot 自体は残るが、効果は baseline 扱い
+        assert!(player.equipment.curion_id.is_some());
+        let e = player.current_equipment_effect();
+        assert_eq!(e.xp_multiplier, 1.0);
+    }
+
+    /// Issue #38: toggle_equip は同じ id で解除、違う id で装備し直す。
+    #[test]
+    fn test_toggle_equip() {
+        let mut player = Player::new();
+        let c1 = equip_test_curion(Rarity::Rare, uuid::Uuid::new_v4());
+        let id1 = c1.id.clone();
+        let c2 = equip_test_curion(Rarity::Epic, uuid::Uuid::new_v4());
+        let id2 = c2.id.clone();
+        player.collection.push(c1);
+        player.collection.push(c2);
+
+        // 初回トグル: 装備
+        player.toggle_equip(&id1);
+        assert_eq!(player.equipment.curion_id.as_deref(), Some(id1.as_str()));
+        // 同じ id で再トグル: 解除
+        player.toggle_equip(&id1);
+        assert!(player.equipment.curion_id.is_none());
+        // 別 id をトグル: 装備
+        player.toggle_equip(&id2);
+        assert_eq!(player.equipment.curion_id.as_deref(), Some(id2.as_str()));
+        // 違う id のトグルで取り替え
+        player.toggle_equip(&id1);
+        assert_eq!(player.equipment.curion_id.as_deref(), Some(id1.as_str()));
+    }
+
+    // -----------------------------------------------------------------
+    // (元の Issue #30 テストはここから続く)
+    // -----------------------------------------------------------------
 
     /// Issue #30: 旧セーブ JSON (lifespan_days フィールド無し) からの deserialize で
     /// `lifespan_days = None` に復元され、期限切れ扱いされない。
