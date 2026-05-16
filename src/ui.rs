@@ -18,6 +18,7 @@ use crate::cooldown::{cooldown_progress, current_rarity_probabilities, remaining
 use crate::curion::{Category, Curion, Rarity};
 use crate::generator::CurionGenerator;
 use crate::player::{GameState, LoginBonusReward};
+use crate::san::{san_state, SanState, SAN_MAX};
 
 // ── Style constants ──────────────────────────────────────────────
 
@@ -1350,11 +1351,12 @@ impl App {
                 Constraint::Length(3), // 1: XP gauge
                 Constraint::Length(1), // 2: Rare cooldown
                 Constraint::Length(1), // 3: RARE 出現確率 (Issue #28)
-                Constraint::Length(2), // 4: stats (total/today/level/COMBO)
-                Constraint::Length(1), // 5: next milestone (Issue #32)
-                Constraint::Length(3), // 6: latest curion
-                Constraint::Length(6), // 7: rarity distribution
-                Constraint::Min(4),    // 8: category distribution
+                Constraint::Length(1), // 4: SAN bar (Issue #29)
+                Constraint::Length(2), // 5: stats (total/today/level/COMBO)
+                Constraint::Length(1), // 6: next milestone (Issue #32)
+                Constraint::Length(3), // 7: latest curion
+                Constraint::Length(6), // 8: rarity distribution
+                Constraint::Min(4),    // 9: category distribution
             ])
             .split(area);
 
@@ -1446,6 +1448,31 @@ impl App {
         ]);
         f.render_widget(Paragraph::new(rare_probability_line), chunks[3]);
 
+        // Issue #29: SAN 値 (正気度) バー
+        // ロジックは `crate::san` に閉じ、ここでは値を読んで描画するだけ。
+        let san = self.game_state.player.san;
+        let san_ratio = (san / SAN_MAX).clamp(0.0, 1.0);
+        let state = san_state(san);
+        let (san_color, san_warn) = match state {
+            SanState::Healthy => (Color::Cyan, ""),
+            SanState::Slight => (Color::Yellow, ""),
+            SanState::Warning => (Color::Red, ""),
+            SanState::Critical => (Color::Magenta, "  ⚠ 異常状態"),
+        };
+        let san_label = format!(
+            "SAN [{}] {:>5.1} / {:.0}{}",
+            bar(san_ratio, 12),
+            san,
+            SAN_MAX,
+            san_warn
+        );
+        let san_gauge = LineGauge::default()
+            .ratio(san_ratio)
+            .label(san_label)
+            .filled_style(Style::default().fg(san_color))
+            .unfilled_style(Style::default().fg(COLOR_LABEL));
+        f.render_widget(san_gauge, chunks[4]);
+
         // Basic stats
         let player = &self.game_state.player;
         // COMBO 表示: コンボ中はレアリティ色で強調、5+ は Legendary + 称号アイコン
@@ -1495,7 +1522,7 @@ impl App {
         let stats = Paragraph::new(stats_text)
             .block(unfocused_block("統計"))
             .alignment(Alignment::Left);
-        f.render_widget(stats, chunks[4]);
+        f.render_widget(stats, chunks[5]);
 
         // Issue #32: 次のマイルストーン表示 (= 「あと少し感」を常時演出)
         // XP / 各種実績の残量から最も小さいものを 1 行で出す。
@@ -1520,7 +1547,7 @@ impl App {
             )])
         };
         let milestone_widget = Paragraph::new(vec![milestone_line]).alignment(Alignment::Left);
-        f.render_widget(milestone_widget, chunks[5]);
+        f.render_widget(milestone_widget, chunks[6]);
 
         // Latest curion
         if let Some(curion) = player.latest_curion() {
@@ -1543,7 +1570,7 @@ impl App {
                 ),
             ])];
             let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
-            f.render_widget(latest, chunks[6]);
+            f.render_widget(latest, chunks[7]);
         }
 
         // Rarity distribution
@@ -1574,7 +1601,7 @@ impl App {
             ]));
         }
         let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
-        f.render_widget(rarity_widget, chunks[7]);
+        f.render_widget(rarity_widget, chunks[8]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -1586,7 +1613,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[8]);
+        f.render_widget(category_widget, chunks[9]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {

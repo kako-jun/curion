@@ -155,6 +155,15 @@ Left pane sections:
   - `combo_count` is shown in label color when 0/1, Rare color at 2, Epic color at 3-4, Legendary color + `🔥 コンボマスター!` at 5+
   - `max_combo` is recorded for future stats display
   - Save compatibility: `combo_count` / `max_combo` use `#[serde(default)]`
+- **SAN value (正気度) LineGauge** (Issue #29):
+  - 0.0..=100.0 の `f64` を `Player::san` に持つ。初期値 100.0。
+  - 表示: `SAN [████████░░░░] 67.5 / 100` 形式の LineGauge を常時 1 行で表示。
+  - 色: SAN >= 80 → Cyan / 50..80 → Yellow / 30..50 → Red / < 30 → Magenta + `⚠ 異常状態` ラベル付記。
+  - 変動: Common 収集 +0.5 / Rare +2.0 / Epic +5.0 / Legendary +15.0 / 合成成功 +3.0 /
+    時間経過 -0.1 per minute (放置で減少)。境界は `[0.0, 100.0]` でクランプ。
+  - 変動ロジックは `src/san.rs` のピュア関数 (`san_gain_for_acquisition`,
+    `apply_decay`, `apply_gain`, `san_state`) に閉じ、`ui.rs` は値を読み取って描画するだけ。
+  - Save compatibility: `san` は `#[serde(default = "default_san")]` (= 100.0 で復元)。
 - Latest curion acquired
 - Rarity distribution (horizontal text bars)
 - Category distribution (compact text summary)

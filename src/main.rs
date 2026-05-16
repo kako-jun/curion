@@ -7,6 +7,7 @@ mod interactive;
 mod nostr_identity;
 mod plain;
 mod player;
+mod san;
 mod save;
 mod synthesis;
 mod ui;

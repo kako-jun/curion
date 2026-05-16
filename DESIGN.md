@@ -168,6 +168,12 @@ Right pane layout:
       - cooldown progress 反映済み。レア以上は Cyan+Bold (満タン時は Epic 色)、内訳は Label color
       - 確率は `crate::cooldown::current_rarity_probabilities(progress)` がロジック層で算出
       - generator の roll-shift モデル (累積境界 0.01 / 0.10 / 0.40 + `0.3*progress` シフト) と整合
+    - LineGauge: SAN 値 (正気度) (Issue #29, 1 行)
+      - `SAN [████████░░░░] 67.5 / 100`
+      - 色: >= 80 Cyan / 50..80 Yellow / 30..50 Red / < 30 Magenta + `⚠ 異常状態` ラベル付記
+      - 変動: Common +0.5 / Rare +2.0 / Epic +5.0 / Legendary +15.0 / 合成成功 +3.0 / 時間経過 -0.1/min
+      - 計算は `crate::san` のピュア関数 (`san_gain_for_acquisition` / `apply_decay` / `apply_gain` / `san_state`) に閉じ、UI は値を読んで描画するだけ
+      - 旧セーブ互換: `Player::san` は `#[serde(default = "default_san")]` (= 100.0 で復元)
     - Paragraph: 総獲得数 / 今日の獲得 / レベル / COMBO (one line, inline)
       - COMBO: N — Common でリセット、Rare 以上で +1
       - 表示色: 0/1=Label, 2=Rare, 3-4=Epic, 5+=Legendary + `🔥 コンボマスター!`
