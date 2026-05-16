@@ -3,120 +3,140 @@
     "name": "米",
     "reading": "こめ",
     "english": "rice",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "日々を支える、勤勉な興味の粒子。一粒に八十八の手間が宿ると伝えられてきた。"
   },
   {
     "name": "麦",
     "reading": "むぎ",
     "english": "wheat",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "風になびく金色の海、豊穣の興味を宿す粒子。挽かれてなお誰かの朝を温める。"
   },
   {
     "name": "豆",
     "reading": "まめ",
     "english": "bean",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "小さな殻に未来を畳み込む、可能性の興味の粒子。発芽の力は哲学を超えてくる。"
   },
   {
     "name": "芋",
     "reading": "いも",
     "english": "potato",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "土の中で静かに肥える、辛抱強い興味の粒子。地味な見た目に膨大な熱量を秘める。"
   },
   {
     "name": "魚",
     "reading": "さかな",
     "english": "fish",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "海から食卓へ運ばれる、栄養の興味を宿す粒子。命を頂く儀礼を最も身近に教える。"
   },
   {
     "name": "肉",
     "reading": "にく",
     "english": "meat",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "他の命を取り込むことで生まれる、強さの興味の粒子。歓喜と罪悪を同時に抱く食。"
   },
   {
     "name": "卵",
     "reading": "たまご",
     "english": "egg",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "全ての可能性が殻に閉じる、始まりの興味の粒子。割られて初めて未来が選ばれる。"
   },
   {
     "name": "乳",
     "reading": "ちち",
     "english": "milk",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "母なる命が分け与える、慈愛の興味を宿す粒子。栄養と温度を併せて運んでくる。"
   },
   {
     "name": "果",
     "reading": "み",
     "english": "fruit",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "甘さで誘い種を運ばせる、戦略の興味を宿す粒子。色と香りで世界を交渉する。"
   },
   {
     "name": "菜",
     "reading": "な",
     "english": "vegetable",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "緑のまま命をくれる、清涼な興味の粒子。日々の身体を整える静かな主役。"
   },
   {
     "name": "茸",
     "reading": "きのこ",
     "english": "mushroom",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "光なき森で繁る、神秘の興味を宿す粒子。生と死の境界をやさしく和らげていく。"
   },
   {
     "name": "海苔",
     "reading": "のり",
     "english": "seaweed",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "黒い紙のように波を畳み込んだ、海の興味の粒子。香りに磯の記憶を封じている。"
   },
   {
     "name": "昆布",
     "reading": "こんぶ",
     "english": "kelp",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "海中で揺れて旨味を育てる、忍耐の興味を宿す粒子。出汁となり料理の根を支える。"
   },
   {
     "name": "鰹",
     "reading": "かつお",
     "english": "bonito",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "海を疾走し続ける、力強い興味の粒子。削られて初めて深い甘さを放つ命の象徴。"
   },
   {
     "name": "味噌",
     "reading": "みそ",
     "english": "miso",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "豆と時間と菌が織りなす、熟成の興味の粒子。一杯の汁で家郷の輪郭が立ち上がる。"
   },
   {
     "name": "醤油",
     "reading": "しょうゆ",
     "english": "soy sauce",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "黒く薫る液体、調和の興味を宿す粒子。一滴で皿の世界を引き締めてくれる。"
   },
   {
     "name": "酒",
     "reading": "さけ",
     "english": "sake",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "穀物が時間を経て香る、酩酊の興味を宿す粒子。喜びを増幅し悲しみを薄めてくれる。"
   },
   {
     "name": "茶",
     "reading": "ちゃ",
     "english": "tea",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "葉から立ち上る静かな興味の粒子。一服のうちに時間の流れがゆっくりと変わる。"
   },
   {
     "name": "塩",
     "reading": "しお",
     "english": "salt",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "海から取り出した命の輪郭、清めの興味を宿す粒子。味を引き出す静かな鍵となる。"
   },
   {
     "name": "砂糖",
     "reading": "さとう",
     "english": "sugar",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "甘さを結晶化した、誘惑の興味を宿す粒子。少量で気分を翻し過ぎれば毒となる。"
   }
 ]

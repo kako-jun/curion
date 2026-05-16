@@ -3,120 +3,140 @@
     "name": "夢",
     "reading": "ゆめ",
     "english": "dream",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "眠りの中で組み立てられる、もう一つの興味の粒子。覚めても余韻が一日を彩る。"
   },
   {
     "name": "光",
     "reading": "ひかり",
     "english": "light",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "速度の限界に立つ、純粋な興味の粒子。届くこと自体が小さな奇跡を運んでいる。"
   },
   {
     "name": "影",
     "reading": "かげ",
     "english": "shadow",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "光があるから生まれる、対の興味を宿す粒子。輪郭をなぞって本体を浮き彫りにする。"
   },
   {
     "name": "風",
     "reading": "かぜ",
     "english": "wind",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "形を持たぬまま全てを撫でる、自由な興味の粒子。吹けば思考の塵まで運んでいく。"
   },
   {
     "name": "雲",
     "reading": "くも",
     "english": "cloud",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "空に浮かぶ即興の彫刻、移ろいの興味を宿す粒子。同じ形は一秒として続かない。"
   },
   {
     "name": "雨",
     "reading": "あめ",
     "english": "rain",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "天が地を撫でる時の手触り、慰めの興味を宿す粒子。落ちる音だけで世界が静まる。"
   },
   {
     "name": "雪",
     "reading": "ゆき",
     "english": "snow",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "六角形の沈黙が降り積もる、静寂の興味の粒子。音を吸い込んで世界を初期化する。"
   },
   {
     "name": "霧",
     "reading": "きり",
     "english": "fog",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "視界を奪うことで観察を促す、逆説の興味を宿す粒子。輪郭の不在こそが想像を生む。"
   },
   {
     "name": "虹",
     "reading": "にじ",
     "english": "rainbow",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "雨と光の和解の証、希望の興味を宿す粒子。橋として現れては静かに消えていく。"
   },
   {
     "name": "星",
     "reading": "ほし",
     "english": "star",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "遥か昔の光が今届く、時差を抱えた興味の粒子。見える星のいくつかは既に失われている。"
   },
   {
     "name": "月",
     "reading": "つき",
     "english": "moon",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "夜の鏡となって地球を見守る、静謐な興味の粒子。満ち欠けで心の周期を導いてくる。"
   },
   {
     "name": "太陽",
     "reading": "たいよう",
     "english": "sun",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "全ての始まりを灯す、原初の興味の粒子。直視できないほどの恩恵を毎朝届ける。"
   },
   {
     "name": "空",
     "reading": "そら",
     "english": "sky",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "無限の容れ物として広がる、開放の興味の粒子。何もないからこそ全てを許容する。"
   },
   {
     "name": "海",
     "reading": "うみ",
     "english": "sea",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "塩と命の揺り籠として広がる、深淵の興味の粒子。表面の波の下には別の宇宙がある。"
   },
   {
     "name": "山",
     "reading": "やま",
     "english": "mountain",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "大地が天を目指した形、不動の興味を宿す粒子。仰ぐ者の心を一段引き上げてくれる。"
   },
   {
     "name": "川",
     "reading": "かわ",
     "english": "river",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "終わりなく流れ続ける、変化の興味を宿す粒子。同じ水に二度と入れぬのが理となる。"
   },
   {
     "name": "森",
     "reading": "もり",
     "english": "forest",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "無数の生命が呼吸する、多声の興味を宿す粒子。一歩ごとに時間の進み方が変わる。"
   },
   {
     "name": "道",
     "reading": "みち",
     "english": "road",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "歩く者によって生まれる、可能性の興味の粒子。引き返す自由も含めて道と呼ぶ。"
   },
   {
     "name": "橋",
     "reading": "はし",
     "english": "bridge",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "断絶を縫い直す、和解の興味を宿す粒子。架ける覚悟を持つ者だけが渡れる軌跡。"
   },
   {
     "name": "門",
     "reading": "もん",
     "english": "gate",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "外と内を区切る、選択の興味を宿す粒子。くぐる前と後で世界の解像度が変わる。"
   }
 ]

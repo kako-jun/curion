@@ -3,312 +3,364 @@
     "name": "愛",
     "reading": "あい",
     "english": "love",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "観測者と対象を区別しなくなる、結合の興味を宿す粒子。万有引力の心理学的形態。"
   },
   {
     "name": "美",
     "reading": "び",
     "english": "beauty",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "認識した瞬間に呼吸を変える、調和の興味を宿す粒子。理由を超えて魂を立ち止まらせる。"
   },
   {
     "name": "自由",
     "reading": "じゆう",
     "english": "freedom",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "選択肢の総和ではなく選び抜く力、解放の興味の粒子。重みに耐えられる者にだけ宿る。"
   },
   {
     "name": "勇気",
     "reading": "ゆうき",
     "english": "courage",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "恐れを抱えたまま前へ進む、決断の興味を宿す粒子。震える手のまま剣を握れる強さ。"
   },
   {
     "name": "希望",
     "reading": "きぼう",
     "english": "hope",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "暗闇の中で発光する、微小だが切れない興味の粒子。今ここを未来から照らしてくる。"
   },
   {
     "name": "絶望",
     "reading": "ぜつぼう",
     "english": "despair",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "希望の対極に位置する、深淵の興味の粒子。底まで沈むことで反転の合図を放つ。"
   },
   {
     "name": "正義",
     "reading": "せいぎ",
     "english": "justice",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "誰の視点に立つかで形が変わる、揺らぐ興味の粒子。問い続ける姿勢こそが本質となる。"
   },
   {
     "name": "知恵",
     "reading": "ちえ",
     "english": "wisdom",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "知識を経験で炊き上げた、滋養ある興味の粒子。本ではなく沈黙の中で熟成される。"
   },
   {
     "name": "力",
     "reading": "ちから",
     "english": "power",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "意志と物質を結ぶ、媒介の興味を宿す粒子。向きを誤れば破壊、定めれば創造となる。"
   },
   {
     "name": "平和",
     "reading": "へいわ",
     "english": "peace",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "騒がしさが収まった後に立ち上る、繊細な興味の粒子。維持するほうが手に入れるより難しい。"
   },
   {
     "name": "調和",
     "reading": "ちょうわ",
     "english": "harmony",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "違うものが共存する音、橋渡しの興味を宿す粒子。同質ではなく差異の中にこそ宿る。"
   },
   {
     "name": "混沌",
     "reading": "こんとん",
     "english": "chaos",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "秩序が生まれる前の母なる海、創発の興味の粒子。曖昧さが新しい形を孕んでいく。"
   },
   {
     "name": "秩序",
     "reading": "ちつじょ",
     "english": "order",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "混沌に意味の梁を渡す、構造の興味を宿す粒子。維持するための摩擦も常に伴う。"
   },
   {
     "name": "真実",
     "reading": "しんじつ",
     "english": "truth",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "観測者が変わっても変わらぬ核、誠実の興味の粒子。砕けても破片にもまだ宿る。"
   },
   {
     "name": "嘘",
     "reading": "うそ",
     "english": "lie",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "本当と嘘の境界で揺れる、影の興味を宿す粒子。物語を駆動する燃料にもなれる。"
   },
   {
     "name": "運命",
     "reading": "うんめい",
     "english": "fate",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "選択と偶然の網目が描く模様、巨視の興味の粒子。後から振り返ると形が見えてくる。"
   },
   {
     "name": "奇跡",
     "reading": "きせき",
     "english": "miracle",
-    "weight": 0.3
+    "weight": 0.3,
+    "flavor": "確率が屈する瞬間に立ち会う、稀少な興味の粒子。日常の中にも紛れ込む小さな歓喜。"
   },
   {
     "name": "栄光",
     "reading": "えいこう",
     "english": "glory",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "結果が他者の眼差しを通して輝く、社会的興味の粒子。一瞬の光は影とともに長く残る。"
   },
   {
     "name": "屈辱",
     "reading": "くつじょく",
     "english": "humiliation",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "誇りが踏みにじられた跡に残る、痛みの興味を宿す粒子。再起の燃料になることもある。"
   },
   {
     "name": "喜び",
     "reading": "よろこび",
     "english": "joy",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "心拍と表情が同時に弾む、純粋な興味の粒子。分けるほどに総量が増す不思議な熱。"
   },
   {
     "name": "悲しみ",
     "reading": "かなしみ",
     "english": "sadness",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "失った形の輪郭を撫でる、慰めの興味を宿す粒子。涙によって心が再構成されていく。"
   },
   {
     "name": "怒り",
     "reading": "いかり",
     "english": "anger",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "境界線が破られた合図、防衛の興味を宿す粒子。鎮める術を持つ者にこそ宿る力。"
   },
   {
     "name": "恐怖",
     "reading": "きょうふ",
     "english": "fear",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "未知に対する身体の先回り、警戒の興味を宿す粒子。理解できれば力に変換できる。"
   },
   {
     "name": "安心",
     "reading": "あんしん",
     "english": "relief",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "緊張が解けた身体に流れ込む、ぬるい興味の粒子。深い呼吸が出来ることが証となる。"
   },
   {
     "name": "孤独",
     "reading": "こどく",
     "english": "loneliness",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "他者がいない時間に自分と出会う、内省の興味の粒子。深さは他者と分かち合う器を作る。"
   },
   {
     "name": "友情",
     "reading": "ゆうじょう",
     "english": "friendship",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "対等な眼差しを交わし合う、共鳴の興味を宿す粒子。沈黙さえ言葉として通じ合う関係。"
   },
   {
     "name": "信頼",
     "reading": "しんらい",
     "english": "trust",
-    "weight": 1.0
+    "weight": 1.0,
+    "flavor": "未来を相手に預ける、緩やかで強い興味の粒子。築くのは年月、壊すのは一瞬となる。"
   },
   {
     "name": "裏切り",
     "reading": "うらぎり",
     "english": "betrayal",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "築かれた信頼に走る亀裂、痛烈な興味の粒子。傷の形が世界の輪郭を再定義する。"
   },
   {
     "name": "魂",
     "reading": "たましい",
     "english": "soul",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "肉体を脱いでも残るかもしれない、形なき興味の粒子。観測できないが確かに在るもの。"
   },
   {
     "name": "精神",
     "reading": "せいしん",
     "english": "spirit",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "肉体を統べる司令塔、意識の興味を宿す粒子。鍛えれば現実をも書き換える力となる。"
   },
   {
     "name": "意志",
     "reading": "いし",
     "english": "will",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "未来を現在へ手繰り寄せる、推進の興味の粒子。折れない強さよりしなる強さが本質。"
   },
   {
     "name": "欲望",
     "reading": "よくぼう",
     "english": "desire",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "存在を駆動する燃料、原動の興味を宿す粒子。手綱を握れば翼となり離せば荒馬となる。"
   },
   {
     "name": "理性",
     "reading": "りせい",
     "english": "reason",
-    "weight": 0.8
+    "weight": 0.8,
+    "flavor": "感情の波を観測する灯台、観測の興味を宿す粒子。冷たさではなく明晰さが本質となる。"
   },
   {
     "name": "本能",
     "reading": "ほんのう",
     "english": "instinct",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "言葉以前から身体に住む、古層の興味を宿す粒子。理屈を越えて命の判断を下してくる。"
   },
   {
     "name": "永遠",
     "reading": "えいえん",
     "english": "eternity",
-    "weight": 0.4
+    "weight": 0.4,
+    "flavor": "終わりを持たぬ広がり、無限の興味を宿す粒子。一瞬の中にも畳まれて宿ることがある。"
   },
   {
     "name": "刹那",
     "reading": "せつな",
     "english": "moment",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "切り取れぬほど短い時間の名、稀少な興味の粒子。集中の中でだけ可視化される時間。"
   },
   {
     "name": "無限",
     "reading": "むげん",
     "english": "infinity",
-    "weight": 0.3
+    "weight": 0.3,
+    "flavor": "終わりが定義されないことの自由、開放の興味の粒子。数字を超えた概念の海となる。"
   },
   {
     "name": "虚無",
     "reading": "きょむ",
     "english": "nothingness",
-    "weight": 0.2
+    "weight": 0.2,
+    "flavor": "全てが消えた後に立つ広がり、静寂の興味の粒子。無こそ最大の容器だと囁いてくる。"
   },
   {
     "name": "存在",
     "reading": "そんざい",
     "english": "existence",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "「在る」という最も基本的な事実、根源の興味の粒子。ここに在ること自体が奇跡。"
   },
   {
     "name": "創造",
     "reading": "そうぞう",
     "english": "creation",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "無から有を立ち上げる、火花のような興味の粒子。観測者を作り手に変える瞬間の輝き。"
   },
   {
     "name": "破壊",
     "reading": "はかい",
     "english": "destruction",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "形を解いて素材へ戻す、解体の興味を宿す粒子。次の創造のための余白を空けていく。"
   },
   {
     "name": "生命",
     "reading": "せいめい",
     "english": "life",
-    "weight": 0.7
+    "weight": 0.7,
+    "flavor": "情報が温度を持って動き続ける、奇跡の興味の粒子。一秒の継続が宇宙最大の事件となる。"
   },
   {
     "name": "死",
     "reading": "し",
     "english": "death",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "形ある全てに必ず約束された、境界の興味の粒子。怖れる対象であり指針でもある。"
   },
   {
     "name": "再生",
     "reading": "さいせい",
     "english": "rebirth",
-    "weight": 0.4
+    "weight": 0.4,
+    "flavor": "終わったはずの形が再び芽吹く、循環の興味を宿す粒子。死を栄養に変える生命の知恵。"
   },
   {
     "name": "記憶",
     "reading": "きおく",
     "english": "memory",
-    "weight": 0.9
+    "weight": 0.9,
+    "flavor": "過去を未来へ運ぶ薄膜、橋渡しの興味を宿す粒子。歪みながらも自分の輪郭を保つ礎。"
   },
   {
     "name": "忘却",
     "reading": "ぼうきゃく",
     "english": "oblivion",
-    "weight": 0.6
+    "weight": 0.6,
+    "flavor": "心を軽くする慈悲、空白の興味を宿す粒子。覚え続けるためには手放しもまた必要。"
   },
   {
     "name": "時",
     "reading": "とき",
     "english": "time",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "戻れない方向に流れる、不可逆の興味の粒子。観測することで形を変えてしまう存在。"
   },
   {
     "name": "空",
     "reading": "くう",
     "english": "void",
-    "weight": 0.4
+    "weight": 0.4,
+    "flavor": "全てが在りつつ全てが空である、逆説の興味の粒子。容れ物としての宇宙の名でもある。"
   },
   {
     "name": "因果",
     "reading": "いんが",
     "english": "causality",
-    "weight": 0.3
+    "weight": 0.3,
+    "flavor": "原因と結果を結ぶ見えない糸、連鎖の興味の粒子。種を蒔く手の責任を静かに示す。"
   },
   {
     "name": "輪廻",
     "reading": "りんね",
     "english": "samsara",
-    "weight": 0.2
+    "weight": 0.2,
+    "flavor": "終わらず巡り続ける円環、回帰の興味を宿す粒子。今日の行いが遥か先で実を結ぶ。"
   },
   {
     "name": "時間",
     "reading": "じかん",
     "english": "time",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "万物を運ぶ目に見えぬ川、不可逆の興味を宿す粒子。観測する者だけが感じ取れる流れ。"
   },
   {
     "name": "空間",
     "reading": "くうかん",
     "english": "space",
-    "weight": 0.5
+    "weight": 0.5,
+    "flavor": "存在が広がる土台、容器の興味を宿す粒子。曲がり伸び縮みする現代の柔らかな概念。"
   }
 ]
