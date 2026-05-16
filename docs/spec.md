@@ -81,6 +81,53 @@ Recipe JSON is backward compatible: existing recipes without `success_rate` /
 `failure_mode` deserialize to `1.0` / `NoLoss`, so all 15 legacy recipes remain
 100% safe.
 
+### Partial Recipe Visibility (Issue #37)
+
+Each recipe carries a `visibility: RecipeVisibility` (default `Public`,
+`#[serde(default)]` so legacy JSON is unchanged):
+
+- `Public`  — ingredients and result are fully displayed from the start.
+- `Partial` — only the first ingredient name is shown; the rest of the
+  ingredients and the result are masked with `?`. Recipe `name` is still shown.
+  Example list line: `光 + ? -> ?` (with description hidden behind the same mask).
+- `Unknown` — recipe shown only as `未確認レシピ #NN` where `NN` is the 1-origin
+  recipe index, zero-padded to 2 digits. Description, ingredients, result, and
+  the recipe `name` are all hidden.
+
+A recipe is always rendered as Public the moment it becomes discovered,
+regardless of its `visibility`. Discovery transitions are unchanged: passing
+`discovery_rate` flips `is_discovered = true` and the row reveals full text on
+the next render.
+
+Progress indicator (per recipe row, except Unknown rows):
+
+- `進捗: N/M` where `N = satisfied IngredientRequirement count`, `M = total`.
+- `✓` appended in green when `all_satisfied == true`.
+- Otherwise `(あと K 種)` is appended where `K = total - satisfied`, calculated
+  via `SynthesisRecipe::remaining_categories(&collection)`.
+
+Logic-layer APIs (UI-independent, in `synthesis.rs`):
+
+- `SynthesisRecipe::ingredient_progress(&[Curion]) -> IngredientProgress`
+- `SynthesisRecipe::remaining_categories(&[Curion]) -> usize`
+- `SynthesisRecipe::display_label(&[Curion], is_discovered, index) -> String`
+
+Color treatment in the recipe list:
+
+- Public / discovered: white recipe name (default).
+- Partial: recipe name in `COLOR_LABEL` (dark gray) to signal "obfuscated".
+- Unknown: row in `Color::DarkGray` throughout.
+- When `all_satisfied == true` and `!discovered`, the name is bumped to
+  `COLOR_SUCCESS` to tease the player ("you have everything; try synthesizing").
+
+Current bundled high-visibility recipes (`data/recipes/basic_recipes.json`):
+
+| Recipe | Visibility |
+|---|---|
+| `recipe_014` (陰陽 / Advanced Legendary) | `partial` |
+| `recipe_016` (禁断の神 / Advanced Legendary, LoseAll) | `unknown` |
+| `recipe_017` (黒い太陽 / Conceptual Epic, Salvage) | `partial` |
+
 ## Lifespan System (Issue #30)
 
 Each curion has a finite lifespan tied to its rarity. Curions left in the

@@ -2804,22 +2804,32 @@ impl App {
     }
 
     fn render_recipe_list(&self, f: &mut Frame<'_>, area: Rect) {
+        // Issue #37: visibility に応じて未発見レシピの材料/結果/名前を隠す。
+        // 発見済みは visibility に関わらず常に完全表示。
+        let collection = &self.game_state.player.collection;
         let items: Vec<ListItem> = self
             .game_state
             .synthesis_manager
             .recipe_db()
             .all_recipes()
             .iter()
+            .enumerate() // Unknown レシピの番号付けに使う (絶対 index)
             .skip(self.detail_scroll)
             .take(area.height as usize - 3)
-            .map(|recipe| {
+            .map(|(idx, recipe)| {
                 let discovered = self.game_state.synthesis_manager.is_discovered(&recipe.id);
-                let marker = if discovered { "✓" } else { "?" };
-                let preview = if discovered {
-                    recipe.result.noun.clone()
+                let visibility = recipe.visibility;
+                // 発見済みは Public 扱い。
+                let effective_visibility = if discovered {
+                    crate::synthesis::RecipeVisibility::Public
                 } else {
-                    "???".to_string()
+                    visibility
                 };
+
+                let marker = if discovered { "✓" } else { "?" };
+
+                // 進捗 (材料の何種類が手元に揃っているか)
+                let progress = recipe.ingredient_progress(collection);
 
                 // Issue #28: 合成成功確率を LineGauge 風に表示
                 // Issue #35: 高リスクレシピは赤系で SAFE/RISKY バッジを併記する
@@ -2829,6 +2839,22 @@ impl App {
                     .success_probability_for_recipe(recipe);
                 let success_pct = (success_p * 100.0).round() as u16;
                 let is_risky = recipe.is_high_risk();
+
+                // Issue #37: 公開状態に応じて色を切り替える。
+                // - Public/discovered: 通常 (討伐済みは Success 色 / 未発見は RARE 色)
+                // - Partial: ラベルは COLOR_LABEL (薄め) で出す
+                // - Unknown: DarkGray (さらに暗く)
+                // - 全材料揃いなら COLOR_SUCCESS でハイライト (発見手前の煽り)
+                let name_color = if progress.all_satisfied && !discovered {
+                    COLOR_SUCCESS
+                } else {
+                    match effective_visibility {
+                        crate::synthesis::RecipeVisibility::Public => Color::White,
+                        crate::synthesis::RecipeVisibility::Partial => COLOR_LABEL,
+                        crate::synthesis::RecipeVisibility::Unknown => Color::DarkGray,
+                    }
+                };
+
                 let probability_color = if is_risky {
                     COLOR_BAR_HOT
                 } else if discovered {
@@ -2874,25 +2900,83 @@ impl App {
                     Span::styled(failure_hint, Style::default().fg(COLOR_BAR_HOT)),
                 ]);
 
+                // Issue #37: 名前と式の行。Unknown は recipe.name を出さず、display_label
+                // の "未確認レシピ #NN" だけにする。Partial/Public は recipe.name は表示しつつ
+                // 式部分 (材料 → 結果) を visibility に従って隠す。
+                let display_label = recipe.display_label(collection, discovered, idx);
+                let name_line =
+                    if effective_visibility == crate::synthesis::RecipeVisibility::Unknown {
+                        Line::from(vec![
+                            Span::styled(marker, Style::default().fg(Color::DarkGray)),
+                            Span::raw(" "),
+                            Span::styled(
+                                display_label.clone(),
+                                Style::default().fg(name_color).add_modifier(Modifier::BOLD),
+                            ),
+                        ])
+                    } else {
+                        Line::from(vec![
+                            Span::styled(
+                                marker,
+                                Style::default().fg(if discovered {
+                                    Color::Green
+                                } else {
+                                    Color::DarkGray
+                                }),
+                            ),
+                            Span::raw(" "),
+                            Span::styled(
+                                recipe.name.clone(),
+                                Style::default().fg(name_color).add_modifier(Modifier::BOLD),
+                            ),
+                        ])
+                    };
+
+                // Issue #37: 進捗行。「進捗: 2/2 ✓」または「進捗: 1/2 (あと N 種)」。
+                // Unknown は仕様上「存在しか分からない」ので進捗は出さず、空行とのトレードに
+                // しないため進捗が 0/total の場合のみ常時 1 行で表示する。
+                let progress_line =
+                    if effective_visibility == crate::synthesis::RecipeVisibility::Unknown {
+                        // Unknown は進捗を出さない (材料の正体がバレるため)
+                        Line::from("")
+                    } else {
+                        let progress_text = if progress.all_satisfied {
+                            format!("    進捗: {}/{}  ✓", progress.satisfied, progress.total)
+                        } else {
+                            // Issue #37: 残数算出は SynthesisRecipe::remaining_categories に集約。
+                            let remaining = recipe.remaining_categories(collection);
+                            format!(
+                                "    進捗: {}/{} (あと {} 種)",
+                                progress.satisfied, progress.total, remaining
+                            )
+                        };
+                        let progress_color = if progress.all_satisfied {
+                            COLOR_SUCCESS
+                        } else {
+                            COLOR_LABEL
+                        };
+                        Line::from(Span::styled(
+                            progress_text,
+                            Style::default().fg(progress_color),
+                        ))
+                    };
+
+                // 説明 + 式 (Unknown は description も隠す)
+                let body_line = match effective_visibility {
+                    crate::synthesis::RecipeVisibility::Unknown => Line::from(Span::styled(
+                        "    (??? の手がかりはまだ無い)".to_string(),
+                        Style::default().fg(Color::DarkGray),
+                    )),
+                    _ => Line::from(Span::styled(
+                        format!("    {} -> {}", recipe.description, display_label),
+                        Style::default().fg(name_color),
+                    )),
+                };
+
                 ListItem::new(vec![
-                    Line::from(vec![
-                        Span::styled(
-                            marker,
-                            Style::default().fg(if discovered {
-                                Color::Green
-                            } else {
-                                Color::DarkGray
-                            }),
-                        ),
-                        Span::raw(" "),
-                        Span::styled(
-                            &recipe.name,
-                            Style::default()
-                                .fg(Color::White)
-                                .add_modifier(Modifier::BOLD),
-                        ),
-                    ]),
-                    Line::from(format!("    {} -> {}", recipe.description, preview)),
+                    name_line,
+                    body_line,
+                    progress_line,
                     probability_line,
                     Line::from(""),
                 ])

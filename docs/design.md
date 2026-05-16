@@ -311,14 +311,27 @@ Right pane layout:
 ```
 レシピ一覧 (section 0):
   - Scrollable list of all recipes
-  - Each item (4 lines):
-    Line 1: ✓/? RecipeName (bold White)
-    Line 2:     Description -> ResultName (discovered) or ??? (undiscovered)
-    Line 3:     合成確率: NN% [████████░░] (Issue #28)
+  - Each item (5 lines, Issue #37 で +1 行):
+    Line 1: ✓/? RecipeName (bold)
+              - Public:   White
+              - Partial:  DarkGray (薄め)
+              - Unknown:  DarkGray + 行全体 "未確認レシピ #NN" 表示で recipe.name は出さない
+              - 全材料揃いかつ未発見: Green (煽り強調)
+    Line 2:     Description -> display_label (Public/Partial/discovered)
+              - Public/discovered: 完全表示 "水 + 火 → 蒸気"
+              - Partial: 第一材料のみ表示し、残材料と結果は ? でマスク "光 + ? → ?"
+              - Unknown: 行ごと "(??? の手がかりはまだ無い)" に置換 (DarkGray)
+    Line 3:     進捗: N/M ✓ もしくは 進捗: N/M (あと K 種) (Issue #37)
+              - all_satisfied=true なら ✓ + Green
+              - 揃ってなければ COLOR_LABEL (DarkGray)
+              - Unknown は進捗を出さない (材料の正体がバレるため空行)
+              - 残数 K は `SynthesisRecipe::remaining_categories(&collection)`
+    Line 4:     合成確率: NN% [████████░░] (Issue #28)
               - undiscovered: Cyan ratio bar + cyan percentage (= discovery_rate)
               - discovered:   Green 100% + green full bar (確定成功)
               - 10-cell bar, percentage は `round()` で整数化
-    Line 4: (blank)
+              - RISKY のときは Red バーで [RISKY] バッジ + 失敗時挙動を表示 (Issue #35)
+    Line 5: (blank)
   - ✓ = Green (discovered), ? = DarkGray (undiscovered)
 
 合成実行 (section 1):
