@@ -127,6 +127,16 @@ pub struct Player {
     /// 旧セーブには無いため `#[serde(default)]`。
     #[serde(default)]
     pub max_combo: u32,
+
+    /// 通算入手回数 (Issue #27)
+    ///
+    /// `collection.len()` は合成で消費されると減ってしまうため、
+    /// 別途「過去に何回入手したか」を保持するカウンタを持つ。
+    /// `add_curion` が呼ばれるたびに +1 され、その値が
+    /// `Curion::acquisition_index` に採番される。
+    /// 旧セーブには無いため `#[serde(default)]` (= 0 で復元)。
+    #[serde(default)]
+    pub total_acquisitions: u32,
 }
 
 /// カテゴリ別統計
@@ -218,6 +228,7 @@ impl Player {
             daily_mission_manager: DailyMissionManager::new(),
             combo_count: 0,
             max_combo: 0,
+            total_acquisitions: 0,
         }
     }
 
@@ -251,7 +262,7 @@ impl Player {
     }
 
     /// キュリオンを追加
-    pub fn add_curion(&mut self, curion: Curion) -> u32 {
+    pub fn add_curion(&mut self, mut curion: Curion) -> u32 {
         // カテゴリ統計を更新
         let category_stat = self
             .category_stats
@@ -269,6 +280,11 @@ impl Player {
             self.max_daily_acquired = self.today_acquired;
             self.max_daily_acquired_date = Some(Utc::now());
         }
+
+        // Issue #27: 通算入手回数を採番
+        // 合成消費で collection.len() は減ることがあるため、別カウンタで管理する。
+        self.total_acquisitions = self.total_acquisitions.saturating_add(1);
+        curion.acquisition_index = Some(self.total_acquisitions);
 
         // コレクションに追加
         self.collection.push(curion.clone());
@@ -1192,5 +1208,167 @@ mod tests {
         assert_eq!(player.combo_count, 2);
         player.add_curion(combo_test_curion(Rarity::Legendary));
         assert_eq!(player.combo_count, 3);
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #27 入手履歴 (acquisition_index / total_acquisitions)
+    // -----------------------------------------------------------------
+
+    fn history_test_curion(rarity: Rarity) -> Curion {
+        Curion::new(
+            uuid::Uuid::new_v4(),
+            "履歴テスト".to_string(),
+            Category::Concept,
+            rarity,
+            50.0,
+            50.0,
+        )
+    }
+
+    #[test]
+    fn test_total_acquisitions_increments() {
+        let mut player = Player::new();
+        assert_eq!(player.total_acquisitions, 0);
+        for _ in 0..3 {
+            player.add_curion(history_test_curion(Rarity::Rare));
+        }
+        assert_eq!(
+            player.total_acquisitions, 3,
+            "add_curion 3 回で total_acquisitions=3"
+        );
+    }
+
+    #[test]
+    fn test_acquisition_index_assigned_in_order() {
+        let mut player = Player::new();
+        for _ in 0..3 {
+            player.add_curion(history_test_curion(Rarity::Rare));
+        }
+        let indices: Vec<_> = player
+            .collection
+            .iter()
+            .map(|c| c.acquisition_index)
+            .collect();
+        assert_eq!(
+            indices,
+            vec![Some(1), Some(2), Some(3)],
+            "追加順に 1, 2, 3 が採番される"
+        );
+    }
+
+    #[test]
+    fn test_acquisition_index_persists_through_synthesis() {
+        // 合成で collection から消えても、total_acquisitions は減らないので
+        // 次の入手は前回の続きの番号で採番される。
+        let mut player = Player::new();
+        for _ in 0..3 {
+            player.add_curion(history_test_curion(Rarity::Rare));
+        }
+        assert_eq!(player.total_acquisitions, 3);
+        assert_eq!(player.collection.len(), 3);
+
+        // 合成で 2 個消費したシミュレーション (collection を 2 個削る)。
+        // total_acquisitions は触らない (= 入手履歴は減らない) のが本機能の肝。
+        player.collection.drain(0..2);
+        assert_eq!(player.collection.len(), 1);
+        assert_eq!(
+            player.total_acquisitions, 3,
+            "合成消費で total_acquisitions は減らない"
+        );
+
+        // 次に入手したものは 4 番目として採番される
+        player.add_curion(history_test_curion(Rarity::Rare));
+        assert_eq!(player.total_acquisitions, 4);
+        let last = player.collection.last().expect("collection 非空");
+        assert_eq!(
+            last.acquisition_index,
+            Some(4),
+            "合成後の新規入手は 4 番目になる (連番が維持される)"
+        );
+    }
+
+    #[test]
+    fn test_legacy_save_acquisition_index_is_none() {
+        // 旧セーブの Curion JSON には acquisition_index フィールドが無い。
+        // それでも Curion::deserialize は default で None を埋めて成功する。
+        let legacy_curion = json!({
+            "id": "abc",
+            "source_guid": "00000000-0000-0000-0000-000000000000",
+            "noun": "魚",
+            "category": "Animal",
+            "rarity": "Common",
+            "interest": 0.5,
+            "beauty": 0.5,
+            "acquired_at": "2026-05-14T12:00:00Z"
+        });
+        let curion: Curion =
+            serde_json::from_value(legacy_curion).expect("旧 Curion JSON が読める");
+        assert_eq!(curion.acquisition_index, None);
+    }
+
+    #[test]
+    fn test_legacy_save_total_acquisitions_default_zero() {
+        // 旧 Player JSON には total_acquisitions フィールドが無い。
+        // それでも default で 0 が入る。
+        let legacy = json!({
+            "level": 1,
+            "xp": 0,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+        });
+        let player: Player = serde_json::from_value(legacy).expect("旧 Player JSON が読める");
+        assert_eq!(player.total_acquisitions, 0);
+    }
+
+    #[test]
+    fn test_format_acquisition_detail_with_index() {
+        // acquisition_index = Some(N) の場合の表示フォーマット
+        let mut curion = history_test_curion(Rarity::Rare);
+        curion.acquired_at = Utc.with_ymd_and_hms(2026, 5, 14, 14, 47, 0).unwrap();
+        curion.acquisition_index = Some(142);
+
+        let detail = curion.format_acquisition_detail();
+        // 「(通算 142回目の収集)」が含まれる
+        assert!(
+            detail.contains("(通算 142回目の収集)"),
+            "通算回数の表記が含まれる: {detail}"
+        );
+        // 「入手: 」プレフィックスが付く
+        assert!(detail.starts_with("入手: "), "プレフィックス: {detail}");
+        // Local TZ への変換が行われた YYYY-MM-DD HH:MM が含まれる
+        // (TZ 依存だが日付の桁数フォーマット自体は不変)
+        // 例: "入手: 2026-05-14 23:47  (通算 142回目の収集)"
+        assert!(
+            detail.contains("2026-05-1"),
+            "日付らしき文字列を含む: {detail}"
+        );
+    }
+
+    #[test]
+    fn test_format_acquisition_detail_without_index() {
+        // acquisition_index = None (旧セーブ) の場合は「履歴情報なし」になる
+        let mut curion = history_test_curion(Rarity::Rare);
+        curion.acquired_at = Utc.with_ymd_and_hms(2026, 5, 14, 14, 47, 0).unwrap();
+        curion.acquisition_index = None;
+
+        let detail = curion.format_acquisition_detail();
+        assert!(
+            detail.contains("(履歴情報なし)"),
+            "「履歴情報なし」が含まれる: {detail}"
+        );
+        assert!(
+            !detail.contains("通算"),
+            "通算回数の表記は含まれない: {detail}"
+        );
     }
 }

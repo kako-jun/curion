@@ -197,16 +197,19 @@ Right pane layout:
 
 ```
 所持一覧 (section 0):
-  - Vertical split: top = scrollable list (Constraint::Min(3)), bottom = detail pane (Constraint::Length(3))
+  - Vertical split: top = scrollable list (Constraint::Min(3)), bottom = detail pane (Constraint::Length(4))
   - List: collected curions (newest first), each item is 3 lines:
     Line 1: #N  ★★  [RARE]  名前                 2025-01-01 12:00
     Line 2:       興味度: [██████░░░░]  60%  美しさ: [████░░░░░░]  40%
     Line 3: (blank separator)
   - Color: rarity color on stars and rarity label
   - Timestamp: DarkGray
-  - Detail pane (Issue #22): unfocused_block("詳細: {noun}") showing the SF flavor text
-    of the curion currently at the top of the visible list. `Wrap { trim: true }` is
-    applied; missing flavor falls back to `(フレーバー未登録)`.
+  - Detail pane (Issue #22 + #27): unfocused_block("詳細: {noun}") with two body lines for
+    the curion currently at the top of the visible list. `Wrap { trim: true }` is applied.
+    Line 1: SF flavor text (Color::Gray); missing flavor falls back to `(フレーバー未登録)`.
+    Line 2 (Issue #27, Color::DarkGray): acquisition history —
+      `入手: YYYY-MM-DD HH:MM  (通算 N回目の収集)`, where the timestamp is rendered in the
+      local TZ. Legacy save curions without `acquisition_index` show `(履歴情報なし)`.
 
 図鑑 (section 1):
   - Two-column layout inside the focused_block("図鑑")

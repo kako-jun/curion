@@ -164,7 +164,9 @@ Left pane sections:
 - Scrollable list of all owned curions
 - Display format: `#ID stars [Rarity] Category Name  Date`
 - Attribute bars (interest, beauty) shown inline
-- Bottom detail pane (`Constraint::Length(3)`): SF flavor text of the curion currently at the top of the visible list (Issue #22). Wraps if the flavor exceeds the line width.
+- Bottom detail pane (`Constraint::Length(4)`, Issue #22 + #27): two lines for the curion currently at the top of the visible list. Wraps if the flavor exceeds the line width.
+  - Line 1: SF flavor text (Issue #22). Missing flavor falls back to `(フレーバー未登録)`.
+  - Line 2: acquisition history (Issue #27) — `入手: YYYY-MM-DD HH:MM  (通算 N回目の収集)` in local TZ. Legacy save curions without `acquisition_index` show `(履歴情報なし)` instead of the count.
 
 **Encyclopedia right pane:**
 - Two-column layout: category list (left) + noun entries for the focused category (right)
