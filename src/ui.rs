@@ -11,6 +11,7 @@ use ratatui::{
     Frame,
 };
 use std::time::{Duration, Instant};
+use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 
 use crate::curion::{Category, Rarity};
@@ -32,6 +33,7 @@ const COLOR_BAR_COLD: Color = Color::Gray;
 const COLOR_SUCCESS: Color = Color::Green;
 const RECENT_ACTIVITY_BUCKETS: usize = 16;
 
+// TODO: Category::iter() (strum) 化を将来検討
 const ALL_CATEGORIES: [Category; 9] = [
     Category::Animal,
     Category::Plant,
@@ -43,6 +45,22 @@ const ALL_CATEGORIES: [Category; 9] = [
     Category::Phenomenon,
     Category::Abstract,
 ];
+
+/// 文字列を表示幅 (East Asian Wide を 2 セル換算) で `target` セルまで右側を空白埋めする。
+/// 既に target 以上の幅があれば、入力をそのまま返す（切り詰めない）。
+fn pad_display(s: &str, target: usize) -> String {
+    let width = UnicodeWidthStr::width(s);
+    if width >= target {
+        s.to_string()
+    } else {
+        let mut out = String::with_capacity(s.len() + (target - width));
+        out.push_str(s);
+        for _ in 0..(target - width) {
+            out.push(' ');
+        }
+        out
+    }
+}
 
 fn rarity_color(rarity: &Rarity) -> Color {
     match rarity {
@@ -59,6 +77,15 @@ fn rarity_stars(rarity: &Rarity) -> &'static str {
         Rarity::Rare => "★★",
         Rarity::Epic => "★★★",
         Rarity::Legendary => "★★★★",
+    }
+}
+
+fn rarity_rank(rarity: &Rarity) -> u8 {
+    match rarity {
+        Rarity::Common => 0,
+        Rarity::Rare => 1,
+        Rarity::Epic => 2,
+        Rarity::Legendary => 3,
     }
 }
 
@@ -202,6 +229,10 @@ pub struct App {
     pub synthesis_state: SynthesisUIState,
     pub selected_first_curion: Option<usize>,
     pub synthesis_scroll: usize,
+    /// 図鑑モードでフォーカス中のカテゴリ index
+    pub dictionary_category_index: usize,
+    /// 図鑑モードで選択カテゴリ内の名詞リスト縦スクロール
+    pub dictionary_scroll: usize,
 }
 
 impl App {
@@ -221,6 +252,8 @@ impl App {
             synthesis_state: SynthesisUIState::SelectingFirst,
             selected_first_curion: None,
             synthesis_scroll: 0,
+            dictionary_category_index: 0,
+            dictionary_scroll: 0,
         }
     }
 
@@ -249,10 +282,16 @@ impl App {
             KeyCode::Char('j') => self.next_section(),
             KeyCode::Up => self.scroll_up(),
             KeyCode::Down => self.scroll_down(),
+            KeyCode::PageUp => self.page_up(),
+            KeyCode::PageDown => self.page_down(),
             KeyCode::Enter => self.handle_enter()?,
             _ => {}
         }
         Ok(false)
+    }
+
+    fn is_collection_dictionary(&self) -> bool {
+        self.current_tab == Tab::Collection && self.current_section_index() == 1
     }
 
     /// 手動セーブ用（SaveManager を持たないので呼び出し元で save してから呼ぶ）
@@ -285,7 +324,13 @@ impl App {
     }
 
     fn scroll_up(&mut self) {
-        if self.current_tab == Tab::Synthesis
+        if self.is_collection_dictionary() {
+            // 図鑑モード: ↑/↓ はカテゴリ移動
+            if self.dictionary_category_index > 0 {
+                self.dictionary_category_index -= 1;
+                self.dictionary_scroll = 0;
+            }
+        } else if self.current_tab == Tab::Synthesis
             && self.synthesis_state == SynthesisUIState::SelectingSecond
         {
             self.synthesis_scroll = self.synthesis_scroll.saturating_sub(1);
@@ -295,7 +340,14 @@ impl App {
     }
 
     fn scroll_down(&mut self) {
-        if self.current_tab == Tab::Synthesis
+        if self.is_collection_dictionary() {
+            // 図鑑モード: ↑/↓ はカテゴリ移動
+            let max_index = ALL_CATEGORIES.len().saturating_sub(1);
+            if self.dictionary_category_index < max_index {
+                self.dictionary_category_index += 1;
+                self.dictionary_scroll = 0;
+            }
+        } else if self.current_tab == Tab::Synthesis
             && self.synthesis_state == SynthesisUIState::SelectingSecond
         {
             self.synthesis_scroll = self.synthesis_scroll.saturating_add(1);
@@ -304,15 +356,25 @@ impl App {
         }
     }
 
+    fn page_up(&mut self) {
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = self.dictionary_scroll.saturating_sub(10);
+        }
+    }
+
+    fn page_down(&mut self) {
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = self.dictionary_scroll.saturating_add(10);
+        }
+    }
+
     fn handle_enter(&mut self) -> Result<()> {
         match self.current_tab {
-            Tab::Achievements => {
-                if self.current_section_index() == 0 {
-                    let achievable = self.game_state.achievement_manager.get_achievable();
-                    if let Some((achievement, _)) = achievable.get(self.detail_scroll) {
-                        let achievement_id = achievement.id.clone();
-                        self.game_state.claim_achievement_reward(&achievement_id);
-                    }
+            Tab::Achievements if self.current_section_index() == 0 => {
+                let achievable = self.game_state.achievement_manager.get_achievable();
+                if let Some((achievement, _)) = achievable.get(self.detail_scroll) {
+                    let achievement_id = achievement.id.clone();
+                    self.game_state.claim_achievement_reward(&achievement_id);
                 }
             }
             Tab::Synthesis => {
@@ -557,6 +619,31 @@ impl App {
 
     fn render_help_line(&self, f: &mut Frame<'_>, area: Rect) {
         let help = match self.current_tab {
+            Tab::Collection if self.current_section_index() == 1 => Line::from(vec![
+                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 左ペイン  "),
+                Span::styled(
+                    " ↑/↓ ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" カテゴリ移動  "),
+                Span::styled(
+                    " PgUp/PgDn ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" 名詞スクロール  "),
+                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
+                Span::raw(" 生成  "),
+                Span::styled(
+                    " Tab/1-5 ",
+                    Style::default().fg(Color::Black).bg(Color::DarkGray),
+                ),
+                Span::raw(" タブ  "),
+                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 保存  "),
+                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
+                Span::raw(" 終了"),
+            ]),
             Tab::Achievements if self.current_section_index() == 0 => Line::from(vec![
                 Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
                 Span::raw(" 左ペイン  "),
@@ -1155,38 +1242,189 @@ impl App {
     }
 
     fn render_collection_dictionary(&self, f: &mut Frame<'_>, area: Rect) {
-        let player = &self.game_state.player;
-        let mut lines = vec![
-            Line::from(vec![
-                Span::styled("総所持数", Style::default().fg(COLOR_LABEL)),
-                Span::raw("  "),
-                Span::styled(
-                    format!("{} 個", player.total_acquired()),
-                    Style::default()
-                        .fg(COLOR_LEGENDARY)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-        ];
+        let block = focused_block("図鑑");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
 
-        for category in ALL_CATEGORIES {
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("{:<8}", category.as_str()),
-                    Style::default().fg(COLOR_RARE),
-                ),
-                Span::raw(" "),
-                Span::raw(format!(
-                    "{:>3} 所持 / {:>3} 種類",
-                    self.collection_count_by_category(&category),
-                    self.collection_unique_count_by_category(&category)
-                )),
-            ]));
+        let panes = Layout::default()
+            .direction(Direction::Horizontal)
+            // Categories pane width (DESIGN.md spec)
+            .constraints([Constraint::Length(22), Constraint::Min(0)])
+            .split(inner);
+
+        self.render_dictionary_categories(f, panes[0]);
+        self.render_dictionary_entries(f, panes[1]);
+    }
+
+    fn render_dictionary_categories(&self, f: &mut Frame<'_>, area: Rect) {
+        let focused_index = self.dictionary_category_index.min(ALL_CATEGORIES.len() - 1);
+
+        let items: Vec<ListItem> = ALL_CATEGORIES
+            .iter()
+            .enumerate()
+            .map(|(i, category)| {
+                let (owned, total) = self.dictionary_category_counts(category);
+                let is_selected = i == focused_index;
+                let prefix = if is_selected { "> " } else { "  " };
+                let style = if is_selected {
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(COLOR_RARE)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+                // CJK 混在のためバイト幅ではなく表示セル幅でパディング
+                let name = pad_display(category.as_str(), 8);
+                ListItem::new(format!("{prefix}{name} {owned:>3}/{total:<3}")).style(style)
+            })
+            .collect();
+
+        let list = List::new(items).block(unfocused_block("Categories"));
+        f.render_widget(list, area);
+    }
+
+    fn render_dictionary_entries(&self, f: &mut Frame<'_>, area: Rect) {
+        let focused_index = self.dictionary_category_index.min(ALL_CATEGORIES.len() - 1);
+        let category = &ALL_CATEGORIES[focused_index];
+
+        let (total_owned, total_entries) = self.dictionary_total_counts();
+        let total_pct = if total_entries > 0 {
+            (total_owned as f64 / total_entries as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let (cat_owned, cat_total) = self.dictionary_category_counts(category);
+        let cat_pct = if cat_total > 0 {
+            (cat_owned as f64 / cat_total as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let title = format!(
+            "全体: {total_owned}/{total_entries} ({total_pct:.1}%) | {cat_name}: {cat_owned}/{cat_total} ({cat_pct:.1}%)",
+            cat_name = category.as_str(),
+        );
+
+        let block = unfocused_block(title);
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        let visible_height = inner.height as usize;
+        if visible_height == 0 {
+            return;
         }
 
-        let widget = Paragraph::new(lines).block(focused_block("図鑑"));
-        f.render_widget(widget, area);
+        // 名詞リストを取得（DBの順序を維持）。DB に無いカテゴリは空スライスとして扱う。
+        let nouns: &[crate::generator::NounEntry] = self
+            .generator
+            .database()
+            .get_nouns(category)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        if nouns.is_empty() {
+            let widget = Paragraph::new(vec![Line::from(Span::styled(
+                "(このカテゴリは未対応)",
+                Style::default().fg(COLOR_LABEL),
+            ))]);
+            f.render_widget(widget, inner);
+            return;
+        }
+
+        // 最後のページが収まる位置までクランプ。1ページに収まる場合は 0。
+        let max_scroll = nouns.len().saturating_sub(visible_height);
+        let scroll = self.dictionary_scroll.min(max_scroll);
+
+        let lines: Vec<Line> = nouns
+            .iter()
+            .skip(scroll)
+            .take(visible_height)
+            .map(|entry| self.render_dictionary_line(&entry.name))
+            .collect();
+
+        let widget = Paragraph::new(lines);
+        f.render_widget(widget, inner);
+    }
+
+    fn render_dictionary_line(&self, noun_name: &str) -> Line<'_> {
+        let player = &self.game_state.player;
+        // この名詞の獲得済みインスタンスを集約
+        let mut count: usize = 0;
+        let mut highest_rarity: Option<Rarity> = None;
+        let mut latest: Option<chrono::DateTime<chrono::Utc>> = None;
+
+        for curion in player.collection.iter().filter(|c| c.noun == noun_name) {
+            count += 1;
+            highest_rarity = Some(match highest_rarity {
+                Some(r) if rarity_rank(&r) >= rarity_rank(&curion.rarity) => r,
+                _ => curion.rarity,
+            });
+            latest = Some(match latest {
+                Some(d) if d >= curion.acquired_at => d,
+                _ => curion.acquired_at,
+            });
+        }
+
+        if count == 0 {
+            // 未獲得
+            Line::from(vec![Span::styled(
+                pad_display("？？？", 12),
+                Style::default().fg(COLOR_LABEL),
+            )])
+        } else {
+            let rarity = highest_rarity.unwrap_or(Rarity::Common);
+            let color = rarity_color(&rarity);
+            let stars = rarity_stars(&rarity);
+            let label = rarity_label(&rarity);
+            let date = latest
+                .map(|d| d.format("%Y-%m-%d").to_string())
+                .unwrap_or_else(|| "-".to_string());
+
+            Line::from(vec![
+                Span::styled(
+                    // CJK 混在のため表示セル幅でパディング
+                    pad_display(noun_name, 12),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" "),
+                Span::styled(format!("{stars:<4}"), Style::default().fg(color)),
+                Span::raw(" "),
+                Span::styled(format!("[{label:<4}]"), Style::default().fg(color)),
+                Span::raw(" "),
+                Span::styled(date, Style::default().fg(Color::DarkGray)),
+                Span::raw(" "),
+                Span::styled(format!("×{count}"), Style::default().fg(COLOR_SUCCESS)),
+            ])
+        }
+    }
+
+    fn dictionary_category_counts(&self, category: &Category) -> (usize, usize) {
+        let total = self
+            .generator
+            .database()
+            .get_nouns(category)
+            .map(|nouns| nouns.len())
+            .unwrap_or(0);
+        // DB に存在しない noun を collection が持っていても owned > total にならないようクランプ
+        let owned = self
+            .collection_unique_count_by_category(category)
+            .min(total);
+        (owned, total)
+    }
+
+    fn dictionary_total_counts(&self) -> (usize, usize) {
+        let mut total = 0;
+        let mut owned = 0;
+        for category in ALL_CATEGORIES.iter() {
+            let (o, t) = self.dictionary_category_counts(category);
+            owned += o;
+            total += t;
+        }
+        (owned, total)
     }
 
     fn render_achievements_section(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1798,5 +2036,266 @@ impl App {
             );
 
         f.render_widget(list, area);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::curion::Curion;
+    use crate::synthesis::{RecipeDatabase, SynthesisManager};
+    use uuid::Uuid;
+
+    fn empty_app() -> App {
+        let recipe_db = RecipeDatabase::load_embedded().expect("Failed to load recipe database");
+        let synthesis_manager = SynthesisManager::new(recipe_db);
+        let game_state = GameState::new(synthesis_manager);
+        App::new(game_state)
+    }
+
+    fn make_curion(noun: &str, category: Category, rarity: Rarity) -> Curion {
+        Curion::new(Uuid::new_v4(), noun.to_string(), category, rarity, 0.5, 0.5)
+    }
+
+    /// 図鑑モード（Collection タブの section 1）に切り替えるヘルパー
+    fn enter_dictionary_mode(app: &mut App) {
+        app.set_tab(Tab::Collection);
+        app.next_section();
+        debug_assert!(app.is_collection_dictionary());
+    }
+
+    #[test]
+    fn test_rarity_rank_ordering() {
+        assert!(rarity_rank(&Rarity::Common) < rarity_rank(&Rarity::Rare));
+        assert!(rarity_rank(&Rarity::Rare) < rarity_rank(&Rarity::Epic));
+        assert!(rarity_rank(&Rarity::Epic) < rarity_rank(&Rarity::Legendary));
+    }
+
+    #[test]
+    fn test_dictionary_category_counts_empty_collection() {
+        let app = empty_app();
+        for category in ALL_CATEGORIES.iter() {
+            let (owned, total) = app.dictionary_category_counts(category);
+            assert_eq!(owned, 0, "empty collection should have owned=0");
+            assert!(
+                total > 0,
+                "category {category:?} should have at least one noun in DB"
+            );
+        }
+    }
+
+    #[test]
+    fn test_dictionary_category_counts_partial() {
+        let mut app = empty_app();
+        let curion = make_curion("テスト名詞A", Category::Animal, Rarity::Common);
+        app.game_state.player.collection.push(curion);
+        let (owned, _total) = app.dictionary_category_counts(&Category::Animal);
+        assert_eq!(owned, 1, "1 種獲得時 owned=1");
+
+        // 他のカテゴリは影響を受けない
+        let (other_owned, _) = app.dictionary_category_counts(&Category::Plant);
+        assert_eq!(other_owned, 0);
+    }
+
+    #[test]
+    fn test_dictionary_category_counts_unique_dedup() {
+        let mut app = empty_app();
+        // 同名詞を 3 個追加
+        for _ in 0..3 {
+            app.game_state.player.collection.push(make_curion(
+                "ダブり名詞",
+                Category::Animal,
+                Rarity::Common,
+            ));
+        }
+        let (owned, _total) = app.dictionary_category_counts(&Category::Animal);
+        assert_eq!(owned, 1, "同名詞 3 個でも unique 集計で owned=1");
+    }
+
+    #[test]
+    fn test_dictionary_total_counts_aggregates_all_categories() {
+        let app = empty_app();
+        let (total_owned, total_total) = app.dictionary_total_counts();
+
+        let mut sum_owned = 0usize;
+        let mut sum_total = 0usize;
+        for category in ALL_CATEGORIES.iter() {
+            let (o, t) = app.dictionary_category_counts(category);
+            sum_owned += o;
+            sum_total += t;
+        }
+        assert_eq!(total_owned, sum_owned);
+        assert_eq!(total_total, sum_total, "全カテゴリ合計が個別合計と一致する");
+        assert!(total_total > 0);
+    }
+
+    #[test]
+    fn test_dictionary_total_counts_zero_division_safe() {
+        let app = empty_app();
+        let (owned, total) = app.dictionary_total_counts();
+        assert_eq!(owned, 0);
+        assert!(total > 0);
+        // pct を関数化していないので、(owned, total) から手動で計算してパニックしないことを確認
+        let pct = if total == 0 {
+            0.0
+        } else {
+            owned as f64 / total as f64
+        };
+        assert_eq!(pct, 0.0);
+    }
+
+    #[test]
+    fn test_scroll_down_resets_dictionary_scroll_on_category_change() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        app.dictionary_scroll = 7;
+        assert_eq!(app.dictionary_category_index, 0);
+
+        app.scroll_down();
+
+        assert_eq!(app.dictionary_category_index, 1);
+        assert_eq!(
+            app.dictionary_scroll, 0,
+            "カテゴリ移動で scroll が 0 にリセット"
+        );
+    }
+
+    #[test]
+    fn test_scroll_up_stops_at_first_category() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        assert_eq!(app.dictionary_category_index, 0);
+
+        app.scroll_up();
+
+        assert_eq!(app.dictionary_category_index, 0, "先頭で ↑ しても 0 のまま");
+    }
+
+    #[test]
+    fn test_scroll_down_stops_at_last_category() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        let last = ALL_CATEGORIES.len() - 1;
+        app.dictionary_category_index = last;
+
+        app.scroll_down();
+
+        assert_eq!(
+            app.dictionary_category_index, last,
+            "末尾で ↓ しても末尾のまま"
+        );
+    }
+
+    #[test]
+    fn test_page_down_advances_dictionary_scroll() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        let before = app.dictionary_scroll;
+
+        let quit = app
+            .handle_key(KeyCode::PageDown)
+            .expect("handle_key should succeed");
+        assert!(!quit);
+
+        assert_eq!(app.dictionary_scroll, before + 10, "PgDn で +10");
+    }
+
+    #[test]
+    fn test_page_up_saturates_at_zero() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        app.dictionary_scroll = 3;
+
+        let quit = app
+            .handle_key(KeyCode::PageUp)
+            .expect("handle_key should succeed");
+        assert!(!quit);
+
+        assert_eq!(app.dictionary_scroll, 0, "scroll=3 で PgUp なら 0 で飽和");
+    }
+
+    #[test]
+    fn test_page_keys_no_op_outside_dictionary() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Synthesis);
+        app.dictionary_scroll = 5;
+        assert!(!app.is_collection_dictionary());
+
+        let quit = app
+            .handle_key(KeyCode::PageDown)
+            .expect("handle_key should succeed");
+        assert!(!quit);
+
+        assert_eq!(
+            app.dictionary_scroll, 5,
+            "図鑑モード外では PgDn は dictionary_scroll を変えない"
+        );
+    }
+
+    #[test]
+    fn test_pad_display_ascii_only() {
+        // ASCII のみ: バイト数 == 表示幅
+        assert_eq!(pad_display("abc", 6), "abc   ");
+    }
+
+    #[test]
+    fn test_pad_display_cjk_only() {
+        // CJK のみ: 各文字 2 セル幅。3 文字 = 6 セル -> target 8 で残り 2 セル分の空白
+        let out = pad_display("動植物", 8);
+        assert_eq!(UnicodeWidthStr::width(out.as_str()), 8);
+        assert!(out.starts_with("動植物"));
+        assert!(out.ends_with("  "));
+    }
+
+    #[test]
+    fn test_pad_display_mixed() {
+        // 混在: "abc動物" = 3 + 4 = 7 セル -> target 10 で 3 セル空白
+        let out = pad_display("abc動物", 10);
+        assert_eq!(UnicodeWidthStr::width(out.as_str()), 10);
+        assert!(out.starts_with("abc動物"));
+    }
+
+    #[test]
+    fn test_pad_display_already_over_target() {
+        // 既に target 超え: 切り詰めずそのまま返す
+        let s = "abcdefghij";
+        assert_eq!(pad_display(s, 5), s);
+        // 表示幅で target == width の境界も同様
+        let cjk = "あい"; // 4 セル
+        assert_eq!(pad_display(cjk, 4), cjk);
+    }
+
+    #[test]
+    fn test_dictionary_owned_clamps_when_collection_has_unknown_noun() {
+        let mut app = empty_app();
+        // DB に存在しない名詞を含むコレクションを構築
+        app.game_state.player.collection.push(make_curion(
+            "存在しない名詞ZZZ",
+            Category::Animal,
+            Rarity::Common,
+        ));
+        let (owned, total) = app.dictionary_category_counts(&Category::Animal);
+        assert!(
+            owned <= total,
+            "owned ({owned}) は total ({total}) を超えてはならない (DB 外名詞は集計対象外)"
+        );
+    }
+
+    #[test]
+    fn test_scroll_up_resets_dictionary_scroll_on_category_change() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        // 末尾カテゴリへ移動してから ↑ で戻る
+        let last = ALL_CATEGORIES.len() - 1;
+        app.dictionary_category_index = last;
+        app.dictionary_scroll = 11;
+
+        app.scroll_up();
+
+        assert_eq!(app.dictionary_category_index, last - 1);
+        assert_eq!(
+            app.dictionary_scroll, 0,
+            "↑ でのカテゴリ移動でも scroll が 0 にリセット"
+        );
     }
 }

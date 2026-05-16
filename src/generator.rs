@@ -211,6 +211,11 @@ impl CurionGenerator {
         Ok(nouns[index].name.clone())
     }
 
+    /// 名詞データベースへの参照を取得
+    pub fn database(&self) -> &NounDatabase {
+        &self.noun_db
+    }
+
     /// 統計情報を取得
     #[cfg(test)]
     pub fn database_stats(&self) -> HashMap<Category, usize> {

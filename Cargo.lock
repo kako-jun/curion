@@ -536,6 +536,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
+ "unicode-width 0.1.14",
  "uuid",
 ]
 
