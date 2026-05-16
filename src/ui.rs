@@ -20,6 +20,7 @@ use crate::evolution::{sort_progress_by_urgency, EvolutionDatabase};
 use crate::generator::CurionGenerator;
 use crate::player::{GameState, LoginBonusReward};
 use crate::san::{san_state, SanState, SAN_MAX};
+use crate::semantic::SemanticProfile;
 
 // ── Style constants ──────────────────────────────────────────────
 
@@ -399,9 +400,40 @@ impl App {
             KeyCode::PageUp => self.page_up(),
             KeyCode::PageDown => self.page_down(),
             KeyCode::Enter => self.handle_enter()?,
+            // Issue #38: Collection 所持一覧で `e` を押すと、現在 focus 中の curion を
+            // 装備/解除する (詳細ペインに表示中のもの)。装備中の curion を再度 `e` で
+            // 解除。Collection タブの「所持一覧」セクション以外では no-op。
+            KeyCode::Char('e')
+                if self.current_tab == Tab::Collection && self.current_section_index() == 0 =>
+            {
+                self.handle_equip_toggle();
+            }
             _ => {}
         }
         Ok(false)
+    }
+
+    /// Issue #38: 現在 focus 中の Curion を装備/解除する。
+    ///
+    /// 「focus 中の Curion」は `render_collection_list` と同じロジックで決める:
+    /// - フィルタ適用中ならフィルタ後リスト、それ以外は full collection
+    /// - リストは新しい順 (rev) で表示しているので、focus 位置を反転して index を算出
+    fn handle_equip_toggle(&mut self) {
+        let collection = &self.game_state.player.collection;
+        let filtered: Vec<&Curion> = match &self.compiled_filter {
+            Some(re) => collection.iter().filter(|c| match_curion(re, c)).collect(),
+            None => collection.iter().collect(),
+        };
+        if filtered.is_empty() {
+            return;
+        }
+        let focus_index_rev = self.detail_scroll.min(filtered.len().saturating_sub(1));
+        let focus_index = filtered.len() - 1 - focus_index_rev;
+        let id = match filtered.get(focus_index).map(|c| c.id.clone()) {
+            Some(id) => id,
+            None => return,
+        };
+        self.game_state.player.toggle_equip(&id);
     }
 
     /// Issue #31: 正規表現フィルタ入力モード中のキー処理。
@@ -1440,10 +1472,11 @@ impl App {
                 Constraint::Length(2), // 5: stats (total/today/level/COMBO)
                 Constraint::Length(1), // 6: next milestone (Issue #32)
                 Constraint::Length(1), // 7: lifespan warning (Issue #30)
-                Constraint::Length(3), // 8: evolution progress top 3 (Issue #36)
-                Constraint::Length(3), // 9: latest curion
-                Constraint::Length(6), // 10: rarity distribution
-                Constraint::Min(4),    // 11: category distribution
+                Constraint::Length(1), // 8: equipment summary (Issue #38)
+                Constraint::Length(3), // 9: evolution progress top 3 (Issue #36)
+                Constraint::Length(3), // 10: latest curion
+                Constraint::Length(6), // 11: rarity distribution
+                Constraint::Min(4),    // 12: category distribution
             ])
             .split(area);
 
@@ -1664,6 +1697,28 @@ impl App {
         };
         f.render_widget(Paragraph::new(lifespan_line), chunks[7]);
 
+        // Issue #38: 装備中 Curion のサマリを 1 行で表示。
+        // 装備なしなら「装備: なし」、装備ありなら「装備: <display_name> (XP +N% / SAN ...)」。
+        let equip_line: Line = match player.equipped_curion() {
+            Some(c) => {
+                let effect = player.current_equipment_effect();
+                Line::from(vec![
+                    Span::styled("装備: ", Style::default().fg(COLOR_LABEL)),
+                    Span::styled(
+                        c.display_name(),
+                        Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw("  "),
+                    Span::styled(effect.summary_line(), Style::default().fg(COLOR_SUCCESS)),
+                ])
+            }
+            None => Line::from(vec![
+                Span::styled("装備: ", Style::default().fg(COLOR_LABEL)),
+                Span::styled("なし", Style::default().fg(COLOR_LABEL)),
+            ]),
+        };
+        f.render_widget(Paragraph::new(equip_line), chunks[8]);
+
         // Issue #36: 段階進化ガチャ — 進化系列のトップ 3 を 1 行ずつ表示。
         // 「あと N 個で次段階」の期待感を Dashboard に常時演出する。
         // 計算ロジックは `crate::evolution::EvolutionDatabase::calculate_progress` に閉じ、
@@ -1725,7 +1780,7 @@ impl App {
         } else {
             Paragraph::new(evo_lines)
         };
-        f.render_widget(evo_widget, chunks[8]);
+        f.render_widget(evo_widget, chunks[9]);
 
         // Latest curion
         if let Some(curion) = player.latest_curion() {
@@ -1748,7 +1803,7 @@ impl App {
                 ),
             ])];
             let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
-            f.render_widget(latest, chunks[9]);
+            f.render_widget(latest, chunks[10]);
         }
 
         // Rarity distribution
@@ -1779,7 +1834,7 @@ impl App {
             ]));
         }
         let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
-        f.render_widget(rarity_widget, chunks[10]);
+        f.render_widget(rarity_widget, chunks[11]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -1791,7 +1846,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[11]);
+        f.render_widget(category_widget, chunks[12]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1917,13 +1972,15 @@ impl App {
         // 検索プロンプトを表示する。
         let show_filter_line =
             self.filter_mode || self.compiled_filter.is_some() || self.filter_error.is_some();
+        // Issue #38: 詳細ペインに「意味タグ (上位 3)」と「装備状態」の 2 行を追加
+        // (Length 4 → 6: border 2 + 中身 4 行)。
         let outer_split = if show_filter_line {
             Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
                     Constraint::Length(1),
                     Constraint::Min(3),
-                    Constraint::Length(4),
+                    Constraint::Length(6),
                 ])
                 .split(area)
         } else {
@@ -1932,7 +1989,7 @@ impl App {
                 .constraints([
                     Constraint::Length(0),
                     Constraint::Min(3),
-                    Constraint::Length(4),
+                    Constraint::Length(6),
                 ])
                 .split(area)
         };
@@ -2036,8 +2093,19 @@ impl App {
                     .map(|s| s.to_string())
             })
             .unwrap_or_else(|| "(フレーバー未登録)".to_string());
+        // Issue #38: 装備中の curion なら title に [装備中] マーカー
+        let equipped_id = player.equipment.curion_id.as_deref();
+        let is_focused_equipped = focused
+            .map(|c| Some(c.id.as_str()) == equipped_id)
+            .unwrap_or(false);
         let title = focused
-            .map(|c| format!("詳細: {}", c.display_name()))
+            .map(|c| {
+                if is_focused_equipped {
+                    format!("詳細: {}  [装備中]", c.display_name())
+                } else {
+                    format!("詳細: {}", c.display_name())
+                }
+            })
             .unwrap_or_else(|| "詳細".to_string());
 
         // Issue #27: 入手日時 + 通算回数を 2 行目に併記
@@ -2049,12 +2117,55 @@ impl App {
             None => Line::from(""),
         };
 
+        // Issue #38: 意味タグ上位 3 + 装備状態を 2 行で表示
+        let semantic_line: Line = match focused {
+            Some(c) => {
+                let profile = SemanticProfile::from_curion(c);
+                let top = profile.dominant_tags(3);
+                let mut spans = vec![Span::styled("意味タグ: ", Style::default().fg(COLOR_LABEL))];
+                for (i, (tag, score)) in top.iter().enumerate() {
+                    if i > 0 {
+                        spans.push(Span::raw(" / "));
+                    }
+                    let stars = if *score >= 0.66 {
+                        "★★★"
+                    } else if *score >= 0.33 {
+                        "★★"
+                    } else {
+                        "★"
+                    };
+                    spans.push(Span::styled(
+                        format!("{} {}", tag.label(), stars),
+                        Style::default().fg(COLOR_EPIC),
+                    ));
+                }
+                Line::from(spans)
+            }
+            None => Line::from(""),
+        };
+
+        let equip_line: Line = match focused {
+            Some(_) if is_focused_equipped => Line::from(vec![Span::styled(
+                "[装備中] e で解除",
+                Style::default()
+                    .fg(COLOR_SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Some(_) => Line::from(vec![Span::styled(
+                "e で装備",
+                Style::default().fg(COLOR_LABEL),
+            )]),
+            None => Line::from(""),
+        };
+
         let paragraph = Paragraph::new(vec![
             Line::from(vec![Span::styled(
                 flavor_text,
                 Style::default().fg(Color::Gray),
             )]),
             acquisition_line,
+            semantic_line,
+            equip_line,
         ])
         .block(unfocused_block(title))
         .wrap(ratatui::widgets::Wrap { trim: true });
