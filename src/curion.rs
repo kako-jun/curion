@@ -79,6 +79,14 @@ pub struct Curion {
 
     /// 取得日時
     pub acquired_at: DateTime<Utc>,
+
+    /// 入手時の通算収集回数 (Issue #27)
+    ///
+    /// `Player::add_curion` 内で `Player::total_acquisitions` を採番して入れる。
+    /// 生成直後 (まだ Player に追加されていない) や、フィールドを持たない旧セーブからの
+    /// deserialize 時は `None` になる。`None` の場合 UI 側で「履歴情報なし」と表示する。
+    #[serde(default)]
+    pub acquisition_index: Option<u32>,
 }
 
 impl Curion {
@@ -100,11 +108,32 @@ impl Curion {
             interest,
             beauty,
             acquired_at: Utc::now(),
+            acquisition_index: None,
         }
     }
 
     /// キュリオンの表示用文字列
     pub fn display_name(&self) -> String {
         format!("{} の {}", self.category.as_str(), self.noun)
+    }
+
+    /// Collection 詳細ペイン用の入手履歴行 (Issue #27)
+    ///
+    /// 例:
+    /// - `入手: 2026-05-14 23:47  (通算 142回目の収集)`
+    /// - `入手: 2026-05-14 23:47  (履歴情報なし)`  // 旧セーブで acquisition_index = None
+    ///
+    /// `acquired_at` はローカルタイムゾーンに変換して表示する (UTC のままだと
+    /// JST ユーザーには分かりにくいため)。
+    pub fn format_acquisition_detail(&self) -> String {
+        use chrono::Local;
+        let local_time = self
+            .acquired_at
+            .with_timezone(&Local)
+            .format("%Y-%m-%d %H:%M");
+        match self.acquisition_index {
+            Some(idx) => format!("入手: {local_time}  (通算 {idx}回目の収集)"),
+            None => format!("入手: {local_time}  (履歴情報なし)"),
+        }
     }
 }

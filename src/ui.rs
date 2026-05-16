@@ -1432,10 +1432,13 @@ impl App {
             return;
         }
 
-        // Issue #22: 上段=コレクションリスト、下段=選択中キュリオンのフレーバーテキスト詳細
+        // Issue #22: 上段=コレクションリスト、下段=選択中キュリオンの詳細
+        // Issue #27 で詳細ペインにフレーバー + 入手履歴の 2 行構成にしたため、
+        // 旧 Length(3) では 1 行しか入らない。Length(4) に拡張する
+        // (上下 border 各 1 + 中身 2 行)。
         let split = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(3), Constraint::Length(3)])
+            .constraints([Constraint::Min(3), Constraint::Length(4)])
             .split(area);
         let list_area = split[0];
         let detail_area = split[1];
@@ -1509,10 +1512,22 @@ impl App {
             .map(|c| format!("詳細: {}", c.display_name()))
             .unwrap_or_else(|| "詳細".to_string());
 
-        let paragraph = Paragraph::new(vec![Line::from(vec![Span::styled(
-            flavor_text,
-            Style::default().fg(Color::Gray),
-        )])])
+        // Issue #27: 入手日時 + 通算回数を 2 行目に併記
+        let acquisition_line: Line = match focused {
+            Some(c) => Line::from(vec![Span::styled(
+                c.format_acquisition_detail(),
+                Style::default().fg(Color::DarkGray),
+            )]),
+            None => Line::from(""),
+        };
+
+        let paragraph = Paragraph::new(vec![
+            Line::from(vec![Span::styled(
+                flavor_text,
+                Style::default().fg(Color::Gray),
+            )]),
+            acquisition_line,
+        ])
         .block(unfocused_block(title))
         .wrap(ratatui::widgets::Wrap { trim: true });
         f.render_widget(paragraph, detail_area);

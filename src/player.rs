@@ -127,6 +127,16 @@ pub struct Player {
     /// 旧セーブには無いため `#[serde(default)]`。
     #[serde(default)]
     pub max_combo: u32,
+
+    /// 通算入手回数 (Issue #27)
+    ///
+    /// `collection.len()` は合成で消費されると減ってしまうため、
+    /// 別途「過去に何回入手したか」を保持するカウンタを持つ。
+    /// `add_curion` が呼ばれるたびに +1 され、その値が
+    /// `Curion::acquisition_index` に採番される。
+    /// 旧セーブには無いため `#[serde(default)]` (= 0 で復元)。
+    #[serde(default)]
+    pub total_acquisitions: u32,
 }
 
 /// カテゴリ別統計
@@ -218,6 +228,7 @@ impl Player {
             daily_mission_manager: DailyMissionManager::new(),
             combo_count: 0,
             max_combo: 0,
+            total_acquisitions: 0,
         }
     }
 
@@ -251,7 +262,7 @@ impl Player {
     }
 
     /// キュリオンを追加
-    pub fn add_curion(&mut self, curion: Curion) -> u32 {
+    pub fn add_curion(&mut self, mut curion: Curion) -> u32 {
         // カテゴリ統計を更新
         let category_stat = self
             .category_stats
@@ -269,6 +280,11 @@ impl Player {
             self.max_daily_acquired = self.today_acquired;
             self.max_daily_acquired_date = Some(Utc::now());
         }
+
+        // Issue #27: 通算入手回数を採番
+        // 合成消費で collection.len() は減ることがあるため、別カウンタで管理する。
+        self.total_acquisitions += 1;
+        curion.acquisition_index = Some(self.total_acquisitions);
 
         // コレクションに追加
         self.collection.push(curion.clone());
