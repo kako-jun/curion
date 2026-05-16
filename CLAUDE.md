@@ -7,16 +7,17 @@ Nostrベースの分散型トレード機能あり。
 
 | ファイル | 内容 | 言語 |
 |---|---|---|
-| `README.md` | エンドユーザー向けの使い方 | 日本語 |
+| `README.md` / `README.ja.md` | エンドユーザー向けの使い方 | 日本語/英語 |
+| `CLAUDE.md` | AI向け内部ドキュメント目次（このファイル） | 日本語 |
 | `docs/overview.md` | ゲームコンセプト・設計思想 | 英語 |
 | `docs/spec.md` | コアメカニクス仕様・UI設計・データ構造 | 英語 |
+| `docs/design.md` | 画面別レイアウト・色ルール・ASCII モックアップ | 英語 |
 | `docs/roadmap.md` | 完了済み・残タスク（内部運用メモ） | 日本語 |
-| `CLAUDE.md` | AI向け内部ドキュメント（このファイル） | 日本語 |
-| `.claude/vision.md` | ゲームビジョン（中毒性・世界観の深堀り） | 英語 |
-| `.claude/synthesis_and_p2p_design.md` | 合成・P2P交換の設計 | 英語 |
-| `.claude/p2p_detailed_design.md` | P2P詳細設計 | 英語 |
-| `.claude/addictive_ideas.md` | 中毒性向上アイデア集 | 英語 |
-| `.claude/implementation_roadmap.md` | 実装ロードマップ詳細 | 英語 |
+| `docs/vision.md` | ゲームビジョン（中毒性・世界観の深堀り） | 英語 |
+| `docs/synthesis_and_p2p_design.md` | 合成・P2P 交換の設計 | 英語 |
+| `docs/p2p_detailed_design.md` | P2P 詳細設計 | 英語 |
+| `docs/addictive_ideas.md` | 中毒性向上アイデア集 | 英語 |
+| `docs/implementation_roadmap.md` | 実装ロードマップ詳細 | 英語 |
 
 ## ソース構成
 
