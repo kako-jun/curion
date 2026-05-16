@@ -503,11 +503,7 @@ impl App {
                 )
             } else {
                 let total_xp: u32 = claimed.iter().map(|m| m.reward_xp).sum();
-                format!(
-                    "🎯 [Mission] {} 件達成! +{} XP",
-                    claimed.len(),
-                    total_xp
-                )
+                format!("🎯 [Mission] {} 件達成! +{} XP", claimed.len(), total_xp)
             };
             self.save_message = Some((msg, Instant::now()));
         }
@@ -963,10 +959,7 @@ impl App {
         let remaining_minutes = (23 - now.hour()) * 60 + (59 - now.minute());
         let hh = remaining_minutes / 60;
         let mm = remaining_minutes % 60;
-        let title = format!(
-            "デイリーミッション (リセットまで {:02}:{:02})",
-            hh, mm
-        );
+        let title = format!("デイリーミッション (リセットまで {:02}:{:02})", hh, mm);
 
         let block = focused_block(title);
         let inner = block.inner(area);
@@ -1025,7 +1018,10 @@ impl App {
             let gauge_color = if completed { COLOR_SUCCESS } else { COLOR_RARE };
             let gauge_line = Line::from(vec![
                 Span::raw("  "),
-                Span::styled(format!("[{}]", bar(ratio, 12)), Style::default().fg(gauge_color)),
+                Span::styled(
+                    format!("[{}]", bar(ratio, 12)),
+                    Style::default().fg(gauge_color),
+                ),
                 Span::raw(format!(
                     "  {:>3} / {}",
                     mission.current.min(mission.target),

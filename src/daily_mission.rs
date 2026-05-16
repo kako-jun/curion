@@ -260,7 +260,9 @@ mod tests {
         let d1 = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
         let mut seen = std::collections::HashSet::new();
         for delta in 0..14 {
-            let d = d1.checked_add_signed(chrono::Duration::days(delta)).unwrap();
+            let d = d1
+                .checked_add_signed(chrono::Duration::days(delta))
+                .unwrap();
             let ids: Vec<_> = DailyMissionManager::generate_for_date(d)
                 .into_iter()
                 .map(|m| m.id)
