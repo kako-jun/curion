@@ -1,6 +1,7 @@
 use crate::achievement::{AchievementManager, AchievementProgress};
 use crate::curion::{Category, Curion, Rarity};
 use crate::daily_mission::{DailyMission, DailyMissionManager};
+use crate::san::{apply_decay, apply_gain, san_gain_for_acquisition, SAN_GAIN_SYNTHESIS, SAN_MAX};
 use crate::synthesis::SynthesisManager;
 use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -181,6 +182,22 @@ pub struct Player {
     /// 旧セーブには無いため `#[serde(default)]` (= None で復元)。
     #[serde(default)]
     pub last_collection_at: Option<DateTime<Utc>>,
+
+    /// SAN 値 (正気度) (Issue #29)
+    ///
+    /// 0.0〜100.0 の `f64`。初期値 100.0。
+    /// - キュリオン収集 / 合成成功で回復 (`san_gain_for_acquisition`, `SAN_GAIN_SYNTHESIS`)
+    /// - 時間経過で減少 (`SAN_DECAY_PER_MINUTE` per minute)
+    ///
+    /// 旧セーブには無いため `#[serde(default = "default_san")]` (= 100.0 で復元)。
+    #[serde(default = "default_san")]
+    pub san: f64,
+}
+
+/// 旧セーブに `san` フィールドが無い場合のデフォルト値 (Issue #29)。
+/// SAN は初回プレイ時に最大値で始まる仕様。
+fn default_san() -> f64 {
+    SAN_MAX
 }
 
 /// カテゴリ別統計
@@ -274,6 +291,7 @@ impl Player {
             max_combo: 0,
             total_acquisitions: 0,
             last_collection_at: None,
+            san: SAN_MAX,
         }
     }
 
@@ -341,6 +359,9 @@ impl Player {
 
         // Issue #25: 最終収集時刻を更新 (レア出現予告クールダウンをリセット)
         self.last_collection_at = Some(Utc::now());
+
+        // Issue #29: SAN 値をレアリティに応じて回復 (Common +0.5 〜 Legendary +15.0)
+        self.san = apply_gain(self.san, san_gain_for_acquisition(curion.rarity));
 
         // コレクションに追加
         self.collection.push(curion.clone());
@@ -615,8 +636,15 @@ impl Player {
     }
 
     /// プレイ時間を更新（秒）
+    ///
+    /// Issue #29: 経過時間に応じて SAN 値も減少させる。
+    /// 1 分あたり `SAN_DECAY_PER_MINUTE` (= 0.1) ずつ減らし、0 でクランプ。
     pub fn add_play_time(&mut self, seconds: u64) {
         self.total_play_time += seconds;
+
+        // Issue #29: 時間経過による SAN 減少 (放置で減る)
+        let minutes_elapsed = (seconds as f64) / 60.0;
+        self.san = apply_decay(self.san, minutes_elapsed);
     }
 
     /// 称号を追加
@@ -738,12 +766,17 @@ impl GameState {
     }
 
     /// 合成成功を記録し、デイリーミッションの進捗を更新する
+    ///
+    /// Issue #29: SAN 値も `SAN_GAIN_SYNTHESIS` (+3.0) 回復する。
     pub fn record_synthesis_success(&mut self) {
         let today = Local::now().date_naive();
         self.player
             .daily_mission_manager
             .ensure_today_missions(today);
         self.player.daily_mission_manager.record_synthesis_success();
+
+        // Issue #29: SAN 値回復 (合成成功 +3.0)
+        self.player.san = apply_gain(self.player.san, SAN_GAIN_SYNTHESIS);
     }
 
     /// 達成済みのデイリーミッションに自動で報酬 (XP) を付与し、
@@ -1911,6 +1944,170 @@ mod tests {
         assert!(
             buckets.is_empty(),
             "days = 0 のときは空 Vec を返す: {buckets:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #29 SAN 値パラメータ関連のテスト
+    // -----------------------------------------------------------------
+
+    /// テスト用 Curion (Category::Concept 固定、レアリティ可変)。
+    fn san_test_curion(rarity: Rarity) -> Curion {
+        Curion::new(
+            uuid::Uuid::new_v4(),
+            "テスト".to_string(),
+            Category::Concept,
+            rarity,
+            50.0,
+            50.0,
+        )
+    }
+
+    #[test]
+    fn test_san_starts_at_100() {
+        let player = Player::new();
+        assert!(
+            (player.san - 100.0).abs() < 1e-9,
+            "Player::new() の SAN は 100.0 で始まる: {}",
+            player.san
+        );
+    }
+
+    #[test]
+    fn test_san_increases_on_acquisition() {
+        let mut player = Player::new();
+        // SAN を 50.0 に下げてから Common を 1 個拾うと +0.5
+        player.san = 50.0;
+        player.add_curion(san_test_curion(Rarity::Common));
+        assert!(
+            (player.san - 50.5).abs() < 1e-9,
+            "Common +0.5: {}",
+            player.san
+        );
+
+        // 続けて Rare を拾うと +2.0 で 52.5
+        player.add_curion(san_test_curion(Rarity::Rare));
+        assert!(
+            (player.san - 52.5).abs() < 1e-9,
+            "Rare +2.0: {}",
+            player.san
+        );
+
+        // Epic +5.0 で 57.5
+        player.add_curion(san_test_curion(Rarity::Epic));
+        assert!(
+            (player.san - 57.5).abs() < 1e-9,
+            "Epic +5.0: {}",
+            player.san
+        );
+    }
+
+    #[test]
+    fn test_san_increases_more_on_legendary() {
+        let mut player = Player::new();
+        player.san = 50.0;
+        player.add_curion(san_test_curion(Rarity::Common));
+        let after_common = player.san;
+
+        player.san = 50.0;
+        player.add_curion(san_test_curion(Rarity::Legendary));
+        let after_legendary = player.san;
+
+        assert!(
+            after_legendary > after_common,
+            "Legendary 回復量 ({after_legendary}) > Common 回復量 ({after_common})"
+        );
+        // Legendary は +15.0 ぴったり
+        assert!(
+            (after_legendary - 65.0).abs() < 1e-9,
+            "Legendary +15.0: {after_legendary}"
+        );
+    }
+
+    #[test]
+    fn test_san_clamps_at_max_on_acquisition() {
+        // 99.0 + Legendary(+15.0) = 114.0 -> 100.0 にクランプ
+        let mut player = Player::new();
+        player.san = 99.0;
+        player.add_curion(san_test_curion(Rarity::Legendary));
+        assert!(
+            (player.san - 100.0).abs() < 1e-9,
+            "SAN は 100 でクランプ: {}",
+            player.san
+        );
+    }
+
+    #[test]
+    fn test_san_legacy_save_defaults_to_100() {
+        // 旧セーブ JSON (san フィールド無し) を復元したとき
+        // `#[serde(default = "default_san")]` で 100.0 が入る
+        let legacy = json!({
+            "level": 1,
+            "xp": 0,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+        });
+
+        let player: Player = serde_json::from_value(legacy).unwrap();
+        assert!(
+            (player.san - 100.0).abs() < 1e-9,
+            "legacy save の SAN は 100.0 にデフォルト復元: {}",
+            player.san
+        );
+    }
+
+    #[test]
+    fn test_san_decay_via_add_play_time() {
+        let mut player = Player::new();
+        assert!((player.san - 100.0).abs() < 1e-9);
+
+        // 60 秒 = 1 分 経過 → -0.1
+        player.add_play_time(60);
+        assert!(
+            (player.san - 99.9).abs() < 1e-9,
+            "1 分 → -0.1: {}",
+            player.san
+        );
+
+        // 600 秒 = 10 分経過 → -1.0
+        player.add_play_time(600);
+        assert!(
+            (player.san - 98.9).abs() < 1e-9,
+            "+10 分 → -1.0: {}",
+            player.san
+        );
+
+        // 巨大時間経過でも 0 でクランプ
+        player.add_play_time(60_000_000);
+        assert!(
+            (player.san - 0.0).abs() < 1e-9,
+            "巨大時間経過でも 0 でクランプ: {}",
+            player.san
+        );
+    }
+
+    #[test]
+    fn test_san_increases_on_synthesis_success() {
+        use crate::synthesis::{RecipeDatabase, SynthesisManager};
+
+        let recipe_db = RecipeDatabase::load_embedded().expect("load recipes");
+        let mut state = GameState::new(SynthesisManager::new(recipe_db));
+        state.player.san = 50.0;
+        state.record_synthesis_success();
+        assert!(
+            (state.player.san - 53.0).abs() < 1e-9,
+            "合成成功 +3.0: {}",
+            state.player.san
         );
     }
 }
