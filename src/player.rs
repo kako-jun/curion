@@ -777,4 +777,82 @@ mod tests {
         assert_eq!(player.guaranteed_tickets.rare, 0);
         assert_eq!(player.guaranteed_tickets.epic, 0);
     }
+
+    // -----------------------------------------------------------------
+    // Issue #20 デイリーミッション関連のテスト
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_auto_claim_grants_xp() {
+        use crate::daily_mission::{DailyMission, DailyMissionKind};
+        use crate::synthesis::{RecipeDatabase, SynthesisManager};
+
+        let recipe_db = RecipeDatabase::load_embedded().expect("load recipes");
+        let mut state = GameState::new(SynthesisManager::new(recipe_db));
+        let xp_before = state.player.xp;
+
+        // ミッションを 1 本だけ手動で達成状態に
+        let date = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
+        state.player.daily_mission_manager.missions = vec![DailyMission {
+            id: "collect_any_10".to_string(),
+            description: "10 個".to_string(),
+            kind: DailyMissionKind::CollectAny(10),
+            target: 10,
+            current: 10,
+            reward_xp: 100,
+            expires_at: date,
+            claimed: false,
+        }];
+        state.player.daily_mission_manager.generated_date = Some(date);
+
+        let claimed = state.auto_claim_daily_missions();
+        assert_eq!(claimed.len(), 1, "達成ミッション 1 本を回収する");
+        assert_eq!(claimed[0].reward_xp, 100);
+
+        // XP は add_xp 経由なのでレベルアップで繰り上がる可能性がある。
+        // ここでは「+100 XP 相当進んでいる」ことを総量で確認する。
+        let xp_now = state.player.xp;
+        let total_xp_gained = if state.player.level > 1 {
+            // レベルが上がっている場合、消費した XP + 残りの XP で 100 になる想定。
+            // level=1, xp_for_next_level=100 から 100 XP 入れると level=2, xp=0。
+            xp_now + (1..state.player.level).map(|lvl| lvl * 100).sum::<u32>()
+        } else {
+            xp_now - xp_before
+        };
+        assert_eq!(total_xp_gained, 100);
+
+        // 2 度目は重複付与されない
+        let claimed_again = state.auto_claim_daily_missions();
+        assert!(claimed_again.is_empty());
+    }
+
+    #[test]
+    fn test_legacy_save_compatibility_with_daily_mission() {
+        let legacy = json!({
+            "level": 1,
+            "xp": 0,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+            // daily_mission_manager フィールド無し
+        });
+
+        let player: Player = serde_json::from_value(legacy).expect("旧セーブでも読める");
+        // default で構築されているはず
+        assert!(player.daily_mission_manager.missions.is_empty());
+        assert!(player.daily_mission_manager.generated_date.is_none());
+        assert!(player
+            .daily_mission_manager
+            .unique_categories_today
+            .is_empty());
+    }
 }
