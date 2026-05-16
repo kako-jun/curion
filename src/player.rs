@@ -274,6 +274,7 @@ impl Player {
         self.collection.push(curion.clone());
 
         // コンボ更新 (Common でリセット、Rare 以上で +1)
+        let prev_combo = self.combo_count;
         match curion.rarity {
             Rarity::Common => self.combo_count = 0,
             _ => self.combo_count += 1,
@@ -299,8 +300,7 @@ impl Player {
         };
         let xp = (base_xp as f64 * multiplier) as u32;
 
-        // コンボ 5 到達で称号「コンボマスター」を付与 (重複しない)
-        if self.combo_count >= 5 {
+        if self.combo_count == 5 && prev_combo < 5 {
             self.add_title("コンボマスター".to_string());
         }
 
@@ -1113,6 +1113,11 @@ mod tests {
         let xp5 = player.add_curion(combo_test_curion(Rarity::Rare));
         assert_eq!(player.combo_count, 5);
         assert_eq!(xp5, 75, "combo 5: 3.0x");
+
+        // Common はコンボを 0 にリセットし、base 10 のまま付与
+        let xp_common = player.add_curion(combo_test_curion(Rarity::Common));
+        assert_eq!(player.combo_count, 0);
+        assert_eq!(xp_common, 10, "Common: combo 0 + 1.0x で base 10");
     }
 
     #[test]
