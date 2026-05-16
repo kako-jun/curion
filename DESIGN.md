@@ -171,9 +171,18 @@ Right pane layout:
   - Paragraph: 連続ログイン / 状態 / 今日の報酬 / 次回予告 / 所持チケット
 
 デイリーミッション (section 2):
-  - Gauge: 今日の収集進捗 (Cyan, turns Yellow when complete)
-  - Target: 10 curions/day
-  - Label format: [████░░░░]  N / 10 collected today
+  - Focused block title: "デイリーミッション (リセットまで HH:MM)"
+  - 3 missions stacked vertically. Each mission uses 4 lines:
+    Line 1: 🎯 / ✅ + description (white / green-bold when completed)
+    Line 2:   [████████░░░░]  N / target  (gauge color: Cyan progress, Green complete)
+    Line 3:   報酬: +N XP  (or "[✅ +N XP claimed]" when claimed, Green)
+    Line 4:   (blank separator)
+  - Templates (4 種から日付シードで 3 つ抽選):
+    - "10 個のキュリオンを収集": +100 XP
+    - "Rare 以上を 3 個獲得": +200 XP
+    - "合成を 1 回成功させる": +300 XP
+    - "5 種類の異なるカテゴリから収集": +150 XP
+  - 報酬は自動付与（達成判定時に XP 加算 + トースト通知）
 ```
 
 ### Collection Tab
@@ -342,18 +351,12 @@ Marker:       "?"    — fg(DarkGray)
 
 These screens are defined in the roadmap but not yet implemented. When implementing, use these rules as the starting point.
 
-### Daily Mission (Issue #20)
+### Daily Mission (Issue #20) — IMPLEMENTED
 
-```
-Section in Dashboard tab, section index 2.
-Current placeholder: single Gauge (10 curions/day target).
-
-Full implementation target:
-  - List of 3 daily missions (e.g., collect N curions, collect 1 RARE, perform synthesis)
-  - Each mission: LineGauge per mission + reward XP display
-  - "Complete" badge in Green when all done
-  - Reset countdown: when next reset occurs (midnight)
-```
+Dashboard tab section 2 で 3 本のデイリーミッションを表示する。
+詳細レイアウト・テンプレートは「Tab Layout Principles / Dashboard Tab / デイリーミッション」参照。
+日付ベース seed (SHA256(`curion-daily-mission/YYYY-MM-DD`)) で 4 テンプレから 3 つを抽選し、
+報酬は達成時に自動付与される。
 
 ### Collection 図鑑 Filter (Issue #31)
 
