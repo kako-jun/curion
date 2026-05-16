@@ -122,6 +122,24 @@ fn rarity_label(rarity: &Rarity) -> &'static str {
     }
 }
 
+/// 残り寿命を表す Span を返す (Issue #30)。
+///
+/// - 残り 0 日以下: 赤 + `!` 警告アイコン (まもなく消滅)
+/// - 残り 1〜3 日: 黄色
+/// - それ以上: 薄いグレー
+/// - 寿命なし (`lifespan_days = None`、旧セーブ): `--`
+pub(crate) fn lifespan_span_for(curion: &Curion, now: chrono::DateTime<chrono::Utc>) -> Span<'_> {
+    match curion.days_remaining(now) {
+        None => Span::styled("寿命: --", Style::default().fg(Color::DarkGray)),
+        Some(d) if d <= 0 => Span::styled(
+            "寿命: ! まもなく消滅".to_string(),
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
+        Some(d) if d <= 3 => Span::styled(format!("残 {d} 日"), Style::default().fg(Color::Yellow)),
+        Some(d) => Span::styled(format!("残 {d} 日"), Style::default().fg(Color::DarkGray)),
+    }
+}
+
 /// Issue #31: 正規表現フィルタの長尺レアリティラベル。
 ///
 /// `rarity_label` は `[COM ]` 等の固定 4 桁表示用に短縮されているため、ユーザーが
@@ -716,6 +734,28 @@ impl App {
             format!("🎁 Day {} +{} XP", reward.day, reward.xp),
             Instant::now(),
         ));
+    }
+
+    /// 期限切れで消えたキュリオンを 1 行トーストで表示する (Issue #30)。
+    ///
+    /// 表示時間は通常より長めの 6 秒に延長する (普段見ない情報なので拾わせる)。
+    pub fn show_expired_curions_message(&mut self, expired: &[Curion]) {
+        if expired.is_empty() {
+            return;
+        }
+        let preview: String = expired
+            .iter()
+            .take(3)
+            .map(|c| c.display_name())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let more = if expired.len() > 3 {
+            format!(" 他 {} 個", expired.len() - 3)
+        } else {
+            String::new()
+        };
+        self.save_message_duration = Duration::from_secs(6);
+        self.save_message = Some((format!("🕯 寿命で消滅: {}{}", preview, more), Instant::now()));
     }
 
     fn guid_progress(&self) -> f64 {
@@ -1354,9 +1394,10 @@ impl App {
                 Constraint::Length(1), // 4: SAN bar (Issue #29)
                 Constraint::Length(2), // 5: stats (total/today/level/COMBO)
                 Constraint::Length(1), // 6: next milestone (Issue #32)
-                Constraint::Length(3), // 7: latest curion
-                Constraint::Length(6), // 8: rarity distribution
-                Constraint::Min(4),    // 9: category distribution
+                Constraint::Length(1), // 7: lifespan warning (Issue #30)
+                Constraint::Length(3), // 8: latest curion
+                Constraint::Length(6), // 9: rarity distribution
+                Constraint::Min(4),    // 10: category distribution
             ])
             .split(area);
 
@@ -1549,6 +1590,34 @@ impl App {
         let milestone_widget = Paragraph::new(vec![milestone_line]).alignment(Alignment::Left);
         f.render_widget(milestone_widget, chunks[6]);
 
+        // Issue #30: 期限切れ間近 (残り 1 日以下) のキュリオン数を 1 行で警告。
+        // 0 個のときも空行として描画して、レイアウト的に予約だけ残す
+        // (Length(1) を消費しないと下のチャンクが詰まって見えなくなるため)。
+        let now_utc = chrono::Utc::now();
+        let near_expiry_count = player
+            .collection
+            .iter()
+            .filter(|c| match c.days_remaining(now_utc) {
+                Some(d) => d <= 1,
+                None => false,
+            })
+            .count();
+        let lifespan_line = if near_expiry_count > 0 {
+            Line::from(vec![
+                Span::styled(
+                    "⚠ 期限切れ間近 (残り 1 日以下): ",
+                    Style::default().fg(Color::Yellow),
+                ),
+                Span::styled(
+                    format!("{} 個", near_expiry_count),
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
+            ])
+        } else {
+            Line::from("")
+        };
+        f.render_widget(Paragraph::new(lifespan_line), chunks[7]);
+
         // Latest curion
         if let Some(curion) = player.latest_curion() {
             let color = rarity_color(&curion.rarity);
@@ -1570,7 +1639,7 @@ impl App {
                 ),
             ])];
             let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
-            f.render_widget(latest, chunks[7]);
+            f.render_widget(latest, chunks[8]);
         }
 
         // Rarity distribution
@@ -1601,7 +1670,7 @@ impl App {
             ]));
         }
         let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
-        f.render_widget(rarity_widget, chunks[8]);
+        f.render_widget(rarity_widget, chunks[9]);
 
         // Category distribution
         let category_text = ALL_CATEGORIES
@@ -1613,7 +1682,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
-        f.render_widget(category_widget, chunks[9]);
+        f.render_widget(category_widget, chunks[10]);
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1783,6 +1852,7 @@ impl App {
             format!("コレクション [{} 個]", collection.len())
         };
 
+        let now_utc = chrono::Utc::now();
         let items: Vec<ListItem> = filtered
             .iter()
             .rev()
@@ -1795,6 +1865,10 @@ impl App {
                 let stars = rarity_stars(&curion.rarity);
                 let label = rarity_label(&curion.rarity);
                 let index = filtered.len() - i;
+
+                // Issue #30: 残り寿命を 1 行右側に表示。1 日以下で Red、3 日以下で
+                // Yellow、それ以上は薄いグレー。寿命なし (旧セーブ) は `--`。
+                let lifespan_span = lifespan_span_for(curion, now_utc);
 
                 ListItem::new(vec![
                     Line::from(vec![
@@ -1814,6 +1888,8 @@ impl App {
                             curion.acquired_at.format("%Y-%m-%d %H:%M").to_string(),
                             Style::default().fg(Color::DarkGray),
                         ),
+                        Span::raw("  "),
+                        lifespan_span,
                     ]),
                     Line::from(vec![
                         Span::raw("      興味度: "),

@@ -654,6 +654,27 @@ impl Player {
         }
     }
 
+    /// 期限切れキュリオンを collection から取り除き、削除した一覧を返す (Issue #30)。
+    ///
+    /// `Curion::is_expired(now)` が true のものを除外する。
+    /// `lifespan_days = None` (旧セーブ等の永遠キュリオン) は対象外。
+    /// 統計 (`rarity_stats` / `category_stats`) は触らない — これらは
+    /// 「過去に何個入手したか」を表す累積カウンタとして扱い、自然消滅で
+    /// 履歴を消さない方針。
+    pub fn prune_expired(&mut self, now: DateTime<Utc>) -> Vec<Curion> {
+        let mut removed = Vec::new();
+        let mut kept = Vec::with_capacity(self.collection.len());
+        for c in self.collection.drain(..) {
+            if c.is_expired(now) {
+                removed.push(c);
+            } else {
+                kept.push(c);
+            }
+        }
+        self.collection = kept;
+        removed
+    }
+
     /// 最新のキュリオンを取得
     pub fn latest_curion(&self) -> Option<&Curion> {
         self.collection.last()
@@ -744,6 +765,15 @@ impl GameState {
             .ensure_today_missions(today);
         self.refresh_achievement_progress();
         reward
+    }
+
+    /// 期限切れキュリオンを起動時に削除する (Issue #30)。
+    ///
+    /// `process_login` の後に呼び出して、UI 側で削除されたキュリオンの
+    /// 通知 (トースト等) に使うことを想定している。実績/ミッション進捗には
+    /// 影響を与えない (削除は履歴 = `rarity_stats` 等に残す)。
+    pub fn prune_expired_curions(&mut self, now: DateTime<Utc>) -> Vec<Curion> {
+        self.player.prune_expired(now)
     }
 
     /// キュリオンを追加し、実績とデイリーミッションを更新する。
@@ -2109,5 +2139,109 @@ mod tests {
             "合成成功 +3.0: {}",
             state.player.san
         );
+    }
+
+    // -------------------------------------------------------------------
+    // Issue #30 寿命システム (Player::prune_expired)
+    // -------------------------------------------------------------------
+
+    fn make_curion_with_lifespan(
+        rarity: Rarity,
+        acquired_at: DateTime<Utc>,
+        lifespan_days: Option<u32>,
+    ) -> Curion {
+        let mut c = Curion::new(
+            uuid::Uuid::new_v4(),
+            "テスト".to_string(),
+            Category::Animal,
+            rarity,
+            0.5,
+            0.5,
+        );
+        c.acquired_at = acquired_at;
+        c.lifespan_days = lifespan_days;
+        c
+    }
+
+    /// Issue #30: prune_expired は期限切れだけを除外し、寿命内のキュリオンは残す。
+    #[test]
+    fn test_prune_expired_removes_expired_only() {
+        let mut player = Player::new();
+        let acquired = dt(2026, 5, 1);
+        // 期限切れ (Common 3 日寿命、5 日経過)
+        let expired = make_curion_with_lifespan(Rarity::Common, acquired, Some(3));
+        // 寿命内 (Legendary 30 日寿命)
+        let alive = make_curion_with_lifespan(Rarity::Legendary, acquired, Some(30));
+        player.collection.push(expired);
+        player.collection.push(alive);
+
+        let now = acquired + Duration::days(5);
+        let removed = player.prune_expired(now);
+        assert_eq!(removed.len(), 1);
+        assert_eq!(removed[0].rarity, Rarity::Common);
+        assert_eq!(player.collection.len(), 1);
+        assert_eq!(player.collection[0].rarity, Rarity::Legendary);
+    }
+
+    /// Issue #30: prune_expired は削除したキュリオンを Vec で返す (順序は元の collection 順)。
+    #[test]
+    fn test_prune_expired_returns_removed_curions() {
+        let mut player = Player::new();
+        let acquired = dt(2026, 5, 1);
+        let c1 = make_curion_with_lifespan(Rarity::Common, acquired, Some(3));
+        let c2 = make_curion_with_lifespan(Rarity::Rare, acquired, Some(7));
+        let c3 = make_curion_with_lifespan(Rarity::Epic, acquired, Some(14));
+        player.collection.push(c1);
+        player.collection.push(c2);
+        player.collection.push(c3);
+
+        // 8 日経過: Common (3 日) と Rare (7 日) が期限切れ、Epic は残る
+        let now = acquired + Duration::days(8);
+        let removed = player.prune_expired(now);
+        assert_eq!(removed.len(), 2);
+        assert_eq!(removed[0].rarity, Rarity::Common);
+        assert_eq!(removed[1].rarity, Rarity::Rare);
+        assert_eq!(player.collection.len(), 1);
+        assert_eq!(player.collection[0].rarity, Rarity::Epic);
+    }
+
+    /// Issue #30: lifespan_days = None の旧セーブ由来キュリオンは絶対に削除しない。
+    #[test]
+    fn test_prune_expired_keeps_curions_without_lifespan() {
+        let mut player = Player::new();
+        let acquired = dt(2020, 1, 1);
+        // 寿命なし (旧セーブ互換)
+        let eternal = make_curion_with_lifespan(Rarity::Common, acquired, None);
+        player.collection.push(eternal);
+
+        let now = dt(2026, 5, 1); // 6 年経過
+        let removed = player.prune_expired(now);
+        assert!(removed.is_empty());
+        assert_eq!(player.collection.len(), 1);
+        assert!(player.collection[0].lifespan_days.is_none());
+    }
+
+    /// Issue #30: 旧セーブ JSON (lifespan_days フィールド無し) からの deserialize で
+    /// `lifespan_days = None` に復元され、期限切れ扱いされない。
+    #[test]
+    fn test_legacy_save_curion_without_lifespan_loads() {
+        let legacy_json = json!({
+            "id": "11111111-1111-4111-9111-111111111111",
+            "source_guid": "22222222-2222-4222-9222-222222222222",
+            "noun": "テスト",
+            "category": "Animal",
+            "rarity": "Common",
+            "interest": 0.5,
+            "beauty": 0.5,
+            "acquired_at": "2020-01-01T00:00:00Z"
+        });
+        let curion: Curion =
+            serde_json::from_value(legacy_json).expect("legacy Curion should deserialize");
+        assert!(
+            curion.lifespan_days.is_none(),
+            "旧セーブの lifespan_days は None でロードされる"
+        );
+        assert!(curion.expires_at().is_none());
+        assert!(!curion.is_expired(dt(2026, 5, 1)));
     }
 }

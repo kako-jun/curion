@@ -190,6 +190,8 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
 
     // ログイン処理
     let login_bonus = game_state.process_login();
+    // Issue #30: 期限切れキュリオンを削除して通知する。
+    let expired = game_state.prune_expired_curions(chrono::Utc::now());
     save_manager.save(&game_state)?;
 
     let mut helper = CurionHelper::new();
@@ -216,6 +218,18 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
         println!("\x1b[1;32mLogin Bonus\x1b[0m");
         for line in reward.summary_lines() {
             println!("  {line}");
+        }
+        println!();
+    }
+
+    // Issue #30: 期限切れで消えたキュリオンを通知
+    if !expired.is_empty() {
+        println!(
+            "\x1b[1;33m寿命で消えたキュリオン ({} 個)\x1b[0m",
+            expired.len()
+        );
+        for c in &expired {
+            println!("  - {}", c.display_name());
         }
         println!();
     }

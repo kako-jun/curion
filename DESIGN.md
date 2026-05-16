@@ -430,6 +430,34 @@ Behaviour:
     without applying any filter and without crashing.
 ```
 
+### Lifespan System (Issue #30) — IMPLEMENTED
+
+```
+レアリティ別に有限寿命を持たせ、放置されたキュリオンを「自然消滅」させる。
+合成消費は寿命を見ない (使ってあげる = 供養)。
+
+寿命日数:
+  - Common: 3 日 / Rare: 7 日 / Epic: 14 日 / Legendary: 30 日
+
+Curion field:
+  - `lifespan_days: Option<u32>` (新規 = Some, 旧セーブ = None で永遠)
+
+Pruning:
+  - 起動時 (`process_login` 直後) に `prune_expired_curions(now)` を呼ぶ
+  - 削除分は TUI トースト / --plain セクション / interactive REPL 出力で通知
+  - 6 秒トースト (通常 3 秒より長め、見逃さないように)
+
+Dashboard Overview 表示:
+  - "⚠ 期限切れ間近 (残り 1 日以下): N 個" を 1 行で警告 (0 個なら空行)
+
+Collection Owned List 表示:
+  - 各行右端に残り寿命: `残 N 日`
+  - 残 ≤ 0: 赤 + `寿命: ! まもなく消滅`
+  - 残 ≤ 3: 黄色
+  - それ以上: 薄いグレー
+  - 寿命なし: `寿命: --`
+```
+
 ### High-risk Synthesis (Issue #35)
 
 ```

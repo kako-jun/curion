@@ -80,6 +80,8 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     let save_manager = SaveManager::new_with_profile(profile_manager)?;
     let mut game_state = save_manager.load()?;
     let login_bonus = game_state.process_login();
+    // Issue #30: 起動時に期限切れキュリオンを自動削除し、UI に通知メッセージを残す。
+    let expired = game_state.prune_expired_curions(chrono::Utc::now());
     save_manager.save(&game_state)?;
 
     // Terminal setup
@@ -94,6 +96,10 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     app.flush_daily_mission_rewards();
     if let Some(reward) = login_bonus {
         app.show_login_bonus_message(&reward);
+    }
+    // Issue #30: 期限切れで削除されたキュリオンを 1 行トーストで知らせる。
+    if !expired.is_empty() {
+        app.show_expired_curions_message(&expired);
     }
 
     let res = run_app(&mut terminal, &mut app, &save_manager);
