@@ -16,6 +16,40 @@ pub struct SynthesisRecipe {
     pub result: SynthesisResult,
     pub discovery_rate: f64, // 初見成功率（0.0〜1.0）
     pub recipe_type: RecipeType,
+
+    /// Issue #35: 発見済みレシピでも適用される「実行時成功率」。
+    /// `discovery_rate` とは別軸で、`is_discovered == true` でも毎回 roll される。
+    /// 既存レシピ (フィールド省略) は 1.0 (= 100% 成功) として扱われる。
+    #[serde(default = "default_success_rate")]
+    pub success_rate: f64,
+
+    /// Issue #35: 失敗時にどう振る舞うか。デフォルトは `NoLoss` (保険) で、
+    /// 既存レシピの挙動 (素材は消費しない / 副作用なし) と一致する。
+    #[serde(default)]
+    pub failure_mode: FailureMode,
+}
+
+fn default_success_rate() -> f64 {
+    1.0
+}
+
+/// Issue #35: 高リスク合成のリスクしきい値。
+/// `success_rate` がこれより小さい場合に "RISKY" として扱う。
+pub const HIGH_RISK_THRESHOLD: f64 = 0.95;
+
+/// Issue #35: 失敗時の挙動パターン。
+/// `Default = NoLoss` で既存レシピ互換 (失敗ロスなし) を担保する。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(tag = "type")]
+pub enum FailureMode {
+    /// 何も失わない (保険)。素材は手元に残り、結果も出ない。
+    #[default]
+    NoLoss,
+    /// 素材を全て失う (デフォルトの高リスク失敗)。
+    LoseAll,
+    /// 素材を失い、代わりに残骸 curion を 1 個得る。
+    /// `fallback_rarity` のレアリティで、材料のうち最初のものを名詞元として残骸を生成する。
+    Salvage { fallback_rarity: Rarity },
 }
 
 impl SynthesisRecipe {
@@ -27,11 +61,19 @@ impl SynthesisRecipe {
     /// 計算はロジック層に閉じており、UI 層は本メソッドを呼ぶだけで
     /// 表示用の確率を得られる。
     pub fn success_probability(&self, is_discovered: bool) -> f64 {
-        if is_discovered {
+        let base = if is_discovered {
             1.0
         } else {
             self.discovery_rate.clamp(0.0, 1.0)
-        }
+        };
+        // Issue #35: 発見済みでも success_rate < 1.0 なら毎回 roll する。
+        // 表示用の確率は discovery と success_rate の AND (積) で表現する。
+        base * self.success_rate.clamp(0.0, 1.0)
+    }
+
+    /// Issue #35: 高リスクレシピ (`success_rate < HIGH_RISK_THRESHOLD`) か判定する。
+    pub fn is_high_risk(&self) -> bool {
+        self.success_rate < HIGH_RISK_THRESHOLD
     }
 }
 
@@ -208,6 +250,24 @@ impl SynthesisManager {
 
     /// 合成を試みる
     pub fn try_synthesize(&mut self, ingredients: Vec<Curion>) -> Result<SynthesisAttemptResult> {
+        let discovery_roll: f64 = rand::random();
+        let risk_roll: f64 = rand::random();
+        self.try_synthesize_with_rolls(ingredients, discovery_roll, risk_roll)
+    }
+
+    /// Issue #35: テスト用に乱数を外部注入できる内部 API。
+    ///
+    /// - `discovery_roll`: 未発見レシピの `discovery_rate` 判定に使う。
+    ///   `discovery_roll > discovery_rate` で `DiscoveryFailed`。
+    /// - `risk_roll`: `success_rate` 判定に使う。`risk_roll > success_rate` で `HighRiskFailure`。
+    ///
+    /// `try_synthesize` の薄いラッパで本実装。
+    pub fn try_synthesize_with_rolls(
+        &mut self,
+        ingredients: Vec<Curion>,
+        discovery_roll: f64,
+        risk_roll: f64,
+    ) -> Result<SynthesisAttemptResult> {
         // マッチするレシピを検索
         let matching_recipes = self.recipe_db.find_matching_recipes(&ingredients);
 
@@ -222,6 +282,8 @@ impl SynthesisManager {
         let recipe_id = recipe.id.clone();
         let recipe_name = recipe.name.clone();
         let discovery_rate = recipe.discovery_rate;
+        let success_rate = recipe.success_rate;
+        let failure_mode = recipe.failure_mode.clone();
         let result_curion = recipe.result.to_curion();
 
         // 発見済みか確認
@@ -229,15 +291,19 @@ impl SynthesisManager {
 
         // 未発見の場合、discovery_rateで成功判定
         if !is_discovered {
-            let roll: f64 = rand::random();
-            if roll > discovery_rate {
+            if discovery_roll > discovery_rate {
                 return Ok(SynthesisAttemptResult::DiscoveryFailed {
                     hint: "何かが起こりそうだが、まだ完全には理解できていない...".to_string(),
                 });
             }
-
             // 発見成功！
             self.discover_recipe(recipe_id);
+        }
+
+        // Issue #35: success_rate < 1.0 の場合は実行時 roll を毎回行う。
+        // discovery 判定を通過した後に行うため、未発見初回でも risk 判定が走る。
+        if success_rate < 1.0 && risk_roll > success_rate {
+            return Ok(self.build_high_risk_failure(recipe_name, ingredients, failure_mode));
         }
 
         // 合成成功
@@ -246,6 +312,49 @@ impl SynthesisManager {
             recipe_name,
             first_discovery: !is_discovered,
         })
+    }
+
+    /// Issue #35: failure_mode に応じた `HighRiskFailure` を組み立てる。
+    fn build_high_risk_failure(
+        &self,
+        recipe_name: String,
+        ingredients: Vec<Curion>,
+        failure_mode: FailureMode,
+    ) -> SynthesisAttemptResult {
+        match &failure_mode {
+            FailureMode::NoLoss => SynthesisAttemptResult::HighRiskFailure {
+                recipe_name,
+                lost_ingredients: Vec::new(),
+                salvage: None,
+                failure_mode,
+            },
+            FailureMode::LoseAll => SynthesisAttemptResult::HighRiskFailure {
+                recipe_name,
+                lost_ingredients: ingredients,
+                salvage: None,
+                failure_mode,
+            },
+            FailureMode::Salvage { fallback_rarity } => {
+                // 残骸は最初の材料の名詞・カテゴリを引き継ぎつつ、レアリティを fallback まで落とす。
+                // 「残骸」というイメージなので interest/beauty は低めに固定。
+                let salvage_curion = ingredients.first().map(|src| {
+                    Curion::new(
+                        Uuid::new_v4(),
+                        format!("{}の残骸", src.noun),
+                        src.category.clone(),
+                        *fallback_rarity,
+                        0.3,
+                        0.3,
+                    )
+                });
+                SynthesisAttemptResult::HighRiskFailure {
+                    recipe_name,
+                    lost_ingredients: ingredients,
+                    salvage: salvage_curion,
+                    failure_mode,
+                }
+            }
+        }
     }
 
     /// 発見済みレシピの数
@@ -382,6 +491,16 @@ pub enum SynthesisAttemptResult {
     DiscoveryFailed {
         hint: String,
     },
+    /// Issue #35: 高リスクレシピで `success_rate` 判定に失敗したケース。
+    HighRiskFailure {
+        recipe_name: String,
+        /// 失われた材料 (UI 側で collection から削除するために使う)。
+        /// `failure_mode == NoLoss` の場合は空。
+        lost_ingredients: Vec<Curion>,
+        /// 残骸 curion (`failure_mode == Salvage` の場合のみ Some)。
+        salvage: Option<Curion>,
+        failure_mode: FailureMode,
+    },
 }
 
 #[cfg(test)]
@@ -442,7 +561,66 @@ mod tests {
             },
             discovery_rate,
             recipe_type: RecipeType::Intuitive,
+            success_rate: 1.0,
+            failure_mode: FailureMode::NoLoss,
         }
+    }
+
+    /// Issue #35: 「水 + 火」のような 2 材料レシピを動的に作る。テスト専用。
+    fn make_pair_recipe(
+        id: &str,
+        result_noun: &str,
+        ingredient_a: &str,
+        ingredient_b: &str,
+        success_rate: f64,
+        failure_mode: FailureMode,
+    ) -> SynthesisRecipe {
+        SynthesisRecipe {
+            id: id.to_string(),
+            name: result_noun.to_string(),
+            description: "test pair recipe".to_string(),
+            ingredients: vec![
+                IngredientRequirement {
+                    specific_noun: Some(ingredient_a.to_string()),
+                    category: None,
+                    rarity: None,
+                    count: 1,
+                },
+                IngredientRequirement {
+                    specific_noun: Some(ingredient_b.to_string()),
+                    category: None,
+                    rarity: None,
+                    count: 1,
+                },
+            ],
+            result: SynthesisResult {
+                noun: result_noun.to_string(),
+                category: Category::Concept,
+                rarity: Rarity::Epic,
+                synthesis_only: true,
+                special_attributes: HashMap::new(),
+            },
+            discovery_rate: 1.0,
+            recipe_type: RecipeType::Advanced,
+            success_rate,
+            failure_mode,
+        }
+    }
+
+    fn manager_with_recipes(recipes: Vec<SynthesisRecipe>) -> SynthesisManager {
+        let db = RecipeDatabase { recipes };
+        SynthesisManager::new(db)
+    }
+
+    fn make_curion(noun: &str) -> Curion {
+        Curion::new(
+            Uuid::new_v4(),
+            noun.to_string(),
+            Category::Element,
+            Rarity::Common,
+            0.5,
+            0.5,
+        )
     }
 
     /// Issue #28: 未発見レシピの成功確率は `discovery_rate` と一致する
@@ -475,5 +653,228 @@ mod tests {
         manager.discover_recipe(recipe_id);
         let discovered_p = manager.success_probability_for_recipe(&recipe);
         assert!((discovered_p - 1.0).abs() < 1e-9);
+    }
+
+    // ---------- Issue #35: 高リスク合成 ----------
+
+    /// Issue #35: JSON で `success_rate` 省略時はデフォルト 1.0 になる。
+    #[test]
+    fn test_synthesis_recipe_default_success_rate_is_1() {
+        // success_rate / failure_mode を持たない旧レシピ JSON を再現
+        let legacy_json = r#"{
+            "id": "legacy_recipe",
+            "name": "レガシー",
+            "description": "old style",
+            "ingredients": [],
+            "result": {
+                "noun": "x",
+                "category": "Concept",
+                "rarity": "Common",
+                "synthesis_only": false,
+                "special_attributes": {}
+            },
+            "discovery_rate": 0.8,
+            "recipe_type": "Intuitive"
+        }"#;
+        let recipe: SynthesisRecipe =
+            serde_json::from_str(legacy_json).expect("legacy recipe parse");
+        assert!((recipe.success_rate - 1.0).abs() < 1e-9);
+        assert_eq!(recipe.failure_mode, FailureMode::NoLoss);
+    }
+
+    /// Issue #35: 既存レシピは high-risk 扱いにならない (= 100% 成功)。
+    #[test]
+    fn test_is_high_risk_threshold() {
+        // success_rate がしきい値より上なら non-high-risk
+        let mut r = sample_recipe(1.0);
+        r.success_rate = 1.0;
+        assert!(!r.is_high_risk());
+
+        r.success_rate = 0.95;
+        assert!(!r.is_high_risk(), "0.95 はしきい値ちょうど (非リスク)");
+
+        r.success_rate = 0.94;
+        assert!(r.is_high_risk(), "0.94 未満は high risk");
+
+        r.success_rate = 0.30;
+        assert!(r.is_high_risk());
+    }
+
+    /// Issue #35: success_rate 100% なら、risk_roll に関係なく Success を返す。
+    #[test]
+    fn test_try_synthesize_legacy_recipe_always_succeeds() {
+        let recipe = make_pair_recipe("legacy", "結果", "水", "火", 1.0, FailureMode::LoseAll);
+        let mut mgr = manager_with_recipes(vec![recipe]);
+        let ingredients = vec![make_curion("水"), make_curion("火")];
+
+        // risk_roll が 0.99 (= 普通なら高リスクで失敗するレベル) でも、
+        // success_rate=1.0 なら成功する。discovery_roll も成功側にしておく。
+        let result = mgr
+            .try_synthesize_with_rolls(ingredients, 0.0, 0.99)
+            .expect("synthesize");
+        assert!(matches!(result, SynthesisAttemptResult::Success { .. }));
+    }
+
+    /// Issue #35: risk_roll が success_rate 以下なら成功する。
+    #[test]
+    fn test_try_synthesize_high_risk_success() {
+        let recipe = make_pair_recipe("risky", "禁断", "水", "火", 0.30, FailureMode::LoseAll);
+        let mut mgr = manager_with_recipes(vec![recipe]);
+        let ingredients = vec![make_curion("水"), make_curion("火")];
+
+        // discovery 成功 + risk 成功 (roll 0.10 <= 0.30)
+        let result = mgr
+            .try_synthesize_with_rolls(ingredients, 0.0, 0.10)
+            .expect("synthesize");
+        assert!(matches!(result, SynthesisAttemptResult::Success { .. }));
+    }
+
+    /// Issue #35: risk_roll が success_rate を超えると HighRiskFailure を返す。
+    /// LoseAll モードでは lost_ingredients に全材料が入る。
+    #[test]
+    fn test_try_synthesize_high_risk_failure_loseall() {
+        let recipe = make_pair_recipe("risky", "禁断", "水", "火", 0.30, FailureMode::LoseAll);
+        let mut mgr = manager_with_recipes(vec![recipe]);
+        let water = make_curion("水");
+        let fire = make_curion("火");
+        let water_id = water.id.clone();
+        let fire_id = fire.id.clone();
+        let ingredients = vec![water, fire];
+
+        // risk_roll 0.80 > 0.30 → 失敗
+        let result = mgr
+            .try_synthesize_with_rolls(ingredients, 0.0, 0.80)
+            .expect("synthesize");
+        match result {
+            SynthesisAttemptResult::HighRiskFailure {
+                lost_ingredients,
+                salvage,
+                failure_mode,
+                ..
+            } => {
+                assert_eq!(failure_mode, FailureMode::LoseAll);
+                assert_eq!(lost_ingredients.len(), 2);
+                let lost_ids: Vec<String> = lost_ingredients.iter().map(|c| c.id.clone()).collect();
+                assert!(lost_ids.contains(&water_id));
+                assert!(lost_ids.contains(&fire_id));
+                assert!(salvage.is_none());
+            }
+            other => panic!("expected HighRiskFailure, got {other:?}"),
+        }
+    }
+
+    /// Issue #35: NoLoss モードでは失敗しても素材は失われない (lost_ingredients が空)。
+    #[test]
+    fn test_try_synthesize_failure_mode_noloss_no_lost_ingredients() {
+        let recipe = make_pair_recipe("insured", "保険", "水", "火", 0.30, FailureMode::NoLoss);
+        let mut mgr = manager_with_recipes(vec![recipe]);
+        let ingredients = vec![make_curion("水"), make_curion("火")];
+
+        let result = mgr
+            .try_synthesize_with_rolls(ingredients, 0.0, 0.80)
+            .expect("synthesize");
+        match result {
+            SynthesisAttemptResult::HighRiskFailure {
+                lost_ingredients,
+                salvage,
+                failure_mode,
+                ..
+            } => {
+                assert_eq!(failure_mode, FailureMode::NoLoss);
+                assert!(lost_ingredients.is_empty(), "NoLoss は素材を失わない");
+                assert!(salvage.is_none());
+            }
+            other => panic!("expected HighRiskFailure, got {other:?}"),
+        }
+    }
+
+    /// Issue #35: Salvage モードは lost_ingredients + 残骸 curion を返す。
+    #[test]
+    fn test_try_synthesize_failure_mode_salvage_produces_salvage_curion() {
+        let recipe = make_pair_recipe(
+            "salvage",
+            "残骸テスト",
+            "水",
+            "火",
+            0.30,
+            FailureMode::Salvage {
+                fallback_rarity: Rarity::Common,
+            },
+        );
+        let mut mgr = manager_with_recipes(vec![recipe]);
+        let ingredients = vec![make_curion("水"), make_curion("火")];
+
+        let result = mgr
+            .try_synthesize_with_rolls(ingredients, 0.0, 0.95)
+            .expect("synthesize");
+        match result {
+            SynthesisAttemptResult::HighRiskFailure {
+                lost_ingredients,
+                salvage,
+                failure_mode,
+                ..
+            } => {
+                assert!(matches!(failure_mode, FailureMode::Salvage { .. }));
+                assert_eq!(lost_ingredients.len(), 2);
+                let salvage = salvage.expect("salvage curion should be produced");
+                assert_eq!(salvage.rarity, Rarity::Common);
+                assert!(salvage.noun.contains("残骸"));
+            }
+            other => panic!("expected HighRiskFailure, got {other:?}"),
+        }
+    }
+
+    /// Issue #35: discovery 判定に失敗した場合は risk 判定まで到達せず、
+    /// `DiscoveryFailed` が返ることで素材ロストの誤発火が起きない。
+    #[test]
+    fn test_try_synthesize_discovery_failure_does_not_trigger_risk_failure() {
+        // discovery_rate を低く設定したいので make_pair_recipe を上書きする
+        let mut recipe = make_pair_recipe("risky", "禁断", "水", "火", 0.50, FailureMode::LoseAll);
+        recipe.discovery_rate = 0.10;
+        let mut mgr = manager_with_recipes(vec![recipe]);
+        let ingredients = vec![make_curion("水"), make_curion("火")];
+
+        // discovery_roll 0.50 > 0.10 → 発見失敗
+        let result = mgr
+            .try_synthesize_with_rolls(ingredients, 0.50, 0.0)
+            .expect("synthesize");
+        assert!(matches!(
+            result,
+            SynthesisAttemptResult::DiscoveryFailed { .. }
+        ));
+    }
+
+    /// Issue #35: 発見済みレシピで success_rate < 1.0 の場合、毎回 risk roll が走る。
+    #[test]
+    fn test_try_synthesize_discovered_still_rolls_risk() {
+        let recipe = make_pair_recipe("risky", "禁断", "水", "火", 0.30, FailureMode::LoseAll);
+        let recipe_id = recipe.id.clone();
+        let mut mgr = manager_with_recipes(vec![recipe]);
+        mgr.discover_recipe(recipe_id);
+
+        let ingredients = vec![make_curion("水"), make_curion("火")];
+        // 発見済みでも risk_roll 0.99 > 0.30 → 失敗
+        let result = mgr
+            .try_synthesize_with_rolls(ingredients, 0.0, 0.99)
+            .expect("synthesize");
+        assert!(matches!(
+            result,
+            SynthesisAttemptResult::HighRiskFailure { .. }
+        ));
+    }
+
+    /// Issue #35: 表示用の `success_probability` は discovery × success_rate の積。
+    #[test]
+    fn test_success_probability_combines_discovery_and_success_rate() {
+        let mut recipe = sample_recipe(0.50);
+        recipe.success_rate = 0.40;
+
+        // 未発見: 0.50 * 0.40 = 0.20
+        let undiscovered = recipe.success_probability(false);
+        assert!((undiscovered - 0.20).abs() < 1e-9);
+
+        // 発見済み: 1.0 * 0.40 = 0.40
+        let discovered = recipe.success_probability(true);
+        assert!((discovered - 0.40).abs() < 1e-9);
     }
 }

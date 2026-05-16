@@ -496,6 +496,33 @@ fn cmd_synthesize(name1: &str, name2: &str, game_state: &mut GameState) -> Resul
         SynthesisAttemptResult::DiscoveryFailed { hint } => {
             println!("  {hint}");
         }
+        SynthesisAttemptResult::HighRiskFailure {
+            recipe_name,
+            lost_ingredients,
+            salvage,
+            failure_mode,
+        } => {
+            // Issue #35: 高リスク合成失敗の演出 (赤表示)
+            // 失われた材料を collection から除去 (NoLoss モードでは lost_ingredients が空)
+            for ci in &lost_ingredients {
+                game_state.player.collection.retain(|c| c.id != ci.id);
+            }
+            let mode_label = match failure_mode {
+                crate::synthesis::FailureMode::LoseAll => "素材消滅",
+                crate::synthesis::FailureMode::Salvage { .. } => "残骸を獲得",
+                crate::synthesis::FailureMode::NoLoss => "保険発動",
+            };
+            println!("  \x1b[1;31m💥 失敗: {recipe_name} ({mode_label})\x1b[0m");
+            if let Some(s) = salvage {
+                println!(
+                    "  Salvage: \x1b[37m{:?}\x1b[0m {} [{}]",
+                    s.rarity,
+                    s.noun,
+                    s.category.as_str(),
+                );
+                game_state.add_curion(s);
+            }
+        }
     }
 
     Ok(())

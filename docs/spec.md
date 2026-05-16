@@ -40,11 +40,46 @@ Noun data is stored in `data/nouns/*.json` (one file per category).
 
 Combine two owned curions to create a new one.
 
-- Recipes are defined in `data/recipes/basic_recipes.json` (15 base recipes).
+- Recipes are defined in `data/recipes/basic_recipes.json` (17 recipes: 15 base + 2 high-risk).
 - Recipe format: `material_a + material_b -> result` (matched by category + name).
 - Synthesis-exclusive curions exist (e.g., Flame Dragon, Ice Phoenix) -- obtainable only through synthesis.
 - Smart synthesis UI suggests valid combinations from the player's inventory.
 - Discovered recipes are tracked and shown in the UI.
+
+### High-risk Synthesis (Issue #35)
+
+Each recipe has two independent probability dials:
+
+- `discovery_rate` (existing) — first-time-only roll. Failing this returns
+  `DiscoveryFailed` without consuming ingredients. Once passed, the recipe is
+  marked discovered and the roll is skipped on subsequent attempts.
+- `success_rate` (new, default `1.0`) — execution-time roll applied **every**
+  attempt, including discovered recipes. `success_rate < 0.95` flags the recipe
+  as high-risk (`is_high_risk()`).
+
+Failure behaviour is selected per recipe via `failure_mode`:
+
+| Mode | Effect on inventory | Output |
+|---|---|---|
+| `NoLoss` (default) | nothing lost | nothing gained |
+| `LoseAll` | both ingredients deleted | nothing |
+| `Salvage { fallback_rarity }` | both ingredients deleted | 1 salvage curion at `fallback_rarity`, named "`<first>の残骸`", inheriting the first ingredient's category |
+
+The displayed success probability is `discovery_factor * success_rate`, where
+`discovery_factor` is `discovery_rate` for undiscovered recipes and `1.0` for
+discovered ones. UI shows `[SAFE]` / `[RISKY]` badges plus the failure-mode
+label on both the recipe list and the ingredient-2 candidate list.
+
+`SynthesisAttemptResult::HighRiskFailure { recipe_name, lost_ingredients,
+salvage, failure_mode }` is returned on a failed risk roll. The UI layer is
+responsible for removing `lost_ingredients` (matched by `id`) and adding any
+`salvage` curion. The internal `try_synthesize_with_rolls(ingredients,
+discovery_roll, risk_roll)` API allows deterministic testing of the two-stage
+roll without random sources.
+
+Recipe JSON is backward compatible: existing recipes without `success_rate` /
+`failure_mode` deserialize to `1.0` / `NoLoss`, so all 15 legacy recipes remain
+100% safe.
 
 ## Lifespan System (Issue #30)
 
