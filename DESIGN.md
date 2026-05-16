@@ -168,6 +168,11 @@ Right pane layout:
       - 表示色: 0/1=Label, 2=Rare, 3-4=Epic, 5+=Legendary + `🔥 コンボマスター!`
       - XP 倍率: 2x=1.5, 3-4x=2.0, 5+=3.0 を `add_curion` で適用 (切り捨て)
       - combo 5 到達で称号「コンボマスター」を 1 回だけ付与
+    - Paragraph: next milestone (Issue #32, 1 行)
+      - `next milestone: ⭐ コレクター Lv.3 (あと 4 個)` 形式
+      - XP / 未解除実績の残量から最小値を選ぶ (`GameState::next_milestone`)
+      - label=Label, ラベル本文=Epic+Bold, `(あと N)`=Legendary+Bold
+      - 全達成なら `全マイルストーン達成済み` (Label color)
     - Paragraph: 最新キュリオン (rarity color)
     - Paragraph: レアリティ分布 (bar per rarity, per-rarity color)
     - Paragraph: カテゴリ分布 (compact one-liner)

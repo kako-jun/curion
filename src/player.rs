@@ -6,6 +6,42 @@ use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Issue #32 きりの悪い数字設計: Lv.N -> Lv.N+1 に必要な XP テーブル。
+///
+/// 等差 (`level * 100`) は「あと 50 でレベルアップ…切りがいい所まで」みたいに
+/// 区切られて飽きやすいので、わざと割り切れない数列にしている。
+/// 末尾 (Lv.20 以降) は `extrapolate_xp_for_next_level()` で外挿する。
+const XP_THRESHOLDS: &[u32] = &[
+    100, 270, 510, 870, 1280, 1820, 2450, 3210, 4080, 5060, 6170, 7400, 8770, 10260, 11900, 13680,
+    15600, 17680, 19920, 22320,
+];
+
+/// 表の範囲外 (Lv.21 以降) の XP 閾値を外挿する。
+///
+/// 表の最後 (Lv.20 の閾値 22320) を起点に、`last + (last / 10) * 1.18` 風の
+/// 漸近指数で伸ばす。Lv.30〜100 でも 0 を返さず、十分大きな数字になる。
+fn extrapolate_xp_for_next_level(level: u32) -> u32 {
+    let table_len = XP_THRESHOLDS.len() as u32;
+    if level <= table_len {
+        return XP_THRESHOLDS[(level - 1) as usize];
+    }
+    let mut current = *XP_THRESHOLDS.last().expect("XP_THRESHOLDS is non-empty") as f64;
+    // table_len から level までの分だけ +1.18%×(current/10) 風に伸ばす。
+    // u32 直前で頭打ちにして単調増加を保つ (各レベル +1 で 1 ずつ増える)。
+    const CAP: f64 = u32::MAX as f64 - 1.0;
+    let mut steps_at_cap: f64 = 0.0;
+    for _ in table_len..level {
+        if current >= CAP {
+            // u32::MAX を超える前にこれ以上の指数成長を止め、毎レベル +1 だけ加算。
+            steps_at_cap += 1.0;
+            continue;
+        }
+        let increment = (current / 10.0) * 1.18;
+        current = (current + increment).min(CAP);
+    }
+    ((current + steps_at_cap).min(u32::MAX as f64)) as u32
+}
+
 /// 確定チケットの種類
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GuaranteedTicket {
@@ -255,9 +291,17 @@ impl Player {
         level_ups
     }
 
-    /// 次のレベルまでに必要な経験値
+    /// 次のレベルまでに必要な経験値 (Issue #32: きりの悪い非線形テーブル)
     pub fn xp_for_next_level(&self) -> u32 {
-        self.level * 100
+        if self.level == 0 {
+            // 想定外だが万全のため Lv.1 として扱う
+            return XP_THRESHOLDS[0];
+        }
+        let idx = (self.level - 1) as usize;
+        XP_THRESHOLDS
+            .get(idx)
+            .copied()
+            .unwrap_or_else(|| extrapolate_xp_for_next_level(self.level))
     }
 
     /// 次のレベルまでの進捗率
@@ -549,6 +593,44 @@ impl Player {
     pub fn latest_curion(&self) -> Option<&Curion> {
         self.collection.last()
     }
+
+    /// 次のレベルまでの XP マイルストーンを返す (Issue #32)。
+    ///
+    /// 「次のレベルまであと X XP」を `MilestoneHint` で返す。
+    /// 実績側のマイルストーンと一緒に `MilestoneHint::pick_smallest` で
+    /// 残量最小のものを選ぶ用途を想定している。
+    pub fn next_level_milestone(&self) -> MilestoneHint {
+        let target = self.xp_for_next_level();
+        let remaining = target.saturating_sub(self.xp);
+        MilestoneHint {
+            label: format!("Lv.{} → Lv.{}", self.level, self.level + 1),
+            remaining,
+        }
+    }
+}
+
+/// Issue #32 きりの悪い数字設計: マイルストーンヒント。
+///
+/// Dashboard の "next milestone: ⭐ コレクター Lv.3 (あと 4 個)" に使う。
+/// `remaining` は「あとどれだけで達成か」の数値で、複数候補から最も小さい
+/// (= もうすぐ達成できる) ものを選ぶための比較キーになる。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MilestoneHint {
+    /// マイルストーンの表示名 (例: `"⭐ コレクター Lv.3"` や `"Lv.3 → Lv.4"`)
+    pub label: String,
+    /// 達成までの残り個数 / 残り XP。0 はもう達成済み (普通は返らない想定)。
+    pub remaining: u32,
+}
+
+impl MilestoneHint {
+    /// 候補の中から `remaining` が最小のものを返す (= 「あと少し感」が最大)。
+    /// 残量 0 は除外する (達成済みのものは候補にしない)。
+    pub fn pick_smallest(candidates: impl IntoIterator<Item = MilestoneHint>) -> Option<Self> {
+        candidates
+            .into_iter()
+            .filter(|c| c.remaining > 0)
+            .min_by_key(|c| c.remaining)
+    }
 }
 
 impl Default for Player {
@@ -710,6 +792,43 @@ impl GameState {
             }
         }
         None
+    }
+
+    /// 次のマイルストーンを返す (Issue #32)。
+    ///
+    /// 「あと少し感」を演出するため、以下の候補から `remaining` が最小のものを選ぶ:
+    ///
+    /// 1. 次レベルまでの XP (`Player::next_level_milestone`)
+    /// 2. 未解除実績のうち残量が最小のもの
+    ///    (RarityCount / TotalCount / CategoryCount / SpecificNoun / ConsecutiveLogin /
+    ///    PlayTime を網羅。残量は `target - current` を実績名ベースで生成)
+    ///
+    /// 全部達成済み、または開始 0% から始まる長期目標しか残っていない場合は `None`。
+    pub fn next_milestone(&self) -> Option<MilestoneHint> {
+        let mut candidates: Vec<MilestoneHint> = Vec::new();
+        candidates.push(self.player.next_level_milestone());
+
+        for (achievement, progress) in self.achievement_manager.get_sorted_by_progress() {
+            if progress.unlocked {
+                continue;
+            }
+            let remaining = progress.remaining();
+            if remaining == 0 {
+                continue;
+            }
+            // 残量が大きすぎる (進捗率 < 30% かつ remaining > 50) ものは
+            // 「あと少し感」が出ないので候補から外す。残量数字の小さい実績
+            // (Legendary 1 個など) は進捗率が低くても拾いたいので残量で足切り。
+            if progress.progress_ratio() < 0.3 && remaining > 50 {
+                continue;
+            }
+            candidates.push(MilestoneHint {
+                label: format!("{} {}", achievement.icon, achievement.name),
+                remaining: remaining as u32,
+            });
+        }
+
+        MilestoneHint::pick_smallest(candidates)
     }
 
     /// 「もうすぐ達成」の実績を取得（進捗率順）
@@ -888,11 +1007,17 @@ mod tests {
 
         // XP は add_xp 経由なのでレベルアップで繰り上がる可能性がある。
         // ここでは「+100 XP 相当進んでいる」ことを総量で確認する。
+        // Issue #32 で閾値が非線形化したので、各レベルの実消費分を `XP_THRESHOLDS` から拾う。
         let xp_now = state.player.xp;
         let total_xp_gained = if state.player.level > 1 {
-            // レベルが上がっている場合、消費した XP + 残りの XP で 100 になる想定。
-            // level=1, xp_for_next_level=100 から 100 XP 入れると level=2, xp=0。
-            xp_now + (1..state.player.level).map(|lvl| lvl * 100).sum::<u32>()
+            let consumed: u32 = (1..state.player.level)
+                .map(|lvl| {
+                    let mut tmp = Player::new();
+                    tmp.level = lvl;
+                    tmp.xp_for_next_level()
+                })
+                .sum();
+            xp_now + consumed
         } else {
             xp_now - xp_before
         };
@@ -1006,12 +1131,17 @@ mod tests {
         );
 
         // 100 XP が確かに加算されている (レベルアップで level=2, xp=0 になる想定)
+        // Issue #32: 非線形閾値なので各レベルの実消費分は `xp_for_next_level` で拾う。
         let xp_now = state.player.xp;
         let total_xp_gained = if state.player.level > level_before {
-            xp_now
-                + (level_before..state.player.level)
-                    .map(|lvl| lvl * 100)
-                    .sum::<u32>()
+            let consumed: u32 = (level_before..state.player.level)
+                .map(|lvl| {
+                    let mut tmp = Player::new();
+                    tmp.level = lvl;
+                    tmp.xp_for_next_level()
+                })
+                .sum();
+            xp_now + consumed
         } else {
             xp_now - xp_before
         };
@@ -1428,6 +1558,231 @@ mod tests {
         assert!(
             !detail.contains("通算"),
             "通算回数の表記は含まれない: {detail}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Issue #32 きりの悪い数字設計
+    // -----------------------------------------------------------------
+
+    /// 非線形閾値: Lv.1〜Lv.20 で単調増加かつ等差ではないことを確認する。
+    #[test]
+    fn test_xp_thresholds_are_nonlinear() {
+        let mut prev = 0u32;
+        let mut diffs: Vec<i64> = Vec::new();
+        for level in 1..=20u32 {
+            let mut player = Player::new();
+            player.level = level;
+            let threshold = player.xp_for_next_level();
+            assert!(
+                threshold > prev,
+                "Lv.{level} の閾値 {threshold} が直前 {prev} より大きくない (単調増加が崩れている)"
+            );
+            if level > 1 {
+                diffs.push(threshold as i64 - prev as i64);
+            }
+            prev = threshold;
+        }
+        // 差分が一定でないことを確認する (= 等差ではない)
+        let first_diff = diffs[0];
+        let all_same = diffs.iter().all(|&d| d == first_diff);
+        assert!(
+            !all_same,
+            "差分が全部 {first_diff} だと等差になっている: diffs={diffs:?}"
+        );
+    }
+
+    /// 「きりの悪い」値が混じっていることを確認する。
+    /// `XP_THRESHOLDS` の過半数 (Lv.1〜Lv.20 中 11 個以上) が `% 100 != 0` になっている。
+    #[test]
+    fn test_xp_thresholds_have_cliffhanger_values() {
+        let mut not_round = 0;
+        for level in 1..=20u32 {
+            let mut player = Player::new();
+            player.level = level;
+            let threshold = player.xp_for_next_level();
+            if threshold % 100 != 0 {
+                not_round += 1;
+            }
+        }
+        assert!(
+            not_round >= 11,
+            "Lv.1-20 で 100 倍数でない閾値が {not_round} 個しかない (11 個以上を期待: \
+             きりの悪い値を採用しているか確認)"
+        );
+        // 特に Lv.2 の閾値 270 はテーブルの代表的な「きりの悪い数」
+        let mut player = Player::new();
+        player.level = 2;
+        assert_eq!(player.xp_for_next_level(), 270, "Lv.2 の閾値は 270");
+    }
+
+    /// Lv.20 のテーブル外でも 0 でない正の値を返す (外挿が機能している)。
+    #[test]
+    fn test_xp_for_next_level_extrapolates_beyond_table() {
+        // 各レベルの閾値が前レベル以上であり、毎レベル strict に増加する。
+        // u32 飽和域でも +1 ずつ増えて単調性を維持する。
+        let mut prev = {
+            let mut p = Player::new();
+            p.level = 20;
+            p.xp_for_next_level()
+        };
+
+        // Lv.100 までは strict 単調増加（実プレイで到達しうる範囲）。
+        for level in 21..=100u32 {
+            let mut player = Player::new();
+            player.level = level;
+            let threshold = player.xp_for_next_level();
+            assert!(threshold > 0, "Lv.{level} の閾値が 0 (外挿失敗)");
+            assert!(
+                threshold > prev,
+                "Lv.{level} の閾値 {threshold} が Lv.{} の {prev} 以下 (単調増加が崩れている)",
+                level - 1
+            );
+            prev = threshold;
+        }
+
+        // Lv.100 を超えても u32::MAX に張り付きはするが、0 にも下落にもならない。
+        for level in 101..=200u32 {
+            let mut player = Player::new();
+            player.level = level;
+            let threshold = player.xp_for_next_level();
+            assert!(
+                threshold >= prev,
+                "Lv.{level} の閾値 {threshold} が前レベル {prev} を下回った"
+            );
+            prev = threshold;
+        }
+    }
+
+    /// 新しい閾値で `add_xp` がレベルアップを起こす。
+    /// Lv.1 → Lv.2 に 100 XP、Lv.2 → Lv.3 にさらに 270 XP 必要 (合計 370)。
+    #[test]
+    fn test_add_xp_levels_up_with_new_thresholds() {
+        let mut player = Player::new();
+        assert_eq!(player.level, 1);
+
+        // ちょうど Lv.2 の閾値ぴったり = レベルアップして xp=0
+        let ups = player.add_xp(100);
+        assert_eq!(ups, vec![2], "100 XP で Lv.2");
+        assert_eq!(player.level, 2);
+        assert_eq!(player.xp, 0);
+        assert_eq!(
+            player.xp_for_next_level(),
+            270,
+            "Lv.2 の次の閾値は 270 (Lv.3 に必要)"
+        );
+
+        // さらに 270 XP で Lv.3 へ
+        let ups2 = player.add_xp(270);
+        assert_eq!(ups2, vec![3], "あと 270 XP で Lv.3");
+        assert_eq!(player.level, 3);
+        assert_eq!(player.xp, 0);
+    }
+
+    /// 旧セーブ (level=5, xp=200) を deserialize しても新閾値で正しく
+    /// `xp_for_next_level` が引ける (= 旧式 `level * 100` に依存しない)。
+    #[test]
+    fn test_existing_legacy_save_loads_with_new_thresholds() {
+        let legacy = json!({
+            "level": 5,
+            "xp": 200,
+            "total_play_time": 0,
+            "first_played_at": "2026-05-14T12:00:00Z",
+            "last_played_at": "2026-05-14T12:00:00Z",
+            "consecutive_login_days": 1,
+            "titles": [],
+            "active_title": null,
+            "today_acquired": 0,
+            "max_daily_acquired": 0,
+            "max_daily_acquired_date": null,
+            "category_stats": {},
+            "rarity_stats": {},
+            "collection": []
+        });
+        let player: Player = serde_json::from_value(legacy).expect("旧セーブが読める");
+        assert_eq!(player.level, 5);
+        assert_eq!(player.xp, 200);
+        // 旧コードでは Lv.5 は 500、新コードでは XP_THRESHOLDS[4] = 1280
+        assert_eq!(
+            player.xp_for_next_level(),
+            1280,
+            "旧セーブの level=5 でも新閾値 1280 が返る"
+        );
+    }
+
+    /// 複数のマイルストーン候補から `remaining` 最小のものを選ぶ。
+    #[test]
+    fn test_next_milestone_returns_smallest_remaining() {
+        let candidates = vec![
+            MilestoneHint {
+                label: "Lv.3 → Lv.4".to_string(),
+                remaining: 50,
+            },
+            MilestoneHint {
+                label: "⭐ コレクター Lv.3".to_string(),
+                remaining: 4,
+            },
+            MilestoneHint {
+                label: "💜 Epic ハンター 23".to_string(),
+                remaining: 17,
+            },
+        ];
+        let picked = MilestoneHint::pick_smallest(candidates).expect("候補がある");
+        assert_eq!(picked.remaining, 4);
+        assert_eq!(picked.label, "⭐ コレクター Lv.3");
+
+        // remaining=0 は除外
+        let zero_only = vec![
+            MilestoneHint {
+                label: "達成済み".to_string(),
+                remaining: 0,
+            },
+            MilestoneHint {
+                label: "残あり".to_string(),
+                remaining: 9,
+            },
+        ];
+        let picked2 = MilestoneHint::pick_smallest(zero_only).expect("残ありが選ばれる");
+        assert_eq!(picked2.remaining, 9);
+
+        // 全部 0 なら None
+        let all_zero: Vec<MilestoneHint> = vec![MilestoneHint {
+            label: "達成済み".to_string(),
+            remaining: 0,
+        }];
+        assert!(MilestoneHint::pick_smallest(all_zero).is_none());
+    }
+
+    /// 実績側の閾値が「きりの悪い数」になっている (= 旧 25/50 等ではない)。
+    #[test]
+    fn test_achievement_thresholds_use_cliffhanger_numbers() {
+        use crate::achievement::{AchievementManager, AchievementType};
+
+        let mgr = AchievementManager::new();
+        let total_counts: Vec<usize> = mgr
+            .get_all_achievements()
+            .iter()
+            .filter_map(|a| match a.achievement_type {
+                AchievementType::TotalCount(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+
+        // 旧来のキリのいい値 (25, 50, 100, 250, 500, 1000) は採用していない
+        for legacy in [25usize, 50, 100, 250, 500, 1000] {
+            assert!(
+                !total_counts.contains(&legacy),
+                "TotalCount に旧来のキリのいい値 {legacy} が残っている: {total_counts:?}"
+            );
+        }
+
+        // 新仕様のきりの悪い値が少なくとも 1 件入っている
+        let has_cliffhanger = total_counts
+            .iter()
+            .any(|&c| c == 27 || c == 51 || c == 103 || c == 247 || c == 501 || c == 1001);
+        assert!(
+            has_cliffhanger,
+            "TotalCount に新仕様のきりの悪い値 (27/51/103/247/501/1001) が無い: {total_counts:?}"
         );
     }
 }

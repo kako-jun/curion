@@ -159,22 +159,32 @@ impl AchievementManager {
 
     /// デフォルトの実績を登録
     fn register_default_achievements(&mut self) {
-        // 総数マイルストーン
-        for count in [10, 50, 100, 250, 500, 1000] {
+        // Issue #32 きりの悪い数字設計:
+        //   旧 [10, 50, 100, 250, 500, 1000] (キリのいい所で切り上げたくなる)
+        //   新 [10, 27, 51, 103, 247, 501, 1001] (= わざと割り切れない)
+        //
+        // 後方互換: 実績進捗は `HashMap<AchievementId, Progress>` で管理されており、
+        //   - 古いセーブに残った `total_50` などの ID は次回起動で再評価されず放置 (実害なし)
+        //   - 新規 ID (`total_27` 等) は空 Progress として `register_default_achievements`
+        //     から作られ、現在の `total_acquired` で再計算される
+        //   - つまりマイグレーション不要。旧解除済みフラグは無視されて未解放扱いに戻るが、
+        //     現在の所持数で再達成される (詳細は docs/spec.md 参照)。
+        let total_thresholds = [10, 27, 51, 103, 247, 501, 1001];
+        for (idx, &count) in total_thresholds.iter().enumerate() {
             self.register_achievement(Achievement::new(
                 format!("total_{count}"),
-                format!("コレクター Lv.{}", count / 10),
+                format!("コレクター Lv.{}", idx + 1),
                 format!("{count}個のキュリオンを集める"),
                 AchievementType::TotalCount(count),
                 count as u32 * 10,
-                if count >= 1000 {
+                if count >= 1001 {
                     Some("伝説のコレクター".to_string())
                 } else {
                     None
                 },
-                if count >= 1000 {
+                if count >= 1001 {
                     "👑"
-                } else if count >= 500 {
+                } else if count >= 501 {
                     "💎"
                 } else {
                     "📦"
@@ -183,11 +193,11 @@ impl AchievementManager {
             ));
         }
 
-        // レアリティ別
+        // レアリティ別 (Issue #32: 旧 [10,50,100]/[5,25,50]/[1,5,10,50,100] を非線形に)
         for (rarity, counts) in [
-            (Rarity::Rare, vec![10, 50, 100]),
-            (Rarity::Epic, vec![5, 25, 50]),
-            (Rarity::Legendary, vec![1, 5, 10, 50, 100]),
+            (Rarity::Rare, vec![10, 47, 103]),
+            (Rarity::Epic, vec![5, 23, 51]),
+            (Rarity::Legendary, vec![1, 7, 23, 47, 101]),
         ] {
             for count in counts {
                 self.register_achievement(Achievement::new(
@@ -202,7 +212,7 @@ impl AchievementManager {
                             Rarity::Legendary => 100,
                             _ => 10,
                         },
-                    if count >= 100 && rarity == Rarity::Legendary {
+                    if count >= 101 && rarity == Rarity::Legendary {
                         Some("神話の収集家".to_string())
                     } else if count == 1 && rarity == Rarity::Legendary {
                         Some("伝説のハンター".to_string())
@@ -254,15 +264,15 @@ impl AchievementManager {
             "👑".to_string(),
         ));
 
-        // 連続ログイン
-        for days in [3, 7, 14, 30, 100] {
+        // 連続ログイン (Issue #32: 30 → 33, 100 → 101 で「あと一日」感を残す)
+        for days in [3, 7, 14, 33, 101] {
             self.register_achievement(Achievement::new(
                 format!("login_{days}"),
                 format!("継続は力なり {days}"),
                 format!("{days}日連続ログイン"),
                 AchievementType::ConsecutiveLogin(days),
                 days as u32 * 50,
-                if days >= 100 {
+                if days >= 101 {
                     Some("不屈の意志".to_string())
                 } else {
                     None
@@ -271,15 +281,15 @@ impl AchievementManager {
             ));
         }
 
-        // プレイ時間
-        for hours in [1, 10, 50, 100, 500] {
+        // プレイ時間 (Issue #32: 50 → 47, 100 → 103, 500 → 503)
+        for hours in [1, 11, 47, 103, 503] {
             self.register_achievement(Achievement::new(
                 format!("playtime_{hours}"),
                 format!("ベテラン {hours}"),
                 format!("{hours}時間プレイ"),
                 AchievementType::PlayTime(hours * 60),
                 hours as u32 * 20,
-                if hours >= 500 {
+                if hours >= 503 {
                     Some("時間の支配者".to_string())
                 } else {
                     None
