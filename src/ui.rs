@@ -1339,9 +1339,10 @@ impl App {
 
         if count == 0 {
             // 未獲得
-            Line::from(vec![
-                Span::styled("？？？", Style::default().fg(COLOR_LABEL)),
-            ])
+            Line::from(vec![Span::styled(
+                "？？？",
+                Style::default().fg(COLOR_LABEL),
+            )])
         } else {
             let rarity = highest_rarity.unwrap_or(Rarity::Common);
             let color = rarity_color(&rarity);
@@ -1365,10 +1366,7 @@ impl App {
                 Span::raw(" "),
                 Span::styled(date, Style::default().fg(Color::DarkGray)),
                 Span::raw(" "),
-                Span::styled(
-                    format!("×{count}"),
-                    Style::default().fg(COLOR_SUCCESS),
-                ),
+                Span::styled(format!("×{count}"), Style::default().fg(COLOR_SUCCESS)),
             ])
         }
     }
