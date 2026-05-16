@@ -26,12 +26,20 @@ fn extrapolate_xp_for_next_level(level: u32) -> u32 {
         return XP_THRESHOLDS[(level - 1) as usize];
     }
     let mut current = *XP_THRESHOLDS.last().expect("XP_THRESHOLDS is non-empty") as f64;
-    // table_len から level までの分だけ +1.18%×(current/10) 風に伸ばす
+    // table_len から level までの分だけ +1.18%×(current/10) 風に伸ばす。
+    // u32 直前で頭打ちにして単調増加を保つ (各レベル +1 で 1 ずつ増える)。
+    const CAP: f64 = u32::MAX as f64 - 1.0;
+    let mut steps_at_cap: f64 = 0.0;
     for _ in table_len..level {
+        if current >= CAP {
+            // u32::MAX を超える前にこれ以上の指数成長を止め、毎レベル +1 だけ加算。
+            steps_at_cap += 1.0;
+            continue;
+        }
         let increment = (current / 10.0) * 1.18;
-        current += increment;
+        current = (current + increment).min(CAP);
     }
-    current as u32
+    ((current + steps_at_cap).min(u32::MAX as f64)) as u32
 }
 
 /// 確定チケットの種類
@@ -1611,22 +1619,38 @@ mod tests {
     /// Lv.20 のテーブル外でも 0 でない正の値を返す (外挿が機能している)。
     #[test]
     fn test_xp_for_next_level_extrapolates_beyond_table() {
-        let mut last_in_table = Player::new();
-        last_in_table.level = 20;
-        let table_end = last_in_table.xp_for_next_level();
+        // 各レベルの閾値が前レベル以上であり、毎レベル strict に増加する。
+        // u32 飽和域でも +1 ずつ増えて単調性を維持する。
+        let mut prev = {
+            let mut p = Player::new();
+            p.level = 20;
+            p.xp_for_next_level()
+        };
 
+        // Lv.100 までは strict 単調増加（実プレイで到達しうる範囲）。
         for level in 21..=100u32 {
             let mut player = Player::new();
             player.level = level;
             let threshold = player.xp_for_next_level();
+            assert!(threshold > 0, "Lv.{level} の閾値が 0 (外挿失敗)");
             assert!(
-                threshold > 0,
-                "Lv.{level} の閾値が 0 になっている (外挿失敗)"
+                threshold > prev,
+                "Lv.{level} の閾値 {threshold} が Lv.{} の {prev} 以下 (単調増加が崩れている)",
+                level - 1
             );
+            prev = threshold;
+        }
+
+        // Lv.100 を超えても u32::MAX に張り付きはするが、0 にも下落にもならない。
+        for level in 101..=200u32 {
+            let mut player = Player::new();
+            player.level = level;
+            let threshold = player.xp_for_next_level();
             assert!(
-                threshold >= table_end,
-                "Lv.{level} の閾値 {threshold} が Lv.20 の {table_end} より小さい (単調性が崩れている)"
+                threshold >= prev,
+                "Lv.{level} の閾値 {threshold} が前レベル {prev} を下回った"
             );
+            prev = threshold;
         }
     }
 
