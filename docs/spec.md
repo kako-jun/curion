@@ -248,7 +248,7 @@ Left pane sections:
 Right pane behavior:
 - Rarity: player summary + recent-acquisition `Sparkline` + rarity `BarChart`
 - Category: category `BarChart` plus total / unique breakdown
-- Timeline: first play, last play, total play time, streak gauges, and collection-rate `Sparkline`
+- Timeline: first play, last play, total play time, streak gauges, and a daily `Sparkline` over the last 30 days (`Player::daily_acquisition_counts(30, now)`)
 
 ### Tab 5: Synthesis
 

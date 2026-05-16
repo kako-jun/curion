@@ -2548,9 +2548,12 @@ impl App {
             .unfilled_style(Style::default().fg(COLOR_LABEL));
         f.render_widget(today, chunks[2]);
 
-        let data = self.recent_acquisition_buckets(RECENT_ACTIVITY_BUCKETS);
+        // Issue #26: 直近 30 日の「日別」獲得数 Sparkline。
+        // 既存の COLLECTION RATE (total span 16-bucket) を置き換え、btop 風の
+        // 日次推移を表示する。Player 側の純粋関数を呼ぶことでテスト可能にしている。
+        let data = player.daily_acquisition_counts(30, chrono::Utc::now());
         let sparkline = Sparkline::default()
-            .block(unfocused_block("COLLECTION RATE"))
+            .block(unfocused_block("DAILY (last 30 days)"))
             .data(&data)
             .style(Style::default().fg(COLOR_RARE));
         f.render_widget(sparkline, chunks[3]);
