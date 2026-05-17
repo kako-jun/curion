@@ -20,6 +20,8 @@ The "single-player addiction" release: every system needed to make a focused off
 - 高リスク合成 (#35): per-recipe `success_rate` and `failure_mode` (NoLoss / LoseAll / Salvage) with SAFE/RISKY badges.
 - 段階進化ガチャ (#36): 3-stage evolution lines tracked by collection counts, with "almost complete" highlights on the Dashboard.
 - 部分公開レシピ (#37): per-recipe `Public` / `Partial` / `Unknown` visibility levels with progressively revealed labels.
+- 意味空間ベクトル装備効果 (#38) と文字列→潜在ベクトル→ラベルの対称パイプライン (#39).
+- **最新キュリオン名 bloom 演出** (jiwa): Dashboard の「最新キュリオン」表示が、新規生成の瞬間に grapheme 単位で暗(50,50,50)→白(255,255,255) に 220 ms フェードインする。中毒ループの「届いた感」を視線でキャッチできるように。Powered by the [`jiwa`](https://crates.io/crates/jiwa) crate, shared with `type-globe` and `gitpp`.
 
 ### Changed
 - Docs reorganized: `DESIGN.md` moved to `docs/design.md`; `.claude/*.md` (vision / synthesis_and_p2p_design / p2p_detailed_design / addictive_ideas / implementation_roadmap) moved under `docs/` with lowercase filenames. The `.claude/` directory was removed.
