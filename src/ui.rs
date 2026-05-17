@@ -1821,8 +1821,8 @@ impl App {
                 Span::raw(" "),
             ];
             spans.extend(self.render_latest_name_spans(&curion.display_name()));
-            let latest = Paragraph::new(vec![Line::from(spans)])
-                .block(unfocused_block("最新キュリオン"));
+            let latest =
+                Paragraph::new(vec![Line::from(spans)]).block(unfocused_block("最新キュリオン"));
             f.render_widget(latest, chunks[10]);
         }
 
