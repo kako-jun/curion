@@ -537,6 +537,7 @@ dependencies = [
  "clap",
  "crossterm",
  "dirs",
+ "jiwa",
  "nostr-sdk",
  "rand",
  "ratatui",
@@ -1103,6 +1104,15 @@ name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
+
+[[package]]
+name = "jiwa"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "497631bbd8b775edcba252d44939e21a04e28848320bcf49dbee0707c21d11ab"
+dependencies = [
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "js-sys"

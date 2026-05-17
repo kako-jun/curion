@@ -14,6 +14,8 @@ use std::time::{Duration, Instant};
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
 
+use jiwa::{RevealHandle, RevealOpts, Rgb};
+
 use crate::cooldown::{cooldown_progress, current_rarity_probabilities, remaining_seconds};
 use crate::curion::{Category, Curion, Rarity};
 use crate::evolution::{sort_progress_by_urgency, EvolutionDatabase};
@@ -331,6 +333,10 @@ pub struct App {
     pub compiled_filter: Option<regex::Regex>,
     /// Issue #36: 段階進化ガチャの埋め込みデータベース。Dashboard の進化進捗表示で参照する。
     pub evolution_db: EvolutionDatabase,
+    /// Dashboard「最新キュリオン」表示の reveal アニメーション。新しいキュリオンが
+    /// 生成された瞬間に start し、display_name を 1 文字ずつ暗→明にフェードインで
+    /// 浮かび上がらせる。生成体験に「届いた感」を出すための演出。
+    latest_reveal: Option<RevealHandle>,
 }
 
 impl App {
@@ -360,6 +366,18 @@ impl App {
             filter_error: None,
             compiled_filter: None,
             evolution_db,
+            latest_reveal: None,
+        }
+    }
+
+    /// Dashboard「最新キュリオン」名を bloom させるための reveal プリセット。
+    /// 暗いグレーから真っ白へ ~200 ms でフェード、字送りは 40 ms。
+    fn latest_reveal_opts() -> RevealOpts {
+        RevealOpts {
+            char_interval: Duration::from_millis(40),
+            fade_duration: Duration::from_millis(220),
+            fade_from: Rgb(50, 50, 50),
+            fade_to: Rgb(255, 255, 255),
         }
     }
 
@@ -746,7 +764,12 @@ impl App {
             chrono::Utc::now(),
         );
         let curion = self.generator.generate_with_bonus(guid, progress)?;
+        let revealed_name = curion.display_name();
         self.game_state.add_curion(curion);
+        self.latest_reveal = Some(RevealHandle::start(
+            &revealed_name,
+            Self::latest_reveal_opts(),
+        ));
         self.flush_daily_mission_rewards();
         self.guid_timer = Instant::now();
         Ok(())
@@ -1782,12 +1805,13 @@ impl App {
         };
         f.render_widget(evo_widget, chunks[9]);
 
-        // Latest curion
+        // Latest curion — Issue: jiwa を使った名前の bloom 演出。生成直後に
+        // grapheme 単位で暗→白へフェードイン、~200 ms 経つと通常表示に戻る。
         if let Some(curion) = player.latest_curion() {
             let color = rarity_color(&curion.rarity);
             let stars = rarity_stars(&curion.rarity);
             let label = rarity_label(&curion.rarity);
-            let latest_text = vec![Line::from(vec![
+            let mut spans = vec![
                 Span::styled(stars, Style::default().fg(color)),
                 Span::raw(" "),
                 Span::styled(
@@ -1795,14 +1819,10 @@ impl App {
                     Style::default().fg(color).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" "),
-                Span::styled(
-                    curion.display_name(),
-                    Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ])];
-            let latest = Paragraph::new(latest_text).block(unfocused_block("最新キュリオン"));
+            ];
+            spans.extend(self.render_latest_name_spans(&curion.display_name()));
+            let latest = Paragraph::new(vec![Line::from(spans)])
+                .block(unfocused_block("最新キュリオン"));
             f.render_widget(latest, chunks[10]);
         }
 
@@ -1847,6 +1867,32 @@ impl App {
             .join("  ");
         let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
         f.render_widget(category_widget, chunks[12]);
+    }
+
+    /// 最新キュリオン名を grapheme 単位の Span 列にする。reveal 未開始 or 完了済みは
+    /// 通常の白太字で 1 つの Span にまとめる (Span 数が膨らむと描画が重いため)。
+    fn render_latest_name_spans(&self, name: &str) -> Vec<Span<'static>> {
+        let now = Instant::now();
+        match self.latest_reveal.as_ref() {
+            Some(reveal) if !reveal.is_done(now) => reveal
+                .snapshot(now)
+                .into_iter()
+                .map(|g| {
+                    Span::styled(
+                        g.text,
+                        Style::default()
+                            .fg(Color::Rgb(g.color.0, g.color.1, g.color.2))
+                            .add_modifier(Modifier::BOLD),
+                    )
+                })
+                .collect(),
+            _ => vec![Span::styled(
+                name.to_string(),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            )],
+        }
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {

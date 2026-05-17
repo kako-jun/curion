@@ -30,6 +30,7 @@ rustyline = "14.0"
 tokio = { version = "1.42", features = ["full"] }
 unicode-width = "0.1"
 regex = "1"
+jiwa = "0.1"
 
 [dev-dependencies]
 cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
