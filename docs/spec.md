@@ -34,7 +34,18 @@ Each curion has:
 | Phenomena | ~20 | Thunder, Rainbow |
 | Abstracts | 52 | Love, Freedom, Chaos |
 
-Noun data is stored in `data/nouns/*.json` (one file per category).
+Noun data is stored in `data/nouns/*.json` (one file per category). Each entry has the following fields:
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | yes | The Japanese name. Also used as the internal noun ID (see `Curion::noun`, `match_curion`, `AchievementType::SpecificNoun`). |
+| `reading` | yes | Hiragana / katakana reading of `name`. |
+| `english` | yes | Canonical English label. Surfaced through `App::display_curion_name` when the language is `En`. |
+| `weight` | yes | Relative spawn weight inside the category. |
+| `flavor` | yes | Japanese flavor text (SF / philosophical short prose). |
+| `flavor_en` | yes (since #65 Phase 2) | English flavor text. Phase 3 (Issue #68) will route flavor rendering through the language gate; until then the UI always displays `flavor`. |
+
+Synthesis-only nouns generated at runtime (e.g. `蒸気`, `残骸`) may not have an entry in this database, in which case English lookups fall back to the JA noun.
 
 ## Latent Vector Pipeline (Issue #39)
 

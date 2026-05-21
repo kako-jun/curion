@@ -119,7 +119,9 @@
 
 3. **文化交流機能**
    - 漢字トレード推奨システム
-   - 多言語対応（進行中: Phase 1 完了 / Issue #63）
+   - 多言語対応（進行中: Phase 1/2 完了 / Issue #63）
      - Phase 1 完了: i18n 基盤 + Settings タブの En/Ja 切替 + 主要 UI ラベルの翻訳
-     - Phase 2 未完了: flavor / 実績 / デイリーミッション説明文の英訳（Issue #65）
+     - Phase 2 完了: 268 nouns 全件に `flavor_en` データ追加（Issue #65）
+     - Phase 3 未完了: flavor の lang gate 表示切替 + interest/curiosity 表記統一（Issue #68）
+     - Phase 4 候補: 実績タイトル / デイリーミッション説明文 / Evolution display_name / 合成失敗メッセージ の英訳（未起票）
    - グローバルランキング
