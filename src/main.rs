@@ -157,6 +157,11 @@ fn run_app<B: ratatui::backend::Backend>(
                 } else if app.handle_key(key.code)? {
                     return Ok(());
                 }
+                // Issue #63: Settings から「即時保存」リクエストが立っていれば
+                // ここでディスクへ反映する。take_pending_save はフラグを消費する。
+                if app.take_pending_save() {
+                    save_manager.save(&app.game_state)?;
+                }
             }
         }
 

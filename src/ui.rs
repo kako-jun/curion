@@ -251,6 +251,8 @@ pub enum Tab {
     Achievements,
     Stats,
     Synthesis,
+    /// Issue #63: language switch + future per-user preferences.
+    Settings,
 }
 
 impl Tab {
@@ -266,6 +268,7 @@ impl Tab {
             Tab::Achievements => "tab.achievements",
             Tab::Stats => "tab.stats",
             Tab::Synthesis => "tab.synthesis",
+            Tab::Settings => "tab.settings",
         }
     }
 
@@ -276,6 +279,7 @@ impl Tab {
             Tab::Achievements => 2,
             Tab::Stats => 3,
             Tab::Synthesis => 4,
+            Tab::Settings => 5,
         }
     }
 
@@ -286,12 +290,13 @@ impl Tab {
             2 => Some(Tab::Achievements),
             3 => Some(Tab::Stats),
             4 => Some(Tab::Synthesis),
+            5 => Some(Tab::Settings),
             _ => None,
         }
     }
 
     fn next(&self) -> Tab {
-        Tab::from_index((self.index() + 1) % 5).unwrap_or(Tab::Dashboard)
+        Tab::from_index((self.index() + 1) % 6).unwrap_or(Tab::Dashboard)
     }
 }
 
@@ -309,7 +314,7 @@ pub struct App {
     pub game_state: GameState,
     pub current_tab: Tab,
     pub detail_scroll: usize,
-    pub section_indices: [usize; 5],
+    pub section_indices: [usize; 6],
     pub guid_timer: Instant,
     pub guid_interval: Duration,
     pub generator: CurionGenerator,
@@ -342,6 +347,13 @@ pub struct App {
     /// 生成された瞬間に start し、display_name を 1 文字ずつ暗→明にフェードインで
     /// 浮かび上がらせる。生成体験に「届いた感」を出すための演出。
     latest_reveal: Option<RevealHandle>,
+    /// Issue #63: 設定変更直後に保存を要求するフラグ。
+    ///
+    /// `App` 側は `SaveManager` を直接持たないため、保存が必要になった瞬間に
+    /// このフラグを立てる。メインループ (`main.rs`) が `take_pending_save()`
+    /// で取り出し、その場で `SaveManager::save` を呼ぶ。これにより
+    /// 「言語切替の瞬間にディスクへ反映」を実現する。
+    pending_save: bool,
 }
 
 impl App {
@@ -355,7 +367,7 @@ impl App {
             game_state,
             current_tab: Tab::Dashboard,
             detail_scroll: 0,
-            section_indices: [0; 5],
+            section_indices: [0; 6],
             guid_timer: Instant::now(),
             guid_interval: Duration::from_secs(30),
             generator,
@@ -372,7 +384,16 @@ impl App {
             compiled_filter: None,
             evolution_db,
             latest_reveal: None,
+            pending_save: false,
         }
+    }
+
+    /// Issue #63: 設定変更直後の即時保存要求を取り出す。
+    ///
+    /// 呼び出し側 (main loop) は `true` が返ったらその場で
+    /// `SaveManager::save` を実行する。一度取り出すとフラグはクリアされる。
+    pub fn take_pending_save(&mut self) -> bool {
+        std::mem::take(&mut self.pending_save)
     }
 
     /// Dashboard「最新キュリオン」名を bloom させるための reveal プリセット。
@@ -409,7 +430,7 @@ impl App {
                     return Ok(true);
                 }
             }
-            KeyCode::Char(c @ '1'..='5') => {
+            KeyCode::Char(c @ '1'..='6') => {
                 if let Some(tab) = Tab::from_index((c as usize) - ('1' as usize)) {
                     self.set_tab(tab);
                 }
@@ -420,6 +441,11 @@ impl App {
             KeyCode::Char('j') => self.next_section(),
             KeyCode::Up => self.scroll_up(),
             KeyCode::Down => self.scroll_down(),
+            // Issue #63: Settings タブで ←/→ により言語を切り替える。
+            // Settings タブ以外では現状ノーオペ (将来別設定の左右切替に拡張する余地)。
+            KeyCode::Left | KeyCode::Right if self.current_tab == Tab::Settings => {
+                self.toggle_language();
+            }
             KeyCode::PageUp => self.page_up(),
             KeyCode::PageDown => self.page_down(),
             KeyCode::Enter => self.handle_enter()?,
@@ -543,6 +569,19 @@ impl App {
     fn set_tab(&mut self, tab: Tab) {
         self.current_tab = tab;
         self.detail_scroll = 0;
+    }
+
+    /// Issue #63: Settings タブで `←/→` を受けたときの言語トグル。
+    ///
+    /// `Language::next` で次の言語に切り替えるだけで、永続化 (= save) は
+    /// `main.rs` 側のオートセーブ (60 秒間隔) と終了時セーブに任せている。
+    /// 「即座に保存される」を厳密に保証したい場合は呼び出し側で
+    /// `SaveManager::save` を続けて呼ぶこと (Phase 2 で検討)。
+    fn toggle_language(&mut self) {
+        self.game_state.language = self.game_state.language.next();
+        // Settings の「即座に保存される」契約を満たすためのフラグ。
+        // 実際の I/O はメインループが拾って実行する。
+        self.pending_save = true;
     }
 
     fn next_tab(&mut self) {
@@ -916,6 +955,7 @@ impl App {
             ],
             Tab::Stats => &["section.rarity", "section.category", "section.timeline"],
             Tab::Synthesis => &["section.recipes", "section.synthesize"],
+            Tab::Settings => &["section.language"],
         }
     }
 
@@ -1087,7 +1127,7 @@ impl App {
         // Trailing tail shared by every tab: Tab/1-5 + s + q.
         // (Settings tab in a later commit bumps the range to "Tab/1-6".)
         let tail = |spans: &mut Vec<Span<'static>>| {
-            spans.extend(key_dark("Tab/1-5", crate::i18n::t("help.tab", lang)));
+            spans.extend(key_dark("Tab/1-6", crate::i18n::t("help.tab", lang)));
             spans.extend(key_dark("s", crate::i18n::t("help.save", lang)));
             spans.extend(key_dark("q", crate::i18n::t("help.quit", lang)));
         };
@@ -1155,6 +1195,7 @@ impl App {
             "tab.achievements",
             "tab.stats",
             "tab.synthesis",
+            "tab.settings",
         ]
         .into_iter()
         .map(|key| crate::i18n::t(key, lang))
@@ -1213,7 +1254,53 @@ impl App {
             Tab::Achievements => self.render_achievements_section(f, area),
             Tab::Stats => self.render_stats_section(f, area),
             Tab::Synthesis => self.render_synthesis_section(f, area),
+            Tab::Settings => self.render_settings_section(f, area),
         }
+    }
+
+    /// Issue #63: Settings タブの描画。現状は言語切替 1 項目のみ。
+    ///
+    /// `←/→` で言語をトグルし、現在の選択を太字で表示する。永続化は
+    /// `handle_key` 側で行うので、ここでは表示だけに専念する。
+    fn render_settings_section(&self, f: &mut Frame<'_>, area: Rect) {
+        let lang = self.game_state.language;
+        let block = focused_block(crate::i18n::t("block.settings", lang));
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        let label = crate::i18n::t("settings.language", lang);
+        let help_text = crate::i18n::t("settings.language_help", lang);
+
+        let en_style = if lang == crate::i18n::Language::En {
+            Style::default()
+                .fg(Color::Black)
+                .bg(COLOR_RARE)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        let ja_style = if lang == crate::i18n::Language::Ja {
+            Style::default()
+                .fg(Color::Black)
+                .bg(COLOR_RARE)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+
+        let lines = vec![
+            Line::from(vec![
+                Span::styled(format!("{label}: "), Style::default().fg(COLOR_LABEL)),
+                Span::styled(" En ", en_style),
+                Span::raw("  "),
+                Span::styled(" Ja ", ja_style),
+            ]),
+            Line::from(""),
+            Line::from(Span::styled(help_text, Style::default().fg(COLOR_LABEL))),
+        ];
+
+        let widget = Paragraph::new(lines);
+        f.render_widget(widget, inner);
     }
 
     fn render_dashboard_section(&self, f: &mut Frame<'_>, area: Rect) {
