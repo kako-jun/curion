@@ -118,6 +118,13 @@ pub struct SerializableGameState {
     pub achievement_progress: Vec<crate::achievement::AchievementProgress>,
     // synthesis_managerの発見済みレシピ
     pub discovered_recipes: std::collections::HashMap<String, bool>,
+    /// UI 言語 (Issue #63 Phase 1)。
+    ///
+    /// 旧セーブにはこのフィールドが無いため `#[serde(default)]` を付け、
+    /// 復元時は [`crate::i18n::Language::default()`] = `Language::En`
+    /// にフォールバックする。
+    #[serde(default)]
+    pub language: crate::i18n::Language,
 }
 
 impl From<&GameState> for SerializableGameState {
@@ -139,6 +146,7 @@ impl From<&GameState> for SerializableGameState {
             player: game_state.player.clone(),
             achievement_progress,
             discovered_recipes: game_state.synthesis_manager.get_discovered_state(),
+            language: game_state.language,
         }
     }
 }
@@ -148,6 +156,7 @@ impl SerializableGameState {
     fn into_game_state(self, synthesis_manager: SynthesisManager) -> GameState {
         let mut game_state = GameState::new(synthesis_manager);
         game_state.player = self.player;
+        game_state.language = self.language;
 
         // 実績の進捗を復元
         for progress in self.achievement_progress {

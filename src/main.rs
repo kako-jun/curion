@@ -5,6 +5,7 @@ mod daily_mission;
 mod equipment;
 mod evolution;
 mod generator;
+mod i18n;
 mod interactive;
 mod latent;
 mod nostr_identity;
