@@ -5,6 +5,7 @@ mod daily_mission;
 mod equipment;
 mod evolution;
 mod generator;
+mod i18n;
 mod interactive;
 mod latent;
 mod nostr_identity;
@@ -152,6 +153,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 // Issue #62: mutation 駆動の即時永続化。
                 // key event を契機に状態が変わったときだけ save する (ポーリングは廃止)。
                 // dirty を立てる点は src/ui.rs の各 handler 側で管理する。
+                // Issue #63: Settings タブの言語切替も dirty フラグ経由で即時永続化する。
                 if app.dirty {
                     save_manager.save(&app.game_state)?;
                     app.dirty = false;

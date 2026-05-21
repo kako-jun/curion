@@ -804,6 +804,12 @@ pub struct GameState {
     pub player: Player,
     pub achievement_manager: AchievementManager,
     pub synthesis_manager: SynthesisManager,
+    /// UI 言語 (Issue #63 Phase 1)。
+    ///
+    /// 既定値は [`Language::En`] (英語正本化)。`SerializableGameState` 経由で
+    /// 永続化され、旧セーブ (フィールド無し) は `#[serde(default)]` により
+    /// `Language::En` で復元される。
+    pub language: crate::i18n::Language,
 }
 
 impl GameState {
@@ -812,6 +818,7 @@ impl GameState {
             player: Player::new(),
             achievement_manager: AchievementManager::new(),
             synthesis_manager,
+            language: crate::i18n::Language::default(),
         }
     }
 

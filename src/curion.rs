@@ -38,6 +38,13 @@ pub enum Category {
 }
 
 impl Category {
+    /// Japanese-fixed name used as internal ID and legacy save-compat label.
+    ///
+    /// Issue #63: kept unchanged so that already-persisted save data,
+    /// achievement title generation (`achievement.rs`), and other internal
+    /// look-ups by string continue to work. New UI code paths should call
+    /// [`Category::display`] instead so they respect the player's chosen
+    /// language.
     pub fn as_str(&self) -> &str {
         match self {
             Category::Animal => "動物",
@@ -50,6 +57,27 @@ impl Category {
             Category::Phenomenon => "現象",
             Category::Abstract => "抽象",
         }
+    }
+
+    /// i18n-aware display name (Issue #63 Phase 1).
+    ///
+    /// Looks up the static `category.{lower}` key in the translation table.
+    /// English is canonical; Japanese matches `as_str()`. Callers that need
+    /// the legacy fixed Japanese label (achievement titles, internal IDs)
+    /// must keep using [`Category::as_str`].
+    pub fn display(&self, lang: crate::i18n::Language) -> &'static str {
+        let key = match self {
+            Category::Animal => "category.animal",
+            Category::Plant => "category.plant",
+            Category::Color => "category.color",
+            Category::Object => "category.object",
+            Category::Concept => "category.concept",
+            Category::Element => "category.element",
+            Category::Food => "category.food",
+            Category::Phenomenon => "category.phenomenon",
+            Category::Abstract => "category.abstract",
+        };
+        crate::i18n::t(key, lang)
     }
 }
 
@@ -145,7 +173,12 @@ impl Curion {
         }
     }
 
-    /// キュリオンの表示用文字列
+    /// i18n-pinned JA legacy label `{Category-Ja} の {noun}`.
+    ///
+    /// Kept as a stable, language-independent form because the regex filter
+    /// (`ui::match_curion`) matches against this exact string. UI rendering
+    /// goes through `App::display_curion_name`, which honours
+    /// `GameState::language`.
     pub fn display_name(&self) -> String {
         format!("{} の {}", self.category.as_str(), self.noun)
     }
@@ -257,6 +290,72 @@ mod tests {
         let c = make_curion_at(Rarity::Legendary, acquired); // 30 日寿命
         let now = acquired + Duration::days(5);
         assert_eq!(c.days_remaining(now), Some(25));
+    }
+
+    /// Issue #63: `Category::display(En)` returns the English name and
+    /// `Category::display(Ja)` matches the legacy `as_str()` Japanese label.
+    #[test]
+    fn test_category_display_en_and_ja() {
+        use crate::i18n::Language;
+        assert_eq!(Category::Animal.display(Language::En), "Animal");
+        assert_eq!(
+            Category::Animal.display(Language::Ja),
+            Category::Animal.as_str()
+        );
+        assert_eq!(Category::Abstract.display(Language::En), "Abstract");
+        assert_eq!(
+            Category::Abstract.display(Language::Ja),
+            Category::Abstract.as_str()
+        );
+    }
+
+    /// Issue #63 D-1: For all 9 categories, `display(Ja)` matches the legacy
+    /// `as_str()` Japanese label (legacy compatibility contract — internal
+    /// look-ups by JA string must keep working).
+    #[test]
+    fn category_display_ja_matches_as_str_for_all_nine() {
+        use crate::i18n::Language;
+        for cat in [
+            Category::Animal,
+            Category::Plant,
+            Category::Color,
+            Category::Object,
+            Category::Concept,
+            Category::Element,
+            Category::Food,
+            Category::Phenomenon,
+            Category::Abstract,
+        ] {
+            assert_eq!(
+                cat.display(Language::Ja),
+                cat.as_str(),
+                "{cat:?} Ja display must match as_str()"
+            );
+        }
+    }
+
+    /// Issue #63 D-2: For all 9 categories, `display(En)` is non-empty and
+    /// differs from `display(Ja)` (= no English entry is accidentally a JA
+    /// fallback).
+    #[test]
+    fn category_display_en_non_empty_and_distinct_from_ja_for_all_nine() {
+        use crate::i18n::Language;
+        for cat in [
+            Category::Animal,
+            Category::Plant,
+            Category::Color,
+            Category::Object,
+            Category::Concept,
+            Category::Element,
+            Category::Food,
+            Category::Phenomenon,
+            Category::Abstract,
+        ] {
+            let en = cat.display(Language::En);
+            let ja = cat.display(Language::Ja);
+            assert!(!en.is_empty(), "{cat:?} En display empty");
+            assert_ne!(en, ja, "{cat:?} En must differ from Ja");
+        }
     }
 
     /// Issue #30: `lifespan_days = None` (旧セーブ等) は永遠扱いで期限切れにならない。

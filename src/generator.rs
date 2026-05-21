@@ -85,6 +85,16 @@ impl NounDatabase {
         self.find_entry(noun_name).and_then(|e| e.flavor.as_deref())
     }
 
+    /// Issue #63: noun の Japanese ID から English 表示名を引く。
+    ///
+    /// `data/nouns/*.json` の各エントリは Phase 1 時点で全て `english` フィールドを
+    /// 持つが、合成限定 noun (`蒸気` / `残骸` 等、データ JSON に存在しない名詞)
+    /// は引けないため `None` を返す。呼び出し側は `None` のとき JA noun をそのまま
+    /// 表示する fallback を取る (Phase 2 でこれらにも英訳を入れる予定)。
+    pub fn english_for(&self, noun_name: &str) -> Option<&str> {
+        self.find_entry(noun_name).map(|e| e.english.as_str())
+    }
+
     /// 統計情報を取得
     #[cfg(test)]
     pub fn stats(&self) -> HashMap<Category, usize> {
@@ -550,6 +560,27 @@ mod tests {
             9,
             "all 9 categories should appear; got {seen:?}"
         );
+    }
+
+    /// Issue #63 E-1: `english_for` returns Some(_) for a noun present in the
+    /// embedded JSON database (e.g. "犬" → "dog").
+    #[test]
+    fn english_for_known_noun_returns_some() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+        let english = db.english_for("犬");
+        assert!(english.is_some(), "「犬」 should resolve via english_for");
+        assert!(
+            !english.unwrap().is_empty(),
+            "english_for should not return an empty string"
+        );
+    }
+
+    /// Issue #63 E-2: `english_for` returns None for nouns that do not exist
+    /// in the database (synthesis-only nouns or unknown strings).
+    #[test]
+    fn english_for_unknown_noun_returns_none() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+        assert!(db.english_for("__絶対に存在しない名詞ZZZ__").is_none());
     }
 
     /// Issue #39: latent パイプライン経由で生成された noun は、必ず

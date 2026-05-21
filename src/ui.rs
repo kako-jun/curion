@@ -251,16 +251,31 @@ pub enum Tab {
     Achievements,
     Stats,
     Synthesis,
+    /// Issue #63: language switch + future per-user preferences.
+    Settings,
 }
 
 impl Tab {
-    pub fn title(&self) -> &str {
+    /// Total number of variants in [`Tab`].
+    ///
+    /// Single source of truth for "how many tabs exist" so that `from_index`
+    /// bounds, `next` wrap-around and `App::section_indices` length stay in
+    /// sync when a new tab is added.
+    pub const COUNT: usize = 6;
+
+    /// Translation-table key used to render this tab's title.
+    ///
+    /// Returning the i18n key (instead of a hard-coded string) lets the
+    /// renderer pick the right column per [`crate::i18n::Language`] at draw
+    /// time.
+    pub fn title_key(&self) -> &'static str {
         match self {
-            Tab::Dashboard => "Dashboard",
-            Tab::Collection => "Collection",
-            Tab::Achievements => "Achievements",
-            Tab::Stats => "Stats",
-            Tab::Synthesis => "Synthesis",
+            Tab::Dashboard => "tab.dashboard",
+            Tab::Collection => "tab.collection",
+            Tab::Achievements => "tab.achievements",
+            Tab::Stats => "tab.stats",
+            Tab::Synthesis => "tab.synthesis",
+            Tab::Settings => "tab.settings",
         }
     }
 
@@ -271,22 +286,27 @@ impl Tab {
             Tab::Achievements => 2,
             Tab::Stats => 3,
             Tab::Synthesis => 4,
+            Tab::Settings => 5,
         }
     }
 
     fn from_index(i: usize) -> Option<Tab> {
+        if i >= Tab::COUNT {
+            return None;
+        }
         match i {
             0 => Some(Tab::Dashboard),
             1 => Some(Tab::Collection),
             2 => Some(Tab::Achievements),
             3 => Some(Tab::Stats),
             4 => Some(Tab::Synthesis),
+            5 => Some(Tab::Settings),
             _ => None,
         }
     }
 
     fn next(&self) -> Tab {
-        Tab::from_index((self.index() + 1) % 5).unwrap_or(Tab::Dashboard)
+        Tab::from_index((self.index() + 1) % Tab::COUNT).unwrap_or(Tab::Dashboard)
     }
 }
 
@@ -304,7 +324,7 @@ pub struct App {
     pub game_state: GameState,
     pub current_tab: Tab,
     pub detail_scroll: usize,
-    pub section_indices: [usize; 5],
+    pub section_indices: [usize; Tab::COUNT],
     pub guid_timer: Instant,
     pub guid_interval: Duration,
     pub generator: CurionGenerator,
@@ -339,9 +359,10 @@ pub struct App {
     latest_reveal: Option<RevealHandle>,
     /// Issue #62: 永続化すべき mutation が発生したことを示すフラグ。
     ///
-    /// ガチャ pull・装備変更・achievement claim・synthesis 成功/副産物・daily mission 自動受領など、
-    /// 「失われると痛い」進行状態の更新時に `true` にセットする。main loop が key event を
-    /// 処理した直後にこのフラグを見て、true なら `SaveManager::save` を呼び、フラグをクリアする。
+    /// ガチャ pull・装備変更・achievement claim・synthesis 成功/副産物・daily mission 自動受領、
+    /// および Issue #63 で追加された Settings タブの言語切替など、「失われると痛い」進行状態の
+    /// 更新時に `true` にセットする。main loop が key event を処理した直後にこのフラグを見て、
+    /// true なら `SaveManager::save` を呼び、フラグをクリアする。
     ///
     /// `on_tick` で連続的に変化するもの (プレイ時間加算、SAN 自然減衰、Rare cooldown 残量) では
     /// dirty を立てない。これらは起動時 save と終了時 save でカバーする。
@@ -359,7 +380,7 @@ impl App {
             game_state,
             current_tab: Tab::Dashboard,
             detail_scroll: 0,
-            section_indices: [0; 5],
+            section_indices: [0; Tab::COUNT],
             guid_timer: Instant::now(),
             guid_interval: Duration::from_secs(30),
             generator,
@@ -414,7 +435,11 @@ impl App {
                     return Ok(true);
                 }
             }
-            KeyCode::Char(c @ '1'..='5') => {
+            // Number-key shortcuts. The literal range stays `'1'..='6'` because
+            // Rust does not allow `Tab::COUNT` inside a char-range pattern, but
+            // the downstream conversion through `Tab::from_index` is bounded by
+            // `Tab::COUNT` so adding a tab only requires widening this literal.
+            KeyCode::Char(c @ '1'..='6') => {
                 if let Some(tab) = Tab::from_index((c as usize) - ('1' as usize)) {
                     self.set_tab(tab);
                 }
@@ -425,6 +450,11 @@ impl App {
             KeyCode::Char('j') => self.next_section(),
             KeyCode::Up => self.scroll_up(),
             KeyCode::Down => self.scroll_down(),
+            // Issue #63: Settings タブで ←/→ により言語を切り替える。
+            // Settings タブ以外では現状ノーオペ (将来別設定の左右切替に拡張する余地)。
+            KeyCode::Left | KeyCode::Right if self.current_tab == Tab::Settings => {
+                self.toggle_language();
+            }
             KeyCode::PageUp => self.page_up(),
             KeyCode::PageDown => self.page_down(),
             KeyCode::Enter => self.handle_enter()?,
@@ -545,6 +575,15 @@ impl App {
     fn set_tab(&mut self, tab: Tab) {
         self.current_tab = tab;
         self.detail_scroll = 0;
+    }
+
+    /// Settings タブで `←/→` を押したときに呼ばれる。
+    /// 言語を次の値に切り替え、Issue #62 で導入された共有 `dirty` フラグを立てる。
+    /// `main.rs` のループが次の tick で `dirty` を見て即座に `SaveManager::save` を呼ぶため、
+    /// ユーザーから見ると言語切替は即時永続化される。
+    fn toggle_language(&mut self) {
+        self.game_state.language = self.game_state.language.next();
+        self.dirty = true;
     }
 
     fn next_tab(&mut self) {
@@ -777,7 +816,7 @@ impl App {
             chrono::Utc::now(),
         );
         let curion = self.generator.generate_with_bonus(guid, progress)?;
-        let revealed_name = curion.display_name();
+        let revealed_name = self.display_curion_name(&curion);
         self.game_state.add_curion(curion);
         self.latest_reveal = Some(RevealHandle::start(
             &revealed_name,
@@ -861,7 +900,7 @@ impl App {
         let preview: String = expired
             .iter()
             .take(3)
-            .map(|c| c.display_name())
+            .map(|c| self.display_curion_name(c))
             .collect::<Vec<_>>()
             .join(", ");
         let more = if expired.len() > 3 {
@@ -871,6 +910,29 @@ impl App {
         };
         self.save_message_duration = Duration::from_secs(6);
         self.save_message = Some((format!("🕯 寿命で消滅: {preview}{more}"), Instant::now()));
+    }
+
+    /// Issue #63: i18n-aware display name for a `Curion`.
+    ///
+    /// Returns `"{category} の {noun}"` in JA mode (matching the legacy
+    /// `Curion::display_name`) and `"{Category} {english}"` in EN mode, falling
+    /// back to the Japanese noun when the English form is unavailable
+    /// (e.g. synthesis-only nouns that do not appear in `data/nouns/*.json`).
+    fn display_curion_name(&self, curion: &Curion) -> String {
+        let lang = self.game_state.language;
+        match lang {
+            crate::i18n::Language::Ja => {
+                format!("{} の {}", curion.category.display(lang), curion.noun)
+            }
+            crate::i18n::Language::En => {
+                let noun = self
+                    .generator
+                    .database()
+                    .english_for(&curion.noun)
+                    .unwrap_or(&curion.noun);
+                format!("{} ({})", noun, curion.category.display(lang))
+            }
+        }
     }
 
     fn guid_progress(&self) -> f64 {
@@ -884,13 +946,26 @@ impl App {
         self.guid_interval.saturating_sub(elapsed).as_secs()
     }
 
+    /// i18n keys for the current tab's section names (Issue #63).
+    ///
+    /// Rendering code looks up each key via [`crate::i18n::t`] so that the
+    /// left pane and section indices switch language with `game_state.language`.
     fn current_sections(&self) -> &'static [&'static str] {
         match self.current_tab {
-            Tab::Dashboard => &["概要", "ログインボーナス", "デイリーミッション"],
-            Tab::Collection => &["所持一覧", "図鑑"],
-            Tab::Achievements => &["達成可能", "進行中", "達成済み"],
-            Tab::Stats => &["レアリティ", "カテゴリ", "時系列"],
-            Tab::Synthesis => &["レシピ一覧", "合成実行"],
+            Tab::Dashboard => &[
+                "section.overview",
+                "section.login_bonus",
+                "section.daily_missions",
+            ],
+            Tab::Collection => &["section.collection", "section.dictionary"],
+            Tab::Achievements => &[
+                "section.achievable",
+                "section.in_progress",
+                "section.unlocked",
+            ],
+            Tab::Stats => &["section.rarity", "section.category", "section.timeline"],
+            Tab::Synthesis => &["section.recipes", "section.synthesize"],
+            Tab::Settings => &["section.language"],
         }
     }
 
@@ -996,155 +1071,148 @@ impl App {
     }
 
     fn render_help_line(&self, f: &mut Frame<'_>, area: Rect) {
-        // Issue #31: フィルタ入力中は専用ヘルプを出す
-        if self.filter_mode {
-            let help = Line::from(vec![
-                Span::styled(" filter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 正規表現入力中  "),
-                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 入力確定 (フィルタ維持)  "),
-                Span::styled(" Esc ", Style::default().fg(Color::Black).bg(Color::Gray)),
-                Span::raw(" 解除  "),
+        let lang = self.game_state.language;
+
+        // Small helpers to keep the help-line definition concise. Each pair
+        // produces a coloured chord pill followed by its translated label.
+        let key_dark = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
                 Span::styled(
-                    " Backspace ",
+                    format!(" {label} "),
                     Style::default().fg(Color::Black).bg(Color::DarkGray),
                 ),
-                Span::raw(" 1 文字削除"),
-            ]);
-            let help_widget = Paragraph::new(help).style(Style::default().bg(Color::Black));
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+        let key_rare = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
+                Span::styled(
+                    format!(" {label} "),
+                    Style::default().fg(Color::Black).bg(COLOR_RARE),
+                ),
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+        let key_epic = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
+                Span::styled(
+                    format!(" {label} "),
+                    Style::default().fg(Color::Black).bg(COLOR_EPIC),
+                ),
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+        let key_gray = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
+                Span::styled(
+                    format!(" {label} "),
+                    Style::default().fg(Color::Black).bg(Color::Gray),
+                ),
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+
+        // Issue #31: フィルタ入力中は専用ヘルプを出す
+        if self.filter_mode {
+            let mut spans: Vec<Span<'static>> = Vec::new();
+            spans.extend(key_epic(
+                "filter",
+                crate::i18n::t("help.filter_typing", lang),
+            ));
+            spans.extend(key_rare(
+                "Enter",
+                crate::i18n::t("help.filter_confirm", lang),
+            ));
+            spans.extend(key_gray("Esc", crate::i18n::t("help.filter_clear", lang)));
+            spans.extend(key_dark(
+                "Backspace",
+                crate::i18n::t("help.filter_backspace", lang),
+            ));
+            let help_widget =
+                Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
             f.render_widget(help_widget, area);
             return;
         }
-        let help = match self.current_tab {
-            Tab::Collection if self.current_section_index() == 1 => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" カテゴリ移動  "),
-                Span::styled(
-                    " PgUp/PgDn ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 名詞スクロール  "),
-                Span::styled(" / ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 絞り込み  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            Tab::Collection if self.current_section_index() == 0 => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" スクロール  "),
-                Span::styled(" / ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 絞り込み  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            Tab::Achievements if self.current_section_index() == 0 => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 実績選択  "),
-                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 報酬受取  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            Tab::Synthesis => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 候補選択  "),
-                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 合成  "),
-                Span::styled(" Esc ", Style::default().fg(Color::Black).bg(Color::Gray)),
-                Span::raw(" 戻る  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            _ => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 詳細スクロール  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
+
+        // Trailing tail shared by every tab: Tab/1-6 + s + q.
+        let tail = |spans: &mut Vec<Span<'static>>| {
+            spans.extend(key_dark("Tab/1-6", crate::i18n::t("help.tab", lang)));
+            spans.extend(key_dark("s", crate::i18n::t("help.save", lang)));
+            spans.extend(key_dark("q", crate::i18n::t("help.quit", lang)));
         };
 
-        let help_widget = Paragraph::new(help).style(Style::default().bg(Color::Black));
+        let mut spans: Vec<Span<'static>> = Vec::new();
+        spans.extend(key_rare("j/k", crate::i18n::t("help.left_pane", lang)));
+
+        match self.current_tab {
+            Tab::Collection if self.current_section_index() == 1 => {
+                spans.extend(key_dark("↑/↓", crate::i18n::t("help.category_move", lang)));
+                spans.extend(key_dark(
+                    "PgUp/PgDn",
+                    crate::i18n::t("help.noun_scroll", lang),
+                ));
+                spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Collection if self.current_section_index() == 0 => {
+                spans.extend(key_dark("↑/↓", crate::i18n::t("help.scroll", lang)));
+                spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Achievements if self.current_section_index() == 0 => {
+                spans.extend(key_dark(
+                    "↑/↓",
+                    crate::i18n::t("help.achievement_select", lang),
+                ));
+                spans.extend(key_epic("Enter", crate::i18n::t("help.claim_reward", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Synthesis => {
+                spans.extend(key_dark(
+                    "↑/↓",
+                    crate::i18n::t("help.candidate_select", lang),
+                ));
+                spans.extend(key_epic(
+                    "Enter",
+                    crate::i18n::t("help.synthesize_now", lang),
+                ));
+                spans.extend(key_gray("Esc", crate::i18n::t("help.back", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Settings => {
+                spans.extend(key_rare("←/→", crate::i18n::t("help.lang_switch", lang)));
+                tail(&mut spans);
+            }
+            _ => {
+                spans.extend(key_dark("↑/↓", crate::i18n::t("help.detail_scroll", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+        }
+
+        let help_widget =
+            Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
         f.render_widget(help_widget, area);
     }
 
     fn render_tabs(&self, f: &mut Frame<'_>, area: Rect) {
-        let tabs = vec![
-            "Dashboard",
-            "Collection",
-            "Achievements",
-            "Stats",
-            "Synthesis",
-        ];
+        let lang = self.game_state.language;
+        // Tab labels are pulled from the i18n table so En/Ja switch live.
+        let tabs: Vec<&'static str> = [
+            "tab.dashboard",
+            "tab.collection",
+            "tab.achievements",
+            "tab.stats",
+            "tab.synthesis",
+            "tab.settings",
+        ]
+        .into_iter()
+        .map(|key| crate::i18n::t(key, lang))
+        .collect();
 
         let tabs_widget = Tabs::new(tabs)
             .block(tab_block("Curion"))
@@ -1166,11 +1234,13 @@ impl App {
     }
 
     fn render_left_pane(&self, f: &mut Frame<'_>, area: Rect) {
+        let lang = self.game_state.language;
         let items: Vec<ListItem> = self
             .current_sections()
             .iter()
             .enumerate()
-            .map(|(index, title)| {
+            .map(|(index, key)| {
+                let title = crate::i18n::t(key, lang);
                 let is_selected = index == self.current_section_index();
                 let prefix = if is_selected { "> " } else { "  " };
                 let style = if is_selected {
@@ -1185,7 +1255,7 @@ impl App {
             })
             .collect();
 
-        let block = unfocused_block(self.current_tab.title());
+        let block = unfocused_block(crate::i18n::t(self.current_tab.title_key(), lang));
         let list = List::new(items).block(block);
         f.render_widget(list, area);
     }
@@ -1197,7 +1267,55 @@ impl App {
             Tab::Achievements => self.render_achievements_section(f, area),
             Tab::Stats => self.render_stats_section(f, area),
             Tab::Synthesis => self.render_synthesis_section(f, area),
+            Tab::Settings => self.render_settings_section(f, area),
         }
+    }
+
+    /// Issue #63: Settings タブの描画。現状は言語切替 1 項目のみ。
+    ///
+    /// `←/→` で言語をトグルし、現在の選択を太字で表示する。永続化は
+    /// `handle_key` 側で行うので、ここでは表示だけに専念する。
+    fn render_settings_section(&self, f: &mut Frame<'_>, area: Rect) {
+        let lang = self.game_state.language;
+        let block = focused_block(crate::i18n::t("block.settings", lang));
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        let label = crate::i18n::t("settings.language", lang);
+        let help_text = crate::i18n::t("settings.language_help", lang);
+
+        let en_style = if lang == crate::i18n::Language::En {
+            Style::default()
+                .fg(Color::Black)
+                .bg(COLOR_RARE)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        let ja_style = if lang == crate::i18n::Language::Ja {
+            Style::default()
+                .fg(Color::Black)
+                .bg(COLOR_RARE)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+
+        let en_text = format!(" {} ", crate::i18n::Language::En.short_label());
+        let ja_text = format!(" {} ", crate::i18n::Language::Ja.short_label());
+        let lines = vec![
+            Line::from(vec![
+                Span::styled(format!("{label}: "), Style::default().fg(COLOR_LABEL)),
+                Span::styled(en_text, en_style),
+                Span::raw("  "),
+                Span::styled(ja_text, ja_style),
+            ]),
+            Line::from(""),
+            Line::from(Span::styled(help_text, Style::default().fg(COLOR_LABEL))),
+        ];
+
+        let widget = Paragraph::new(lines);
+        f.render_widget(widget, inner);
     }
 
     fn render_dashboard_section(&self, f: &mut Frame<'_>, area: Rect) {
@@ -1210,7 +1328,7 @@ impl App {
     }
 
     fn render_dashboard_overview(&self, f: &mut Frame<'_>, area: Rect) {
-        let block = focused_block("概要");
+        let block = focused_block(crate::i18n::t("block.overview", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -1237,7 +1355,10 @@ impl App {
         } else {
             "未受取"
         };
-        let block = focused_block("ログインボーナス");
+        let block = focused_block(crate::i18n::t(
+            "block.login_bonus",
+            self.game_state.language,
+        ));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -1522,7 +1643,10 @@ impl App {
         let progress = self.guid_progress();
         let remaining = self.guid_remaining_seconds();
         let gauge = Gauge::default()
-            .block(unfocused_block("次のキュリオン生成まで"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.next_curion",
+                self.game_state.language,
+            )))
             .gauge_style(Style::default().fg(COLOR_RARE).bg(Color::Black))
             .percent((progress * 100.0) as u16)
             .label(format!(
@@ -1534,7 +1658,10 @@ impl App {
 
         let xp_ratio = self.game_state.player.xp_progress_ratio();
         let xp_gauge = Gauge::default()
-            .block(unfocused_block("XP"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.xp",
+                self.game_state.language,
+            )))
             .gauge_style(Style::default().fg(xp_bar_color(xp_ratio)))
             .ratio(xp_ratio)
             .label(format!(
@@ -1678,7 +1805,10 @@ impl App {
             ),
         ])];
         let stats = Paragraph::new(stats_text)
-            .block(unfocused_block("統計"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.stats",
+                self.game_state.language,
+            )))
             .alignment(Alignment::Left);
         f.render_widget(stats, chunks[5]);
 
@@ -1740,10 +1870,11 @@ impl App {
         let equip_line: Line = match player.equipped_curion() {
             Some(c) => {
                 let effect = player.current_equipment_effect();
+                let name = self.display_curion_name(c);
                 Line::from(vec![
                     Span::styled("装備: ", Style::default().fg(COLOR_LABEL)),
                     Span::styled(
-                        c.display_name(),
+                        name,
                         Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
                     ),
                     Span::raw("  "),
@@ -1835,9 +1966,10 @@ impl App {
                 ),
                 Span::raw(" "),
             ];
-            spans.extend(self.render_latest_name_spans(&curion.display_name()));
-            let latest =
-                Paragraph::new(vec![Line::from(spans)]).block(unfocused_block("最新キュリオン"));
+            spans.extend(self.render_latest_name_spans(&self.display_curion_name(curion)));
+            let latest = Paragraph::new(vec![Line::from(spans)]).block(unfocused_block(
+                crate::i18n::t("block.latest_curion", self.game_state.language),
+            ));
             f.render_widget(latest, chunks[10]);
         }
 
@@ -1868,19 +2000,26 @@ impl App {
                 Span::raw(format!("  {count} ({percentage}%)")),
             ]));
         }
-        let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
+        let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block(crate::i18n::t(
+            "block.rarity_breakdown",
+            self.game_state.language,
+        )));
         f.render_widget(rarity_widget, chunks[11]);
 
         // Category distribution
+        let lang = self.game_state.language;
         let category_text = ALL_CATEGORIES
             .iter()
             .filter_map(|category| {
                 let count = self.collection_count_by_category(category);
-                (count > 0).then(|| format!("{}: {}個", category.as_str(), count))
+                (count > 0).then(|| format!("{}: {}個", category.display(lang), count))
             })
             .collect::<Vec<_>>()
             .join("  ");
-        let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
+        let category_widget = Paragraph::new(category_text).block(unfocused_block(crate::i18n::t(
+            "block.category_breakdown",
+            lang,
+        )));
         f.render_widget(category_widget, chunks[12]);
     }
 
@@ -1989,7 +2128,11 @@ impl App {
             ]),
         ]));
 
-        let list = List::new(items).block(focused_block("🎯 もうすぐ達成できる目標"));
+        let title = format!(
+            "🎯 {}",
+            crate::i18n::t("block.upcoming_goals", self.game_state.language)
+        );
+        let list = List::new(items).block(focused_block(title));
 
         f.render_widget(list, area);
     }
@@ -2019,7 +2162,10 @@ impl App {
                     Style::default().fg(COLOR_LABEL),
                 )]),
             ])
-            .block(focused_block("コレクション [0 個]"))
+            .block(focused_block(format!(
+                "{} [0]",
+                crate::i18n::t("block.collection", self.game_state.language)
+            )))
             .alignment(Alignment::Center);
             f.render_widget(empty, area);
             return;
@@ -2069,14 +2215,15 @@ impl App {
             None => collection.iter().collect(),
         };
 
+        let collection_label = crate::i18n::t("block.collection", self.game_state.language);
         let list_title = if self.compiled_filter.is_some() {
             format!(
-                "コレクション [{} matched / {} total]",
+                "{collection_label} [{} matched / {} total]",
                 filtered.len(),
                 collection.len(),
             )
         } else {
-            format!("コレクション [{} 個]", collection.len())
+            format!("{collection_label} [{}]", collection.len())
         };
 
         let now_utc = chrono::Utc::now();
@@ -2105,7 +2252,7 @@ impl App {
                         Span::styled(format!("[{label:<4}]"), Style::default().fg(color)),
                         Span::raw(" "),
                         Span::styled(
-                            format!("{:<20}", curion.display_name()),
+                            format!("{:<20}", self.display_curion_name(curion)),
                             Style::default()
                                 .fg(Color::White)
                                 .add_modifier(Modifier::BOLD),
@@ -2161,10 +2308,11 @@ impl App {
             .unwrap_or(false);
         let title = focused
             .map(|c| {
+                let name = self.display_curion_name(c);
                 if is_focused_equipped {
-                    format!("詳細: {}  [装備中]", c.display_name())
+                    format!("詳細: {name}  [装備中]")
                 } else {
-                    format!("詳細: {}", c.display_name())
+                    format!("詳細: {name}")
                 }
             })
             .unwrap_or_else(|| "詳細".to_string());
@@ -2251,7 +2399,7 @@ impl App {
             self.render_filter_input(f, area);
         }
 
-        let block = focused_block("図鑑");
+        let block = focused_block(crate::i18n::t("block.dictionary", self.game_state.language));
         let inner = block.inner(body_area);
         f.render_widget(block, body_area);
 
@@ -2320,12 +2468,15 @@ impl App {
                     Style::default().fg(Color::White)
                 };
                 // CJK 混在のためバイト幅ではなく表示セル幅でパディング
-                let name = pad_display(category.as_str(), 8);
+                let name = pad_display(category.display(self.game_state.language), 8);
                 ListItem::new(format!("{prefix}{name} {owned:>3}/{total:<3}")).style(style)
             })
             .collect();
 
-        let list = List::new(items).block(unfocused_block("Categories"));
+        let list = List::new(items).block(unfocused_block(crate::i18n::t(
+            "block.categories",
+            self.game_state.language,
+        )));
         f.render_widget(list, area);
     }
 
@@ -2349,7 +2500,7 @@ impl App {
 
         let title = format!(
             "全体: {total_owned}/{total_entries} ({total_pct:.1}%) | {cat_name}: {cat_owned}/{cat_total} ({cat_pct:.1}%)",
-            cat_name = category.as_str(),
+            cat_name = category.display(self.game_state.language),
         );
 
         let block = unfocused_block(title);
@@ -2557,10 +2708,16 @@ impl App {
     }
 
     fn render_achievements_section(&self, f: &mut Frame<'_>, area: Rect) {
+        let lang = self.game_state.language;
         match self.current_section_index() {
             0 => {
                 let achievable = self.game_state.achievement_manager.get_achievable();
-                self.render_achievement_list(f, area, "達成可能", achievable.into_iter().collect());
+                self.render_achievement_list(
+                    f,
+                    area,
+                    crate::i18n::t("block.achievable", lang),
+                    achievable.into_iter().collect(),
+                );
             }
             1 => {
                 let in_progress = self
@@ -2570,7 +2727,12 @@ impl App {
                     .into_iter()
                     .filter(|(_, progress)| !progress.unlocked)
                     .collect();
-                self.render_achievement_list(f, area, "進行中", in_progress);
+                self.render_achievement_list(
+                    f,
+                    area,
+                    crate::i18n::t("block.in_progress", lang),
+                    in_progress,
+                );
             }
             2 => {
                 let unlocked = self
@@ -2580,7 +2742,12 @@ impl App {
                     .into_iter()
                     .filter(|(_, progress)| progress.unlocked)
                     .collect();
-                self.render_achievement_list(f, area, "達成済み", unlocked);
+                self.render_achievement_list(
+                    f,
+                    area,
+                    crate::i18n::t("block.unlocked", lang),
+                    unlocked,
+                );
             }
             _ => {}
         }
@@ -2728,7 +2895,7 @@ impl App {
 
     fn render_stats_rarity(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
-        let block = focused_block("レアリティ");
+        let block = focused_block(crate::i18n::t("block.rarity", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -2777,11 +2944,17 @@ impl App {
                 ),
             ]),
         ])
-        .block(unfocused_block("PLAYER"));
+        .block(unfocused_block(crate::i18n::t(
+            "block.player",
+            self.game_state.language,
+        )));
         f.render_widget(summary, chunks[0]);
 
         let recent = Sparkline::default()
-            .block(unfocused_block("RECENT ACQUISITIONS"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.recent_acquisitions",
+                self.game_state.language,
+            )))
             .data(self.recent_acquisition_buckets(RECENT_ACTIVITY_BUCKETS))
             .style(Style::default().fg(COLOR_RARE));
         f.render_widget(recent, chunks[1]);
@@ -2805,7 +2978,10 @@ impl App {
                 .style(Style::default().fg(COLOR_LEGENDARY)),
         ];
         let rarity_chart = BarChart::default()
-            .block(unfocused_block("RARITY BREAKDOWN"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.rarity_breakdown_caps",
+                self.game_state.language,
+            )))
             .data(BarGroup::default().bars(&rarity_bars))
             .bar_width(6)
             .bar_gap(1)
@@ -2819,7 +2995,7 @@ impl App {
     }
 
     fn render_stats_category(&self, f: &mut Frame<'_>, area: Rect) {
-        let block = focused_block("カテゴリ");
+        let block = focused_block(crate::i18n::t("block.category", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -2828,18 +3004,22 @@ impl App {
             .constraints([Constraint::Min(9), Constraint::Min(7)])
             .split(inner);
 
+        let lang = self.game_state.language;
         let category_bars: Vec<Bar> = ALL_CATEGORIES
             .iter()
             .map(|category| {
                 Bar::default()
-                    .label(category.as_str().into())
+                    .label(category.display(lang).into())
                     .value(self.collection_count_by_category(category) as u64)
                     .style(Style::default().fg(COLOR_RARE))
             })
             .collect();
 
         let chart = BarChart::default()
-            .block(unfocused_block("CATEGORY BREAKDOWN"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.category_breakdown_caps",
+                lang,
+            )))
             .data(BarGroup::default().bars(&category_bars))
             .bar_width(5)
             .bar_gap(1)
@@ -2854,7 +3034,7 @@ impl App {
                 let unique = self.collection_unique_count_by_category(category);
                 Line::from(vec![
                     Span::styled(
-                        format!("{:<8}", category.as_str()),
+                        format!("{:<8}", category.display(lang)),
                         Style::default().fg(COLOR_RARE),
                     ),
                     Span::raw(" "),
@@ -2863,13 +3043,16 @@ impl App {
             })
             .collect();
 
-        let widget = Paragraph::new(lines).block(unfocused_block("CATEGORY DETAIL"));
+        let widget = Paragraph::new(lines).block(unfocused_block(crate::i18n::t(
+            "block.category_detail",
+            lang,
+        )));
         f.render_widget(widget, chunks[1]);
     }
 
     fn render_stats_timeline(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
-        let block = focused_block("時系列");
+        let block = focused_block(crate::i18n::t("block.timeline", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -2901,12 +3084,18 @@ impl App {
             ]),
         ];
 
-        let widget = Paragraph::new(lines).block(unfocused_block("SESSION"));
+        let widget = Paragraph::new(lines).block(unfocused_block(crate::i18n::t(
+            "block.session",
+            self.game_state.language,
+        )));
         f.render_widget(widget, chunks[0]);
 
         let login_ratio = (player.consecutive_login_days.min(30) as f64) / 30.0;
         let streak = LineGauge::default()
-            .block(unfocused_block("LOGIN STREAK"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.login_streak",
+                self.game_state.language,
+            )))
             .ratio(login_ratio)
             .label(format!(
                 "[{}] {:>2} / 30 days",
@@ -2920,7 +3109,10 @@ impl App {
         let today_ratio = (player.today_acquired.min(player.max_daily_acquired.max(1)) as f64)
             / (player.max_daily_acquired.max(1) as f64);
         let today = LineGauge::default()
-            .block(unfocused_block("TODAY VS BEST"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.today_vs_best",
+                self.game_state.language,
+            )))
             .ratio(today_ratio)
             .label(format!(
                 "[{}] {:>2} / {}",
@@ -2937,7 +3129,10 @@ impl App {
         // 日次推移を表示する。Player 側の純粋関数を呼ぶことでテスト可能にしている。
         let data = player.daily_acquisition_counts(30, chrono::Utc::now());
         let sparkline = Sparkline::default()
-            .block(unfocused_block("DAILY (last 30 days)"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.daily_30",
+                self.game_state.language,
+            )))
             .data(&data)
             .style(Style::default().fg(COLOR_RARE));
         f.render_widget(sparkline, chunks[3]);
@@ -2963,7 +3158,10 @@ impl App {
             self.game_state.synthesis_manager.discovered_count(),
             self.game_state.synthesis_manager.total_recipe_count()
         ))
-        .block(focused_block("合成実行"))
+        .block(focused_block(crate::i18n::t(
+            "block.synthesize",
+            self.game_state.language,
+        )))
         .style(Style::default().fg(COLOR_RARE));
         f.render_widget(header, chunks[0]);
 
@@ -2980,7 +3178,10 @@ impl App {
                 let help = Paragraph::new(
                     "← Select first ingredient\n\nUse ↑↓ to navigate\nPress Enter to select",
                 )
-                .block(unfocused_block("Help"))
+                .block(unfocused_block(crate::i18n::t(
+                    "block.help",
+                    self.game_state.language,
+                )))
                 .style(Style::default().fg(COLOR_LABEL));
                 f.render_widget(help, content_chunks[1]);
             }
@@ -3004,7 +3205,10 @@ impl App {
 
         if collection.is_empty() {
             let empty = Paragraph::new("No curions in collection")
-                .block(focused_block("Ingredient 1"))
+                .block(focused_block(crate::i18n::t(
+                    "block.ingredient1",
+                    self.game_state.language,
+                )))
                 .style(Style::default().fg(COLOR_BAR_HOT));
             f.render_widget(empty, area);
             return;
@@ -3034,7 +3238,10 @@ impl App {
             .collect();
 
         let list = List::new(items)
-            .block(focused_block("Select Ingredient 1"))
+            .block(focused_block(crate::i18n::t(
+                "block.select_ingredient1",
+                self.game_state.language,
+            )))
             .highlight_style(
                 Style::default()
                     .fg(Color::Black)
@@ -3225,7 +3432,10 @@ impl App {
             })
             .collect();
 
-        let list = List::new(items).block(focused_block("レシピ一覧"));
+        let list = List::new(items).block(focused_block(crate::i18n::t(
+            "block.recipes",
+            self.game_state.language,
+        )));
         f.render_widget(list, area);
     }
 
@@ -3239,7 +3449,10 @@ impl App {
         );
 
         let widget = Paragraph::new(text)
-            .block(unfocused_block("Selected"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.selected",
+                self.game_state.language,
+            )))
             .style(Style::default().fg(COLOR_SUCCESS));
 
         f.render_widget(widget, area);
@@ -3258,7 +3471,10 @@ impl App {
 
         if candidates.is_empty() {
             let empty = Paragraph::new("No possible combinations\n\nPress Esc to go back")
-                .block(focused_block("Ingredient 2"))
+                .block(focused_block(crate::i18n::t(
+                    "block.ingredient2",
+                    self.game_state.language,
+                )))
                 .style(Style::default().fg(COLOR_BAR_HOT));
             f.render_widget(empty, area);
             return;
@@ -3321,7 +3537,7 @@ impl App {
                     candidate.noun,
                     candidate.available_count,
                     result_text,
-                    candidate.category.as_str(),
+                    candidate.category.display(self.game_state.language),
                     probability_text,
                 ))
                 .style(style)
@@ -3329,7 +3545,10 @@ impl App {
             .collect();
 
         let list = List::new(items)
-            .block(focused_block("Select Ingredient 2"))
+            .block(focused_block(crate::i18n::t(
+                "block.select_ingredient2",
+                self.game_state.language,
+            )))
             .highlight_style(
                 Style::default()
                     .fg(Color::Black)
@@ -3849,6 +4068,202 @@ mod tests {
         );
     }
 
+    // ── Issue #63 Phase 1: Tab boundary / Settings / display_curion_name ──
+
+    /// B-2: Every `Tab::from_index(0..Tab::COUNT)` resolves its `title_key()`
+    /// through the i18n dict in both languages (= every key is registered;
+    /// `t()` no longer falls back at all in debug). Detects drift between
+    /// `Tab` variants and the dict entries.
+    #[test]
+    fn tab_title_keys_all_resolved() {
+        use crate::i18n::{t, Language};
+        for i in 0..Tab::COUNT {
+            let tab = Tab::from_index(i).unwrap_or_else(|| panic!("Tab::from_index({i}) is None"));
+            let key = tab.title_key();
+            // `t()` would panic in debug if the key were missing; assert the
+            // resolved text is distinct from the key itself for extra clarity.
+            assert_ne!(t(key, Language::En), key, "{key} unresolved in En");
+            assert_ne!(t(key, Language::Ja), key, "{key} unresolved in Ja");
+        }
+    }
+
+    /// C-1: index 0 maps to the Dashboard tab.
+    #[test]
+    fn tab_from_index_zero_is_dashboard() {
+        assert_eq!(Tab::from_index(0), Some(Tab::Dashboard));
+    }
+
+    /// C-2: index 5 maps to the Settings tab (Issue #63 added).
+    #[test]
+    fn tab_from_index_five_is_settings() {
+        assert_eq!(Tab::from_index(5), Some(Tab::Settings));
+    }
+
+    /// C-3: `Tab::COUNT` itself is out of range and yields None.
+    #[test]
+    fn tab_from_index_six_is_none() {
+        assert_eq!(Tab::from_index(Tab::COUNT), None);
+    }
+
+    /// C-4: `Tab::next` wraps from Settings (last) back to Dashboard.
+    #[test]
+    fn tab_next_wraps_from_settings_to_dashboard() {
+        assert_eq!(Tab::Settings.next(), Tab::Dashboard);
+    }
+
+    /// C-5: `Tab::next` goes from Synthesis to Settings.
+    /// Pins the post-#63 ordering — would have caught a stale `mod 5` wrap.
+    #[test]
+    fn tab_next_synthesis_to_settings() {
+        assert_eq!(Tab::Synthesis.next(), Tab::Settings);
+    }
+
+    /// C-6: `from_index(t.index()) == Some(t)` for every Tab.
+    #[test]
+    fn tab_index_round_trip_all_six() {
+        for tab in [
+            Tab::Dashboard,
+            Tab::Collection,
+            Tab::Achievements,
+            Tab::Stats,
+            Tab::Synthesis,
+            Tab::Settings,
+        ] {
+            assert_eq!(Tab::from_index(tab.index()), Some(tab));
+        }
+    }
+
+    /// F-1: In JA mode, `display_curion_name` matches the legacy
+    /// `Curion::display_name` format `"{Category-Ja} の {noun}"`.
+    #[test]
+    fn display_curion_name_ja_is_legacy_format() {
+        let mut app = empty_app();
+        app.game_state.language = crate::i18n::Language::Ja;
+        let curion = make_curion("犬", Category::Animal, Rarity::Common);
+        assert_eq!(app.display_curion_name(&curion), curion.display_name());
+    }
+
+    /// F-2: In EN mode, a noun present in the database is rendered as
+    /// `"{english} ({Category-En})"`.
+    #[test]
+    fn display_curion_name_en_with_english() {
+        let mut app = empty_app();
+        app.game_state.language = crate::i18n::Language::En;
+        let curion = make_curion("犬", Category::Animal, Rarity::Common);
+        // "犬" is in animals.json with english = "dog".
+        assert_eq!(app.display_curion_name(&curion), "dog (Animal)");
+    }
+
+    /// F-3: In EN mode, a noun missing from the database falls back to the
+    /// JA noun without panicking (synthesis-only nouns will hit this path
+    /// until Phase 2 fills the english field).
+    #[test]
+    fn display_curion_name_en_falls_back_to_ja_noun() {
+        let mut app = empty_app();
+        app.game_state.language = crate::i18n::Language::En;
+        let curion = make_curion("__存在しない名詞ZZZ__", Category::Animal, Rarity::Common);
+        let out = app.display_curion_name(&curion);
+        assert!(
+            out.contains("__存在しない名詞ZZZ__"),
+            "fallback should retain JA noun, got {out:?}"
+        );
+        assert!(
+            out.contains("Animal"),
+            "category should still render in En, got {out:?}"
+        );
+    }
+
+    /// G-1: On the Settings tab, Left toggles En → Ja.
+    #[test]
+    fn settings_tab_left_arrow_toggles_language() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.game_state.language = crate::i18n::Language::En;
+        app.handle_key(KeyCode::Left).unwrap();
+        assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
+    }
+
+    /// G-2: On the Settings tab, Right also toggles (same semantics as Left
+    /// because the picker only has two values).
+    #[test]
+    fn settings_tab_right_arrow_toggles_language() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.game_state.language = crate::i18n::Language::En;
+        app.handle_key(KeyCode::Right).unwrap();
+        assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
+    }
+
+    /// G-3: Toggling the language raises the shared `dirty` flag so the main
+    /// loop can flush to disk on the next save tick (Issue #62 unified flag).
+    #[test]
+    fn settings_tab_toggle_sets_dirty_flag() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.handle_key(KeyCode::Left).unwrap();
+        assert!(
+            app.dirty,
+            "language toggle should set the shared dirty flag"
+        );
+    }
+
+    /// G-5: On non-Settings tabs, Left/Right do not change language nor set
+    /// the `dirty` flag.
+    #[test]
+    fn non_settings_tab_left_right_does_not_toggle() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        let before = app.game_state.language;
+        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Right).unwrap();
+        assert_eq!(app.game_state.language, before, "language must not change");
+        assert!(!app.dirty, "dirty must stay false off Settings");
+    }
+
+    /// G-6: Two toggles on Settings round-trip back to the original language.
+    #[test]
+    fn settings_tab_left_then_right_returns_to_original_language() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        let before = app.game_state.language;
+        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Right).unwrap();
+        assert_eq!(app.game_state.language, before);
+    }
+
+    /// G-7: Multiple toggles keep the shared dirty flag set; after the main
+    /// loop consumes it (sets dirty = false), the next toggle re-arms it.
+    #[test]
+    fn settings_tab_repeated_toggle_keeps_dirty_until_consumed() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Right).unwrap();
+        app.handle_key(KeyCode::Left).unwrap();
+        assert!(app.dirty, "three toggles → dirty still true");
+        // Simulate the main-loop save consuming the flag.
+        app.dirty = false;
+        app.handle_key(KeyCode::Right).unwrap();
+        assert!(app.dirty, "next toggle re-arms dirty");
+    }
+
+    /// J-1: Pinning current behaviour — even when `language = En`, the
+    /// regex filter still matches the Japanese category label `動物`
+    /// (because `match_curion` checks `category.as_str()`, which is the
+    /// fixed JA label). Phase 2 (Issue #65) may revisit this so the filter
+    /// also accepts the English category string in En mode.
+    #[test]
+    fn filter_regex_still_matches_japanese_in_en_mode() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.game_state.language = crate::i18n::Language::En;
+        let curion = make_curion("犬", Category::Animal, Rarity::Common);
+        let re = regex::Regex::new("動物").unwrap();
+        assert!(
+            match_curion(&re, &curion),
+            "current behaviour: JA category label still matches in En mode"
+        );
+    }
     // ── Issue #62: event-driven save (dirty フラグ) ────────────────────
 
     // A. dirty 状態遷移
