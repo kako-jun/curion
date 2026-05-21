@@ -85,6 +85,16 @@ impl NounDatabase {
         self.find_entry(noun_name).and_then(|e| e.flavor.as_deref())
     }
 
+    /// Issue #63: noun の Japanese ID から English 表示名を引く。
+    ///
+    /// `data/nouns/*.json` の各エントリは Phase 1 時点で全て `english` フィールドを
+    /// 持つが、合成限定 noun (`蒸気` / `残骸` 等、データ JSON に存在しない名詞)
+    /// は引けないため `None` を返す。呼び出し側は `None` のとき JA noun をそのまま
+    /// 表示する fallback を取る (Phase 2 でこれらにも英訳を入れる予定)。
+    pub fn english_for(&self, noun_name: &str) -> Option<&str> {
+        self.find_entry(noun_name).map(|e| e.english.as_str())
+    }
+
     /// 統計情報を取得
     #[cfg(test)]
     pub fn stats(&self) -> HashMap<Category, usize> {

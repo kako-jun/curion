@@ -764,7 +764,7 @@ impl App {
             chrono::Utc::now(),
         );
         let curion = self.generator.generate_with_bonus(guid, progress)?;
-        let revealed_name = curion.display_name();
+        let revealed_name = self.display_curion_name(&curion);
         self.game_state.add_curion(curion);
         self.latest_reveal = Some(RevealHandle::start(
             &revealed_name,
@@ -846,7 +846,7 @@ impl App {
         let preview: String = expired
             .iter()
             .take(3)
-            .map(|c| c.display_name())
+            .map(|c| self.display_curion_name(c))
             .collect::<Vec<_>>()
             .join(", ");
         let more = if expired.len() > 3 {
@@ -856,6 +856,29 @@ impl App {
         };
         self.save_message_duration = Duration::from_secs(6);
         self.save_message = Some((format!("🕯 寿命で消滅: {}{}", preview, more), Instant::now()));
+    }
+
+    /// Issue #63: i18n-aware display name for a `Curion`.
+    ///
+    /// Returns `"{category} の {noun}"` in JA mode (matching the legacy
+    /// `Curion::display_name`) and `"{Category} {english}"` in EN mode, falling
+    /// back to the Japanese noun when the English form is unavailable
+    /// (e.g. synthesis-only nouns that do not appear in `data/nouns/*.json`).
+    fn display_curion_name(&self, curion: &Curion) -> String {
+        let lang = self.game_state.language;
+        match lang {
+            crate::i18n::Language::Ja => {
+                format!("{} の {}", curion.category.display(lang), curion.noun)
+            }
+            crate::i18n::Language::En => {
+                let noun = self
+                    .generator
+                    .database()
+                    .english_for(&curion.noun)
+                    .unwrap_or(&curion.noun);
+                format!("{} ({})", noun, curion.category.display(lang))
+            }
+        }
     }
 
     fn guid_progress(&self) -> f64 {
@@ -1725,10 +1748,11 @@ impl App {
         let equip_line: Line = match player.equipped_curion() {
             Some(c) => {
                 let effect = player.current_equipment_effect();
+                let name = self.display_curion_name(c);
                 Line::from(vec![
                     Span::styled("装備: ", Style::default().fg(COLOR_LABEL)),
                     Span::styled(
-                        c.display_name(),
+                        name,
                         Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
                     ),
                     Span::raw("  "),
@@ -1820,7 +1844,7 @@ impl App {
                 ),
                 Span::raw(" "),
             ];
-            spans.extend(self.render_latest_name_spans(&curion.display_name()));
+            spans.extend(self.render_latest_name_spans(&self.display_curion_name(curion)));
             let latest =
                 Paragraph::new(vec![Line::from(spans)]).block(unfocused_block("最新キュリオン"));
             f.render_widget(latest, chunks[10]);
@@ -2091,7 +2115,7 @@ impl App {
                         Span::styled(format!("[{label:<4}]"), Style::default().fg(color)),
                         Span::raw(" "),
                         Span::styled(
-                            format!("{:<20}", curion.display_name()),
+                            format!("{:<20}", self.display_curion_name(curion)),
                             Style::default()
                                 .fg(Color::White)
                                 .add_modifier(Modifier::BOLD),
@@ -2147,10 +2171,11 @@ impl App {
             .unwrap_or(false);
         let title = focused
             .map(|c| {
+                let name = self.display_curion_name(c);
                 if is_focused_equipped {
-                    format!("詳細: {}  [装備中]", c.display_name())
+                    format!("詳細: {name}  [装備中]")
                 } else {
-                    format!("詳細: {}", c.display_name())
+                    format!("詳細: {name}")
                 }
             })
             .unwrap_or_else(|| "詳細".to_string());
