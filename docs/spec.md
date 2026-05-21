@@ -595,7 +595,7 @@ Right pane behavior:
 ## Data Storage
 
 - Save directory: `~/.curion/`
-- Auto-save every 60 seconds
+- Auto-save on every meaningful state mutation (gacha pull, equip toggle, achievement claim, synthesis success/failure, daily mission auto-claim) + on startup and on exit
 - Format: JSON (serde_json serialization)
 - Multi-profile support via `--profile` CLI argument
 - Duplicate connection prevention per profile

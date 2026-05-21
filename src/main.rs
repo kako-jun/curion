@@ -162,6 +162,13 @@ fn run_app<B: ratatui::backend::Backend>(
         if last_tick.elapsed() >= tick_rate {
             app.on_tick();
             last_tick = Instant::now();
+            // Issue #62: on_tick は guid_timer 満了で generate_curion を内部呼出するため
+            // 間接的に dirty が立つことがある。key event を待たずに save しないと、
+            // 無操作中に取得した curion がハードシャットダウンで失われる。
+            if app.dirty {
+                save_manager.save(&app.game_state)?;
+                app.dirty = false;
+            }
         }
     }
 }
