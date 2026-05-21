@@ -254,13 +254,18 @@ pub enum Tab {
 }
 
 impl Tab {
-    pub fn title(&self) -> &str {
+    /// Translation-table key used to render this tab's title.
+    ///
+    /// Returning the i18n key (instead of a hard-coded string) lets the
+    /// renderer pick the right column per [`crate::i18n::Language`] at draw
+    /// time.
+    pub fn title_key(&self) -> &'static str {
         match self {
-            Tab::Dashboard => "Dashboard",
-            Tab::Collection => "Collection",
-            Tab::Achievements => "Achievements",
-            Tab::Stats => "Stats",
-            Tab::Synthesis => "Synthesis",
+            Tab::Dashboard => "tab.dashboard",
+            Tab::Collection => "tab.collection",
+            Tab::Achievements => "tab.achievements",
+            Tab::Stats => "tab.stats",
+            Tab::Synthesis => "tab.synthesis",
         }
     }
 
@@ -892,13 +897,25 @@ impl App {
         self.guid_interval.saturating_sub(elapsed).as_secs()
     }
 
+    /// i18n keys for the current tab's section names (Issue #63).
+    ///
+    /// Rendering code looks up each key via [`crate::i18n::t`] so that the
+    /// left pane and section indices switch language with `game_state.language`.
     fn current_sections(&self) -> &'static [&'static str] {
         match self.current_tab {
-            Tab::Dashboard => &["概要", "ログインボーナス", "デイリーミッション"],
-            Tab::Collection => &["所持一覧", "図鑑"],
-            Tab::Achievements => &["達成可能", "進行中", "達成済み"],
-            Tab::Stats => &["レアリティ", "カテゴリ", "時系列"],
-            Tab::Synthesis => &["レシピ一覧", "合成実行"],
+            Tab::Dashboard => &[
+                "section.overview",
+                "section.login_bonus",
+                "section.daily_missions",
+            ],
+            Tab::Collection => &["section.collection", "section.dictionary"],
+            Tab::Achievements => &[
+                "section.achievable",
+                "section.in_progress",
+                "section.unlocked",
+            ],
+            Tab::Stats => &["section.rarity", "section.category", "section.timeline"],
+            Tab::Synthesis => &["section.recipes", "section.synthesize"],
         }
     }
 
@@ -1146,13 +1163,18 @@ impl App {
     }
 
     fn render_tabs(&self, f: &mut Frame<'_>, area: Rect) {
-        let tabs = vec![
-            "Dashboard",
-            "Collection",
-            "Achievements",
-            "Stats",
-            "Synthesis",
-        ];
+        let lang = self.game_state.language;
+        // Tab labels are pulled from the i18n table so En/Ja switch live.
+        let tabs: Vec<&'static str> = [
+            "tab.dashboard",
+            "tab.collection",
+            "tab.achievements",
+            "tab.stats",
+            "tab.synthesis",
+        ]
+        .into_iter()
+        .map(|key| crate::i18n::t(key, lang))
+        .collect();
 
         let tabs_widget = Tabs::new(tabs)
             .block(tab_block("Curion"))
@@ -1174,11 +1196,13 @@ impl App {
     }
 
     fn render_left_pane(&self, f: &mut Frame<'_>, area: Rect) {
+        let lang = self.game_state.language;
         let items: Vec<ListItem> = self
             .current_sections()
             .iter()
             .enumerate()
-            .map(|(index, title)| {
+            .map(|(index, key)| {
+                let title = crate::i18n::t(key, lang);
                 let is_selected = index == self.current_section_index();
                 let prefix = if is_selected { "> " } else { "  " };
                 let style = if is_selected {
@@ -1193,7 +1217,7 @@ impl App {
             })
             .collect();
 
-        let block = unfocused_block(self.current_tab.title());
+        let block = unfocused_block(crate::i18n::t(self.current_tab.title_key(), lang));
         let list = List::new(items).block(block);
         f.render_widget(list, area);
     }
@@ -1218,7 +1242,7 @@ impl App {
     }
 
     fn render_dashboard_overview(&self, f: &mut Frame<'_>, area: Rect) {
-        let block = focused_block("概要");
+        let block = focused_block(crate::i18n::t("block.overview", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -1245,7 +1269,10 @@ impl App {
         } else {
             "未受取"
         };
-        let block = focused_block("ログインボーナス");
+        let block = focused_block(crate::i18n::t(
+            "block.login_bonus",
+            self.game_state.language,
+        ));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -1530,7 +1557,10 @@ impl App {
         let progress = self.guid_progress();
         let remaining = self.guid_remaining_seconds();
         let gauge = Gauge::default()
-            .block(unfocused_block("次のキュリオン生成まで"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.next_curion",
+                self.game_state.language,
+            )))
             .gauge_style(Style::default().fg(COLOR_RARE).bg(Color::Black))
             .percent((progress * 100.0) as u16)
             .label(format!(
@@ -1542,7 +1572,10 @@ impl App {
 
         let xp_ratio = self.game_state.player.xp_progress_ratio();
         let xp_gauge = Gauge::default()
-            .block(unfocused_block("XP"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.xp",
+                self.game_state.language,
+            )))
             .gauge_style(Style::default().fg(xp_bar_color(xp_ratio)))
             .ratio(xp_ratio)
             .label(format!(
@@ -1686,7 +1719,10 @@ impl App {
             ),
         ])];
         let stats = Paragraph::new(stats_text)
-            .block(unfocused_block("統計"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.stats",
+                self.game_state.language,
+            )))
             .alignment(Alignment::Left);
         f.render_widget(stats, chunks[5]);
 
@@ -1845,8 +1881,9 @@ impl App {
                 Span::raw(" "),
             ];
             spans.extend(self.render_latest_name_spans(&self.display_curion_name(curion)));
-            let latest =
-                Paragraph::new(vec![Line::from(spans)]).block(unfocused_block("最新キュリオン"));
+            let latest = Paragraph::new(vec![Line::from(spans)]).block(unfocused_block(
+                crate::i18n::t("block.latest_curion", self.game_state.language),
+            ));
             f.render_widget(latest, chunks[10]);
         }
 
@@ -1877,7 +1914,10 @@ impl App {
                 Span::raw(format!("  {count} ({percentage}%)")),
             ]));
         }
-        let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block("レアリティ分布"));
+        let rarity_widget = Paragraph::new(rarity_items).block(unfocused_block(crate::i18n::t(
+            "block.rarity_breakdown",
+            self.game_state.language,
+        )));
         f.render_widget(rarity_widget, chunks[11]);
 
         // Category distribution
@@ -1890,7 +1930,10 @@ impl App {
             })
             .collect::<Vec<_>>()
             .join("  ");
-        let category_widget = Paragraph::new(category_text).block(unfocused_block("カテゴリ分布"));
+        let category_widget = Paragraph::new(category_text).block(unfocused_block(crate::i18n::t(
+            "block.category_breakdown",
+            lang,
+        )));
         f.render_widget(category_widget, chunks[12]);
     }
 
@@ -1999,7 +2042,11 @@ impl App {
             ]),
         ]));
 
-        let list = List::new(items).block(focused_block("🎯 もうすぐ達成できる目標"));
+        let title = format!(
+            "🎯 {}",
+            crate::i18n::t("block.upcoming_goals", self.game_state.language)
+        );
+        let list = List::new(items).block(focused_block(title));
 
         f.render_widget(list, area);
     }
@@ -2029,7 +2076,10 @@ impl App {
                     Style::default().fg(COLOR_LABEL),
                 )]),
             ])
-            .block(focused_block("コレクション [0 個]"))
+            .block(focused_block(format!(
+                "{} [0]",
+                crate::i18n::t("block.collection", self.game_state.language)
+            )))
             .alignment(Alignment::Center);
             f.render_widget(empty, area);
             return;
@@ -2079,14 +2129,15 @@ impl App {
             None => collection.iter().collect(),
         };
 
+        let collection_label = crate::i18n::t("block.collection", self.game_state.language);
         let list_title = if self.compiled_filter.is_some() {
             format!(
-                "コレクション [{} matched / {} total]",
+                "{collection_label} [{} matched / {} total]",
                 filtered.len(),
                 collection.len(),
             )
         } else {
-            format!("コレクション [{} 個]", collection.len())
+            format!("{collection_label} [{}]", collection.len())
         };
 
         let now_utc = chrono::Utc::now();
@@ -2262,7 +2313,7 @@ impl App {
             self.render_filter_input(f, area);
         }
 
-        let block = focused_block("図鑑");
+        let block = focused_block(crate::i18n::t("block.dictionary", self.game_state.language));
         let inner = block.inner(body_area);
         f.render_widget(block, body_area);
 
@@ -2336,7 +2387,10 @@ impl App {
             })
             .collect();
 
-        let list = List::new(items).block(unfocused_block("Categories"));
+        let list = List::new(items).block(unfocused_block(crate::i18n::t(
+            "block.categories",
+            self.game_state.language,
+        )));
         f.render_widget(list, area);
     }
 
@@ -2568,10 +2622,16 @@ impl App {
     }
 
     fn render_achievements_section(&self, f: &mut Frame<'_>, area: Rect) {
+        let lang = self.game_state.language;
         match self.current_section_index() {
             0 => {
                 let achievable = self.game_state.achievement_manager.get_achievable();
-                self.render_achievement_list(f, area, "達成可能", achievable.into_iter().collect());
+                self.render_achievement_list(
+                    f,
+                    area,
+                    crate::i18n::t("block.achievable", lang),
+                    achievable.into_iter().collect(),
+                );
             }
             1 => {
                 let in_progress = self
@@ -2581,7 +2641,12 @@ impl App {
                     .into_iter()
                     .filter(|(_, progress)| !progress.unlocked)
                     .collect();
-                self.render_achievement_list(f, area, "進行中", in_progress);
+                self.render_achievement_list(
+                    f,
+                    area,
+                    crate::i18n::t("block.in_progress", lang),
+                    in_progress,
+                );
             }
             2 => {
                 let unlocked = self
@@ -2591,7 +2656,12 @@ impl App {
                     .into_iter()
                     .filter(|(_, progress)| progress.unlocked)
                     .collect();
-                self.render_achievement_list(f, area, "達成済み", unlocked);
+                self.render_achievement_list(
+                    f,
+                    area,
+                    crate::i18n::t("block.unlocked", lang),
+                    unlocked,
+                );
             }
             _ => {}
         }
@@ -2739,7 +2809,7 @@ impl App {
 
     fn render_stats_rarity(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
-        let block = focused_block("レアリティ");
+        let block = focused_block(crate::i18n::t("block.rarity", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -2830,7 +2900,7 @@ impl App {
     }
 
     fn render_stats_category(&self, f: &mut Frame<'_>, area: Rect) {
-        let block = focused_block("カテゴリ");
+        let block = focused_block(crate::i18n::t("block.category", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -2881,7 +2951,7 @@ impl App {
 
     fn render_stats_timeline(&self, f: &mut Frame<'_>, area: Rect) {
         let player = &self.game_state.player;
-        let block = focused_block("時系列");
+        let block = focused_block(crate::i18n::t("block.timeline", self.game_state.language));
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -2975,7 +3045,10 @@ impl App {
             self.game_state.synthesis_manager.discovered_count(),
             self.game_state.synthesis_manager.total_recipe_count()
         ))
-        .block(focused_block("合成実行"))
+        .block(focused_block(crate::i18n::t(
+            "block.synthesize",
+            self.game_state.language,
+        )))
         .style(Style::default().fg(COLOR_RARE));
         f.render_widget(header, chunks[0]);
 
@@ -3237,7 +3310,10 @@ impl App {
             })
             .collect();
 
-        let list = List::new(items).block(focused_block("レシピ一覧"));
+        let list = List::new(items).block(focused_block(crate::i18n::t(
+            "block.recipes",
+            self.game_state.language,
+        )));
         f.render_widget(list, area);
     }
 
