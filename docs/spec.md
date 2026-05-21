@@ -360,7 +360,7 @@ Level N → N+1 XP requirement uses a **non-linear "cliffhanger" table** (Issue 
 
 ## TUI Layout
 
-5 tabs, switched via Tab key or number keys 1-5.
+6 tabs, switched via Tab key or number keys 1-6.
 
 Each tab now uses a 3-layer layout:
 
@@ -540,16 +540,42 @@ Right pane behavior:
   `SynthesisManager::success_probability_for_recipe(&recipe)` がロジック層で確定し、
   UI 層は値を整形するだけ。
 
+### Tab 6: Settings
+
+Left pane sections:
+- Language
+
+Right pane behavior:
+- Language: shows the current UI language with the active choice highlighted.
+  `←/→` toggle between `En` (canonical, default) and `Ja`. The change is
+  persisted immediately — `toggle_language` sets `save_request` and the main
+  loop consumes it on the next tick to invoke `SaveManager::save`.
+
+### Curion display-name formatting (Issue #63)
+
+`App::display_curion_name` renders a curion uniformly across the Dashboard,
+Collection, Synthesis toasts and lifespan warnings. The format depends on
+the active `Language`:
+
+- `Language::Ja` → `{Category-Ja} の {noun}` (legacy format, identical to
+  `Curion::display_name`). Example: `動物 の 犬`.
+- `Language::En` → `{english} ({Category-En})`, where `{english}` is looked
+  up via `NounDatabase::english_for(noun)`. Example: `dog (Animal)`.
+- `Language::En` with no English entry in the noun database (e.g.
+  synthesis-only nouns) → `{noun} ({Category-En})`. Example:
+  `蒸気 (Phenomenon)`.
+
 ## Key Bindings
 
 ### Global
 | Key | Action |
 |---|---|
-| Tab / 1-5 | Switch tabs |
+| Tab / 1-6 | Switch tabs |
 | q / Esc | Quit |
 | ? | Help |
 | j / k | Move selection in the left pane |
 | Up / Down | Scroll or select inside the right pane |
+| ←/→ | Toggle language (Settings tab only) |
 
 ### Dashboard
 | Key | Action |

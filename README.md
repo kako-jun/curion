@@ -28,7 +28,8 @@ No ads, no microtransactions, no internet required. Just one more spin.
 - **GUID-based deterministic generation** — each GUID maps to a specific curion via SHA-256 hashing; same GUID always yields the same result
 - **268 collectible nouns** across 9 categories (Animal, Plant, Color, Object, Concept, Element, Food, Phenomenon, Abstract), each with SF flavor text (#22)
 - **4-tier rarity system** — Common, Rare, Epic, Legendary
-- **5-tab TUI** built with ratatui — Dashboard, Collection, Achievements, Stats, Synthesis
+- **6-tab TUI** built with ratatui — Dashboard, Collection, Achievements, Stats, Synthesis, Settings
+- **Language switch (En / Ja)** — open the Settings tab and press `←/→` to toggle the UI language; the change is saved immediately (Issue #63 Phase 1)
 - **Three-pane navigation** — tab bar + left section list + right content pane, aligned with the future PWA information architecture
 - **Nostr identity** — each player gets a keypair for future decentralized trading
 - **Auto-save** every 60 seconds, manual save with `s`
@@ -113,7 +114,7 @@ You can also press `Space` to spend a GUID immediately instead of waiting for th
 ## Gameplay
 
 ```
-┌─ Dashboard / Collection / Achievements / Stats / Synthesis ─────┐
+┌─ Dashboard / Collection / Achievements / Stats / Synthesis / Settings ─┐
 ├─ Overview / Login / Daily ─┬─ Right pane content ───────────────┤
 │ > Overview                 │ Next GUID in: 18s                  │
 │   Login Bonus              │ [████████████████░░░░░░] 40%       │
@@ -128,11 +129,12 @@ You can also press `Space` to spend a GUID immediately instead of waiting for th
 
 | Key | Action |
 |---|---|
-| `1`-`5` | Switch to tab (Dashboard / Collection / Achievements / Stats / Synthesis) |
+| `1`-`6` | Switch to tab (Dashboard / Collection / Achievements / Stats / Synthesis / Settings) |
 | `Tab` | Next tab |
 | `Space` | Generate a curion now (spends the current GUID) |
 | `j` / `k` | Move between left-pane sections |
 | `Up` / `Down` | Scroll or select inside the right pane |
+| `←` / `→` | Toggle language on the Settings tab (En / Ja) |
 | `Enter` | Claim achievement reward / Select synthesis ingredient |
 | `Esc` | Cancel synthesis selection / Quit |
 | `s` | Manual save |
