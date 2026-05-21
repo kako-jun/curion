@@ -4,174 +4,199 @@
     "reading": "あか",
     "english": "red",
     "weight": 1.0,
-    "flavor": "情熱と血潮を象徴する、最も原初的な興味の粒子。心拍数を上げる根源の輝き。"
+    "flavor": "情熱と血潮を象徴する、最も原初的な興味の粒子。心拍数を上げる根源の輝き。",
+    "flavor_en": "The most primal particle of curiosity, symbolizing passion and lifeblood. A primordial radiance that quickens the heartbeat."
   },
   {
     "name": "青",
     "reading": "あお",
     "english": "blue",
     "weight": 1.0,
-    "flavor": "海と空を映す、無限と冷静さの興味を宿す粒子。深さは見る者の心を試す。"
+    "flavor": "海と空を映す、無限と冷静さの興味を宿す粒子。深さは見る者の心を試す。",
+    "flavor_en": "A particle reflecting sea and sky, harboring the curiosity of infinity and composure. Its depth tests the heart of the observer."
   },
   {
     "name": "緑",
     "reading": "みどり",
     "english": "green",
     "weight": 1.0,
-    "flavor": "生命と循環の興味を司る、安らぎの粒子。視界に入るだけで脳が呼吸を整える。"
+    "flavor": "生命と循環の興味を司る、安らぎの粒子。視界に入るだけで脳が呼吸を整える。",
+    "flavor_en": "A particle of tranquility presiding over the curiosity of life and cycle. Its mere presence in sight steadies the breath of the mind."
   },
   {
     "name": "黄",
     "reading": "き",
     "english": "yellow",
     "weight": 1.0,
-    "flavor": "光と注意を呼び寄せる、警戒と歓喜の興味の粒子。世界を一瞬で明るく塗り替える。"
+    "flavor": "光と注意を呼び寄せる、警戒と歓喜の興味の粒子。世界を一瞬で明るく塗り替える。",
+    "flavor_en": "A particle of curiosity summoning light and attention, alert and jubilant. It repaints the world bright in an instant."
   },
   {
     "name": "紫",
     "reading": "むらさき",
     "english": "purple",
     "weight": 1.0,
-    "flavor": "高貴と神秘の境界に佇む、内省的な興味の粒子。古代では王だけが纏えた色。"
+    "flavor": "高貴と神秘の境界に佇む、内省的な興味の粒子。古代では王だけが纏えた色。",
+    "flavor_en": "An introspective particle of curiosity dwelling at the border of nobility and mystery. A hue once worn by kings alone."
   },
   {
     "name": "橙",
     "reading": "だいだい",
     "english": "orange",
     "weight": 1.0,
-    "flavor": "夕焼けと果実を兼ねた、温かな興味の粒子。境界の時間に最も濃く立ち昇る。"
+    "flavor": "夕焼けと果実を兼ねた、温かな興味の粒子。境界の時間に最も濃く立ち昇る。",
+    "flavor_en": "A warm particle of curiosity, both sunset and fruit. It rises most thickly in the threshold hours."
   },
   {
     "name": "桃",
     "reading": "もも",
     "english": "pink",
     "weight": 1.0,
-    "flavor": "やわらかな朝の光をまとう、優しい興味の粒子。心を解きほぐす最初の挨拶。"
+    "flavor": "やわらかな朝の光をまとう、優しい興味の粒子。心を解きほぐす最初の挨拶。",
+    "flavor_en": "A gentle particle of curiosity clothed in the soft light of morning. The first greeting that loosens the heart."
   },
   {
     "name": "水",
     "reading": "みず",
     "english": "cyan",
     "weight": 1.0,
-    "flavor": "透き通る空気のような、清涼な興味の粒子。視線が抜けていく軽さを携える。"
+    "flavor": "透き通る空気のような、清涼な興味の粒子。視線が抜けていく軽さを携える。",
+    "flavor_en": "A cool, clear particle of curiosity, like translucent air. It carries the lightness through which the gaze passes unhindered."
   },
   {
     "name": "紺",
     "reading": "こん",
     "english": "navy",
     "weight": 1.0,
-    "flavor": "夜明け前の深さを宿す、静謐な興味の粒子。船乗りを導いてきた航海の色。"
+    "flavor": "夜明け前の深さを宿す、静謐な興味の粒子。船乗りを導いてきた航海の色。",
+    "flavor_en": "A serene particle of curiosity holding the depth of pre-dawn. The voyaging hue that has guided sailors through the ages."
   },
   {
     "name": "茶",
     "reading": "ちゃ",
     "english": "brown",
     "weight": 1.0,
-    "flavor": "大地と樹皮を映す、安定の興味を宿す粒子。生活の身近さを丁寧に色づける。"
+    "flavor": "大地と樹皮を映す、安定の興味を宿す粒子。生活の身近さを丁寧に色づける。",
+    "flavor_en": "A particle of steady curiosity mirroring earth and bark. It tints the nearness of daily life with quiet care."
   },
   {
     "name": "灰",
     "reading": "はい",
     "english": "gray",
     "weight": 1.0,
-    "flavor": "黒と白の間で揺らぐ、中庸な興味の粒子。沈黙にも雄弁にもなれる柔軟さを持つ。"
+    "flavor": "黒と白の間で揺らぐ、中庸な興味の粒子。沈黙にも雄弁にもなれる柔軟さを持つ。",
+    "flavor_en": "A temperate particle of curiosity wavering between black and white. It holds the suppleness to be silent or eloquent at will."
   },
   {
     "name": "銀",
     "reading": "ぎん",
     "english": "silver",
     "weight": 0.5,
-    "flavor": "月の光を写し取る、冷ややかな興味の粒子。時間を経るほど落ち着いた風格を増す。"
+    "flavor": "月の光を写し取る、冷ややかな興味の粒子。時間を経るほど落ち着いた風格を増す。",
+    "flavor_en": "A cool particle of curiosity that transcribes the light of the moon. The longer time passes, the deeper its quiet dignity grows."
   },
   {
     "name": "金",
     "reading": "きん",
     "english": "gold",
     "weight": 0.3,
-    "flavor": "永遠を象徴する、栄華の興味を宿した粒子。錆びぬ輝きが価値そのものを定義する。"
+    "flavor": "永遠を象徴する、栄華の興味を宿した粒子。錆びぬ輝きが価値そのものを定義する。",
+    "flavor_en": "A particle harboring the curiosity of splendor, symbol of eternity. Its untarnished radiance defines the very meaning of value."
   },
   {
     "name": "白",
     "reading": "しろ",
     "english": "white",
     "weight": 1.0,
-    "flavor": "全ての色を包含する、純粋な興味の粒子。始まりにも終わりにも宿る神聖な色。"
+    "flavor": "全ての色を包含する、純粋な興味の粒子。始まりにも終わりにも宿る神聖な色。",
+    "flavor_en": "A pure particle of curiosity that contains all colors within. A sacred hue dwelling in both the beginning and the end."
   },
   {
     "name": "黒",
     "reading": "くろ",
     "english": "black",
     "weight": 1.0,
-    "flavor": "全ての色を吸い込む、深淵の興味を宿す粒子。闇は無ではなく可能性の容器だ。"
+    "flavor": "全ての色を吸い込む、深淵の興味を宿す粒子。闇は無ではなく可能性の容器だ。",
+    "flavor_en": "A particle of abyssal curiosity that drinks in all colors. Darkness is not absence, but a vessel of possibility."
   },
   {
     "name": "藍",
     "reading": "あい",
     "english": "indigo",
     "weight": 0.8,
-    "flavor": "夜と海の境界を染める、深い興味の粒子。日本の青を象徴する伝統の彩り。"
+    "flavor": "夜と海の境界を染める、深い興味の粒子。日本の青を象徴する伝統の彩り。",
+    "flavor_en": "A deep particle of curiosity that dyes the border of night and sea. The traditional hue that embodies the blue of Japan."
   },
   {
     "name": "朱",
     "reading": "しゅ",
     "english": "vermilion",
     "weight": 0.7,
-    "flavor": "鳥居と魔除けに用いられた、霊力の興味を宿す粒子。境界線を引き直す赤の聖。"
+    "flavor": "鳥居と魔除けに用いられた、霊力の興味を宿す粒子。境界線を引き直す赤の聖。",
+    "flavor_en": "A particle of spiritual curiosity, used in torii gates and wards against evil. A sacred red that redraws the lines of boundary."
   },
   {
     "name": "翠",
     "reading": "みどり",
     "english": "jade green",
     "weight": 0.6,
-    "flavor": "翡翠のような清冽な緑、希望の興味を宿す粒子。雨後の若葉に最も近い色合い。"
+    "flavor": "翡翠のような清冽な緑、希望の興味を宿す粒子。雨後の若葉に最も近い色合い。",
+    "flavor_en": "A clear, jade-bright green particle harboring the curiosity of hope. The hue nearest to young leaves after the rain."
   },
   {
     "name": "碧",
     "reading": "へき",
     "english": "azure",
     "weight": 0.5,
-    "flavor": "深い海と空に共通する、悠久の興味を宿す粒子。眺めるたびに視野が広がっていく。"
+    "flavor": "深い海と空に共通する、悠久の興味を宿す粒子。眺めるたびに視野が広がっていく。",
+    "flavor_en": "A particle of timeless curiosity, shared by the deep sea and the sky. With every gaze, one's field of vision expands."
   },
   {
     "name": "琥珀",
     "reading": "こはく",
     "english": "amber",
     "weight": 0.4,
-    "flavor": "樹液が時間を閉じ込めた、記憶の興味を宿す粒子。古代の生命を内側に封じる。"
+    "flavor": "樹液が時間を閉じ込めた、記憶の興味を宿す粒子。古代の生命を内側に封じる。",
+    "flavor_en": "A particle of remembering curiosity, where sap has sealed time within. Ancient lives are preserved inside its glow."
   },
   {
     "name": "珊瑚",
     "reading": "さんご",
     "english": "coral",
     "weight": 0.5,
-    "flavor": "海中の宝石としてゆっくり育つ、生きた興味の粒子。生命と装飾の境界に咲く。"
+    "flavor": "海中の宝石としてゆっくり育つ、生きた興味の粒子。生命と装飾の境界に咲く。",
+    "flavor_en": "A living particle of curiosity, slowly grown as the jewel of the sea. It blossoms on the border of life and adornment."
   },
   {
     "name": "薄紅",
     "reading": "うすべに",
     "english": "light pink",
     "weight": 0.8,
-    "flavor": "頬を染める最初の温度を持つ、初々しい興味の粒子。心の鼓動を写し取る色。"
+    "flavor": "頬を染める最初の温度を持つ、初々しい興味の粒子。心の鼓動を写し取る色。",
+    "flavor_en": "A fresh particle of curiosity bearing the first warmth that tints the cheek. A hue that transcribes the pulse of the heart."
   },
   {
     "name": "深緑",
     "reading": "ふかみどり",
     "english": "deep green",
     "weight": 0.9,
-    "flavor": "原生林の奥に潜む、重厚な興味の粒子。時間の蓄積が緑をここまで暗くしていく。"
+    "flavor": "原生林の奥に潜む、重厚な興味の粒子。時間の蓄積が緑をここまで暗くしていく。",
+    "flavor_en": "A weighty particle of curiosity lurking in the depths of primeval forest. Only the accumulation of time can darken green this far."
   },
   {
     "name": "群青",
     "reading": "ぐんじょう",
     "english": "ultramarine",
     "weight": 0.7,
-    "flavor": "祈りと夜空を結ぶ、神聖な興味の粒子。曼荼羅にも空にも宿る至高の青。"
+    "flavor": "祈りと夜空を結ぶ、神聖な興味の粒子。曼荼羅にも空にも宿る至高の青。",
+    "flavor_en": "A sacred particle of curiosity binding prayer and the night sky. The supreme blue that dwells in both mandala and heavens."
   },
   {
     "name": "牡丹色",
     "reading": "ぼたんいろ",
     "english": "peony color",
     "weight": 0.6,
-    "flavor": "華やかさを極めた紅、豪奢な興味の粒子。和服の主役にふさわしい王の色。"
+    "flavor": "華やかさを極めた紅、豪奢な興味の粒子。和服の主役にふさわしい王の色。",
+    "flavor_en": "An opulent particle of curiosity, a crimson at the summit of splendor. A regal hue worthy of being the centerpiece of kimono."
   }
 ]

@@ -4,461 +4,527 @@
     "reading": "さかな",
     "english": "fish",
     "weight": 1.0,
-    "flavor": "興味の海を泳ぐ、最も基本的な粒子。誰もが一度は惹かれる、普遍的な輝きを持つ。"
+    "flavor": "興味の海を泳ぐ、最も基本的な粒子。誰もが一度は惹かれる、普遍的な輝きを持つ。",
+    "flavor_en": "Swimming through the sea of curiosity, the most fundamental particle. Drawing everyone in at least once, with universal radiance."
   },
   {
     "name": "猫",
     "reading": "ねこ",
     "english": "cat",
     "weight": 1.0,
-    "flavor": "気まぐれな興味の化身。観測者の視線を、独立した軌道で躱す不思議な粒子。"
+    "flavor": "気まぐれな興味の化身。観測者の視線を、独立した軌道で躱す不思議な粒子。",
+    "flavor_en": "An incarnation of capricious interest. A mysterious particle that dodges the observer's gaze on its own independent orbit."
   },
   {
     "name": "犬",
     "reading": "いぬ",
     "english": "dog",
     "weight": 1.0,
-    "flavor": "忠実な興味を結晶化した粒子。離れていても主の心に共鳴し続ける。"
+    "flavor": "忠実な興味を結晶化した粒子。離れていても主の心に共鳴し続ける。",
+    "flavor_en": "A particle that crystallizes faithful interest. Resonating with its master's heart even from afar."
   },
   {
     "name": "鳥",
     "reading": "とり",
     "english": "bird",
     "weight": 1.0,
-    "flavor": "自由を意味する興味の翼。空という未踏領域へ意識を運ぶ伝令の粒子。"
+    "flavor": "自由を意味する興味の翼。空という未踏領域へ意識を運ぶ伝令の粒子。",
+    "flavor_en": "Wings of interest signifying freedom. A messenger particle that carries consciousness into the uncharted realm of the sky."
   },
   {
     "name": "龍",
     "reading": "りゅう",
     "english": "dragon",
     "weight": 0.1,
-    "flavor": "伝説の中毒性を秘めた、幻の粒子。一度見たら忘れられない、圧倒的な存在感を放つ。"
+    "flavor": "伝説の中毒性を秘めた、幻の粒子。一度見たら忘れられない、圧倒的な存在感を放つ。",
+    "flavor_en": "A phantom particle harboring the intoxication of legend. Once observed, never forgotten, radiating an overwhelming presence."
   },
   {
     "name": "鯨",
     "reading": "くじら",
     "english": "whale",
     "weight": 0.5,
-    "flavor": "海の底に眠る、巨大で穏やかな興味の粒子。深い知性の歌を響かせる。"
+    "flavor": "海の底に眠る、巨大で穏やかな興味の粒子。深い知性の歌を響かせる。",
+    "flavor_en": "A vast and gentle particle of interest slumbering in ocean depths. Resounding with the song of profound intelligence."
   },
   {
     "name": "蝶",
     "reading": "ちょう",
     "english": "butterfly",
     "weight": 1.0,
-    "flavor": "短命だが鮮烈な、変容を司る興味の粒子。儚さこそ美しさだと囁いてくる。"
+    "flavor": "短命だが鮮烈な、変容を司る興味の粒子。儚さこそ美しさだと囁いてくる。",
+    "flavor_en": "A brief yet vivid particle that presides over transformation. Whispering that ephemerality itself is beauty."
   },
   {
     "name": "蜘蛛",
     "reading": "くも",
     "english": "spider",
     "weight": 1.0,
-    "flavor": "見えない網で世界を編む、忍耐の興味を宿した粒子。観測の達人。"
+    "flavor": "見えない網で世界を編む、忍耐の興味を宿した粒子。観測の達人。",
+    "flavor_en": "A particle harboring patient interest, weaving the world with an invisible web. A master of observation."
   },
   {
     "name": "狼",
     "reading": "おおかみ",
     "english": "wolf",
     "weight": 0.7,
-    "flavor": "群れと孤独の両方を背負う、誇り高き興味の粒子。月夜に冴える鋭い精神。"
+    "flavor": "群れと孤独の両方を背負う、誇り高き興味の粒子。月夜に冴える鋭い精神。",
+    "flavor_en": "A proud particle of interest bearing both pack and solitude. A keen spirit sharpened beneath the moonlit night."
   },
   {
     "name": "熊",
     "reading": "くま",
     "english": "bear",
     "weight": 0.8,
-    "flavor": "ゆったりと深い興味を抱える、森の長老のような粒子。冬を越えてなお目覚める。"
+    "flavor": "ゆったりと深い興味を抱える、森の長老のような粒子。冬を越えてなお目覚める。",
+    "flavor_en": "A particle harboring leisurely, profound interest, like an elder of the forest. Awakening still after enduring winter."
   },
   {
     "name": "兎",
     "reading": "うさぎ",
     "english": "rabbit",
     "weight": 1.0,
-    "flavor": "跳ねるように湧き上がる、軽やかな興味の粒子。月の影を駆ける夢の住人。"
+    "flavor": "跳ねるように湧き上がる、軽やかな興味の粒子。月の影を駆ける夢の住人。",
+    "flavor_en": "A nimble particle of interest that springs up in leaps. A dweller of dreams that races across the lunar shadow."
   },
   {
     "name": "鹿",
     "reading": "しか",
     "english": "deer",
     "weight": 0.9,
-    "flavor": "静謐な森に生まれる、繊細で気品ある興味の粒子。視線が交わるだけで心が澄む。"
+    "flavor": "静謐な森に生まれる、繊細で気品ある興味の粒子。視線が交わるだけで心が澄む。",
+    "flavor_en": "A delicate, dignified particle of interest born in tranquil forests. The mere meeting of gazes brings clarity to the heart."
   },
   {
     "name": "虎",
     "reading": "とら",
     "english": "tiger",
     "weight": 0.5,
-    "flavor": "燃え盛る縞模様の、獰猛な興味を宿す粒子。一閃の集中が世界を切り裂く。"
+    "flavor": "燃え盛る縞模様の、獰猛な興味を宿す粒子。一閃の集中が世界を切り裂く。",
+    "flavor_en": "A particle harboring ferocious interest in blazing stripes. A single flash of focus cleaves through the world."
   },
   {
     "name": "象",
     "reading": "ぞう",
     "english": "elephant",
     "weight": 0.6,
-    "flavor": "巨大な記憶と緩やかな興味を運ぶ、大地に近しい粒子。決して忘れない瞳を持つ。"
+    "flavor": "巨大な記憶と緩やかな興味を運ぶ、大地に近しい粒子。決して忘れない瞳を持つ。",
+    "flavor_en": "A particle close to the earth, carrying vast memory and gentle interest. Bearing eyes that never forget."
   },
   {
     "name": "猿",
     "reading": "さる",
     "english": "monkey",
     "weight": 1.0,
-    "flavor": "好奇心そのものを擬人化したような、跳躍的な興味の粒子。世界に手を伸ばし続ける。"
+    "flavor": "好奇心そのものを擬人化したような、跳躍的な興味の粒子。世界に手を伸ばし続ける。",
+    "flavor_en": "A leaping particle of interest, as though curiosity itself were personified. Forever reaching out toward the world."
   },
   {
     "name": "馬",
     "reading": "うま",
     "english": "horse",
     "weight": 1.0,
-    "flavor": "風と並走する、疾駆する興味の粒子。蹄の音が新たな地平を切り開いていく。"
+    "flavor": "風と並走する、疾駆する興味の粒子。蹄の音が新たな地平を切り開いていく。",
+    "flavor_en": "A galloping particle of interest, running alongside the wind. The sound of hooves opens new horizons."
   },
   {
     "name": "蛇",
     "reading": "へび",
     "english": "snake",
     "weight": 1.0,
-    "flavor": "脱皮を繰り返す、再生の興味を司る粒子。冷たく賢く、地を這って真理に近づく。"
+    "flavor": "脱皮を繰り返す、再生の興味を司る粒子。冷たく賢く、地を這って真理に近づく。",
+    "flavor_en": "A particle presiding over the interest of rebirth, shedding skin again and again. Cold and wise, crawling along the earth toward truth."
   },
   {
     "name": "亀",
     "reading": "かめ",
     "english": "turtle",
     "weight": 1.0,
-    "flavor": "悠久の時間に寄り添う、辛抱強い興味の粒子。甲羅に星の数だけの記憶を刻む。"
+    "flavor": "悠久の時間に寄り添う、辛抱強い興味の粒子。甲羅に星の数だけの記憶を刻む。",
+    "flavor_en": "A patient particle of interest that abides with eternal time. Engraving as many memories as there are stars upon its shell."
   },
   {
     "name": "蛙",
     "reading": "かえる",
     "english": "frog",
     "weight": 1.0,
-    "flavor": "水と陸の境界に佇む、変態を象徴する興味の粒子。雨が降ると心が躍る。"
+    "flavor": "水と陸の境界に佇む、変態を象徴する興味の粒子。雨が降ると心が躍る。",
+    "flavor_en": "A particle of interest standing at the boundary of water and land, symbolizing metamorphosis. When the rain falls, its heart dances."
   },
   {
     "name": "鷲",
     "reading": "わし",
     "english": "eagle",
     "weight": 0.6,
-    "flavor": "高所から世界を俯瞰する、鋭利な興味の粒子。視野の広さが見識を磨いていく。"
+    "flavor": "高所から世界を俯瞰する、鋭利な興味の粒子。視野の広さが見識を磨いていく。",
+    "flavor_en": "A keen particle of interest that surveys the world from on high. The breadth of its vision hones its insight."
   },
   {
     "name": "鶴",
     "reading": "つる",
     "english": "crane",
     "weight": 0.7,
-    "flavor": "千年を生きるとされる、優雅さを宿した興味の粒子。羽ばたきが祝祭を運んでくる。"
+    "flavor": "千年を生きるとされる、優雅さを宿した興味の粒子。羽ばたきが祝祭を運んでくる。",
+    "flavor_en": "A particle of interest harboring elegance, said to live a thousand years. Its wingbeats bring forth celebration."
   },
   {
     "name": "狐",
     "reading": "きつね",
     "english": "fox",
     "weight": 0.9,
-    "flavor": "知恵と幻惑を兼ね備えた、悪戯好きな興味の粒子。真贋を見抜く瞳を持っている。"
+    "flavor": "知恵と幻惑を兼ね備えた、悪戯好きな興味の粒子。真贋を見抜く瞳を持っている。",
+    "flavor_en": "A mischievous particle of interest possessing both wisdom and illusion. Bearing eyes that discern the true from the false."
   },
   {
     "name": "狸",
     "reading": "たぬき",
     "english": "raccoon dog",
     "weight": 1.0,
-    "flavor": "化けることで真実を語る、ユーモラスな興味の粒子。腹鼓で世界の堅さを和らげる。"
+    "flavor": "化けることで真実を語る、ユーモラスな興味の粒子。腹鼓で世界の堅さを和らげる。",
+    "flavor_en": "A humorous particle of interest that speaks truth through transformation. Its belly-drum softens the rigidity of the world."
   },
   {
     "name": "鼠",
     "reading": "ねずみ",
     "english": "mouse",
     "weight": 1.0,
-    "flavor": "暗がりにこそ宿る、機敏な興味の粒子。隅々を駆け抜けては小さな発見を持ち帰る。"
+    "flavor": "暗がりにこそ宿る、機敏な興味の粒子。隅々を駆け抜けては小さな発見を持ち帰る。",
+    "flavor_en": "A nimble particle of interest that dwells precisely in the shadows. Racing through every corner, returning with small discoveries."
   },
   {
     "name": "蝙蝠",
     "reading": "こうもり",
     "english": "bat",
     "weight": 0.8,
-    "flavor": "光ではなく音で世界を識る、逆説的な興味の粒子。闇に響く声が地図を描く。"
+    "flavor": "光ではなく音で世界を識る、逆説的な興味の粒子。闇に響く声が地図を描く。",
+    "flavor_en": "A paradoxical particle of interest that perceives the world through sound rather than light. Voices echoing in darkness sketch the map."
   },
   {
     "name": "蝸牛",
     "reading": "かたつむり",
     "english": "snail",
     "weight": 1.0,
-    "flavor": "螺旋を背負い、緩慢に進む静かな興味の粒子。急がぬことこそ深さだと示してくれる。"
+    "flavor": "螺旋を背負い、緩慢に進む静かな興味の粒子。急がぬことこそ深さだと示してくれる。",
+    "flavor_en": "A quiet particle of interest advancing slowly, bearing a spiral upon its back. It shows us that depth lies in not hastening."
   },
   {
     "name": "蟻",
     "reading": "あり",
     "english": "ant",
     "weight": 1.0,
-    "flavor": "群体として知性を発揮する、勤勉な興味の粒子。一粒一粒が巨大な意志を形作る。"
+    "flavor": "群体として知性を発揮する、勤勉な興味の粒子。一粒一粒が巨大な意志を形作る。",
+    "flavor_en": "A diligent particle of interest that manifests intelligence as a colony. Each single grain forms a vast collective will."
   },
   {
     "name": "蜂",
     "reading": "はち",
     "english": "bee",
     "weight": 1.0,
-    "flavor": "甘さの探究者にして、規律ある興味の粒子。六角形の宇宙に未来を蓄えていく。"
+    "flavor": "甘さの探究者にして、規律ある興味の粒子。六角形の宇宙に未来を蓄えていく。",
+    "flavor_en": "A seeker of sweetness and a disciplined particle of interest. Storing the future within a hexagonal cosmos."
   },
   {
     "name": "蚊",
     "reading": "か",
     "english": "mosquito",
     "weight": 1.0,
-    "flavor": "些細だが鋭利な、執拗な興味の粒子。夜の静けさを破り、生の血脈を意識させる。"
+    "flavor": "些細だが鋭利な、執拗な興味の粒子。夜の静けさを破り、生の血脈を意識させる。",
+    "flavor_en": "A trivial yet sharp, persistent particle of interest. Breaking the silence of night, making one conscious of the pulse of life."
   },
   {
     "name": "鳳凰",
     "reading": "ほうおう",
     "english": "phoenix",
     "weight": 0.05,
-    "flavor": "灰から蘇る、再生の伝説を背負った稀少な粒子。出会えた者は新生の予兆を見る。"
+    "flavor": "灰から蘇る、再生の伝説を背負った稀少な粒子。出会えた者は新生の予兆を見る。",
+    "flavor_en": "A rare particle bearing the legend of rebirth, resurrected from ashes. Those who encounter it glimpse an omen of renewal."
   },
   {
     "name": "麒麟",
     "reading": "きりん",
     "english": "kirin",
     "weight": 0.08,
-    "flavor": "聖王の到来を告げる、瑞兆そのものの粒子。蹄は虫すらも踏まないと言われる。"
+    "flavor": "聖王の到来を告げる、瑞兆そのものの粒子。蹄は虫すらも踏まないと言われる。",
+    "flavor_en": "A particle that is an auspicious omen itself, heralding the arrival of a sage ruler. Its hooves are said to tread upon not even an insect."
   },
   {
     "name": "鯉",
     "reading": "こい",
     "english": "carp",
     "weight": 0.9,
-    "flavor": "滝を昇って龍となる伝承を抱く、向上心の粒子。波紋ひとつが運命を変えていく。"
+    "flavor": "滝を昇って龍となる伝承を抱く、向上心の粒子。波紋ひとつが運命を変えていく。",
+    "flavor_en": "A particle of aspiration embracing the legend of ascending the waterfall to become a dragon. A single ripple alters fate."
   },
   {
     "name": "鮫",
     "reading": "さめ",
     "english": "shark",
     "weight": 0.6,
-    "flavor": "止まれば沈む宿命を背負う、前進の興味を持つ粒子。鋭い嗅覚が真実を嗅ぎ分ける。"
+    "flavor": "止まれば沈む宿命を背負う、前進の興味を持つ粒子。鋭い嗅覚が真実を嗅ぎ分ける。",
+    "flavor_en": "A particle of forward-moving interest bearing the fate of sinking if it halts. Its sharp sense discerns the scent of truth."
   },
   {
     "name": "海豚",
     "reading": "いるか",
     "english": "dolphin",
     "weight": 0.7,
-    "flavor": "海中で歌い合う、社交的で知性に満ちた興味の粒子。波間に笑い声が響く。"
+    "flavor": "海中で歌い合う、社交的で知性に満ちた興味の粒子。波間に笑い声が響く。",
+    "flavor_en": "A sociable particle of interest filled with intelligence, singing to one another beneath the waves. Laughter resounds between the swells."
   },
   {
     "name": "章魚",
     "reading": "たこ",
     "english": "octopus",
     "weight": 0.8,
-    "flavor": "八本の腕で世界に触れる、好奇心の塊のような粒子。色を変えて感情を語る。"
+    "flavor": "八本の腕で世界に触れる、好奇心の塊のような粒子。色を変えて感情を語る。",
+    "flavor_en": "A particle like a cluster of curiosity, touching the world with eight arms. Speaking its emotions through changing colors."
   },
   {
     "name": "烏賊",
     "reading": "いか",
     "english": "squid",
     "weight": 0.8,
-    "flavor": "墨で輪郭を消す、戦略的な興味を宿す粒子。深海の暗闇に思考を漂わせる。"
+    "flavor": "墨で輪郭を消す、戦略的な興味を宿す粒子。深海の暗闇に思考を漂わせる。",
+    "flavor_en": "A particle harboring strategic interest, erasing its outline with ink. Letting its thoughts drift through the darkness of the deep sea."
   },
   {
     "name": "海月",
     "reading": "くらげ",
     "english": "jellyfish",
     "weight": 1.0,
-    "flavor": "形を持たぬまま漂う、透明な興味の粒子。生死の境すらやわらかく溶かしてしまう。"
+    "flavor": "形を持たぬまま漂う、透明な興味の粒子。生死の境すらやわらかく溶かしてしまう。",
+    "flavor_en": "A transparent particle of interest, drifting without form. Even the boundary between life and death is softly dissolved."
   },
   {
     "name": "海星",
     "reading": "ひとで",
     "english": "starfish",
     "weight": 1.0,
-    "flavor": "五芒の腕で海底を歩む、星座のような興味の粒子。ゆっくりと再生する忍耐の輝き。"
+    "flavor": "五芒の腕で海底を歩む、星座のような興味の粒子。ゆっくりと再生する忍耐の輝き。",
+    "flavor_en": "A constellation-like particle of interest, walking the seabed with five-pointed arms. A patient radiance that slowly regenerates."
   },
   {
     "name": "獅子",
     "reading": "しし",
     "english": "lion",
     "weight": 0.5,
-    "flavor": "百獣の王として君臨する、誇り高き興味の粒子。咆哮ひとつで群衆の心を統べる。"
+    "flavor": "百獣の王として君臨する、誇り高き興味の粒子。咆哮ひとつで群衆の心を統べる。",
+    "flavor_en": "A proud particle of interest that reigns as king of all beasts. A single roar governs the hearts of the multitude."
   },
   {
     "name": "豹",
     "reading": "ひょう",
     "english": "leopard",
     "weight": 0.6,
-    "flavor": "音もなく忍び寄る、研ぎ澄まされた興味の粒子。斑模様に世界の影を宿す。"
+    "flavor": "音もなく忍び寄る、研ぎ澄まされた興味の粒子。斑模様に世界の影を宿す。",
+    "flavor_en": "A honed particle of interest that creeps near without sound. The shadows of the world reside within its spotted pattern."
   },
   {
     "name": "豚",
     "reading": "ぶた",
     "english": "pig",
     "weight": 1.0,
-    "flavor": "豊かさと愛嬌を併せ持つ、丸みのある興味の粒子。賢さを愚かさで覆い隠す名手。"
+    "flavor": "豊かさと愛嬌を併せ持つ、丸みのある興味の粒子。賢さを愚かさで覆い隠す名手。",
+    "flavor_en": "A rounded particle of interest possessing both abundance and charm. A master at concealing wisdom beneath folly."
   },
   {
     "name": "牛",
     "reading": "うし",
     "english": "cow",
     "weight": 1.0,
-    "flavor": "大地を耕し続けてきた、忠実で力強い興味の粒子。咀嚼するように真理を反芻する。"
+    "flavor": "大地を耕し続けてきた、忠実で力強い興味の粒子。咀嚼するように真理を反芻する。",
+    "flavor_en": "A faithful and powerful particle of interest that has long tilled the earth. Ruminating upon truth as though chewing."
   },
   {
     "name": "羊",
     "reading": "ひつじ",
     "english": "sheep",
     "weight": 1.0,
-    "flavor": "群れに寄り添う、柔らかな興味の粒子。眠りの数を数えるたび世界が静かになる。"
+    "flavor": "群れに寄り添う、柔らかな興味の粒子。眠りの数を数えるたび世界が静かになる。",
+    "flavor_en": "A soft particle of interest that nestles within the flock. With each count of sleep, the world grows still."
   },
   {
     "name": "山羊",
     "reading": "やぎ",
     "english": "goat",
     "weight": 1.0,
-    "flavor": "崖を平然と歩む、孤高で気高い興味の粒子。瞳の横長い瞳孔は別世界を映す。"
+    "flavor": "崖を平然と歩む、孤高で気高い興味の粒子。瞳の横長い瞳孔は別世界を映す。",
+    "flavor_en": "A solitary and noble particle of interest that walks the cliffs with composure. Its horizontal pupils reflect another world."
   },
   {
     "name": "駱駝",
     "reading": "らくだ",
     "english": "camel",
     "weight": 0.7,
-    "flavor": "砂漠を渡る、忍耐そのもののような興味の粒子。背の瘤に未来の水を蓄えている。"
+    "flavor": "砂漠を渡る、忍耐そのもののような興味の粒子。背の瘤に未来の水を蓄えている。",
+    "flavor_en": "A particle of interest like patience itself, traversing the desert. Storing the water of the future within the hump upon its back."
   },
   {
     "name": "河馬",
     "reading": "かば",
     "english": "hippopotamus",
     "weight": 0.6,
-    "flavor": "水中に潜む、巨大で静かな興味の粒子。穏やかに見えて怒らせれば嵐を呼ぶ。"
+    "flavor": "水中に潜む、巨大で静かな興味の粒子。穏やかに見えて怒らせれば嵐を呼ぶ。",
+    "flavor_en": "A vast and silent particle of interest lurking beneath the water. Calm in appearance, yet summoning storms when angered."
   },
   {
     "name": "犀",
     "reading": "さい",
     "english": "rhinoceros",
     "weight": 0.5,
-    "flavor": "一本角に伝説を宿す、寡黙な興味の粒子。突進すれば常識すら砕けてしまう。"
+    "flavor": "一本角に伝説を宿す、寡黙な興味の粒子。突進すれば常識すら砕けてしまう。",
+    "flavor_en": "A taciturn particle of interest harboring legend within a single horn. When it charges, even common sense is shattered."
   },
   {
     "name": "鳩",
     "reading": "はと",
     "english": "pigeon",
     "weight": 1.0,
-    "flavor": "平和の象徴として宙を舞う、慎ましい興味の粒子。手紙を運び、距離を縮めていく。"
+    "flavor": "平和の象徴として宙を舞う、慎ましい興味の粒子。手紙を運び、距離を縮めていく。",
+    "flavor_en": "A modest particle of interest that dances through the air as a symbol of peace. Bearing letters, drawing distances closer."
   },
   {
     "name": "雀",
     "reading": "すずめ",
     "english": "sparrow",
     "weight": 1.0,
-    "flavor": "身近に潜む、賑やかな興味の粒子。朝の空気を細やかなさえずりで彩り続ける。"
+    "flavor": "身近に潜む、賑やかな興味の粒子。朝の空気を細やかなさえずりで彩り続ける。",
+    "flavor_en": "A lively particle of interest that lingers close at hand. Forever coloring the morning air with delicate chirping."
   },
   {
     "name": "鴉",
     "reading": "からす",
     "english": "crow",
     "weight": 1.0,
-    "flavor": "賢さの黒衣をまとう、神秘的な興味の粒子。鏡を覗くように自分の姿を理解する。"
+    "flavor": "賢さの黒衣をまとう、神秘的な興味の粒子。鏡を覗くように自分の姿を理解する。",
+    "flavor_en": "A mysterious particle of interest clad in the black robe of wisdom. Understanding its own form as though peering into a mirror."
   },
   {
     "name": "燕",
     "reading": "つばめ",
     "english": "swallow",
     "weight": 1.0,
-    "flavor": "春を運ぶ旅人として現れる、軽快な興味の粒子。軒先に幸福の予兆を巣作る。"
+    "flavor": "春を運ぶ旅人として現れる、軽快な興味の粒子。軒先に幸福の予兆を巣作る。",
+    "flavor_en": "A nimble particle of interest that appears as a traveler bearing spring. Building nests of happy omens beneath the eaves."
   },
   {
     "name": "鸚鵡",
     "reading": "おうむ",
     "english": "parrot",
     "weight": 0.7,
-    "flavor": "言葉を映す、模倣の興味を司る粒子。誰の声でも自分のものに変えてしまう才。"
+    "flavor": "言葉を映す、模倣の興味を司る粒子。誰の声でも自分のものに変えてしまう才。",
+    "flavor_en": "A particle presiding over the interest of mimicry, reflecting words. Possessing the talent to make any voice its own."
   },
   {
     "name": "梟",
     "reading": "ふくろう",
     "english": "owl",
     "weight": 0.8,
-    "flavor": "夜の知恵を司る、静謐な興味の粒子。首を巡らせて見えない世界を観測している。"
+    "flavor": "夜の知恵を司る、静謐な興味の粒子。首を巡らせて見えない世界を観測している。",
+    "flavor_en": "A tranquil particle of interest that presides over the wisdom of night. Turning its head to observe the unseen world."
   },
   {
     "name": "孔雀",
     "reading": "くじゃく",
     "english": "peacock",
     "weight": 0.4,
-    "flavor": "扇のような飾りを広げる、誇示の興味を宿す粒子。美しさは生存の戦略だと教える。"
+    "flavor": "扇のような飾りを広げる、誇示の興味を宿す粒子。美しさは生存の戦略だと教える。",
+    "flavor_en": "A particle harboring the interest of display, spreading its fan-like adornment. Teaching that beauty is a strategy of survival."
   },
   {
     "name": "鴨",
     "reading": "かも",
     "english": "duck",
     "weight": 1.0,
-    "flavor": "水に浮かびつつ足は休まぬ、忍耐の興味を持つ粒子。表面の優雅さの裏に努力あり。"
+    "flavor": "水に浮かびつつ足は休まぬ、忍耐の興味を持つ粒子。表面の優雅さの裏に努力あり。",
+    "flavor_en": "A particle of patient interest whose feet never rest while it floats upon the water. Behind surface grace lies ceaseless effort."
   },
   {
     "name": "白鳥",
     "reading": "はくちょう",
     "english": "swan",
     "weight": 0.6,
-    "flavor": "湖面に映る純白の興味、変身の伝説を抱く粒子。醜さを美に変える物語の主人公。"
+    "flavor": "湖面に映る純白の興味、変身の伝説を抱く粒子。醜さを美に変える物語の主人公。",
+    "flavor_en": "Pure white interest mirrored upon the lake, a particle embracing the legend of transformation. The protagonist of a tale that turns ugliness into beauty."
   },
   {
     "name": "蝉",
     "reading": "せみ",
     "english": "cicada",
     "weight": 1.0,
-    "flavor": "数年の地中生活を経て鳴く、短く濃密な興味の粒子。夏の終わりを告げる声。"
+    "flavor": "数年の地中生活を経て鳴く、短く濃密な興味の粒子。夏の終わりを告げる声。",
+    "flavor_en": "A brief yet dense particle of interest that cries after years beneath the earth. A voice heralding the end of summer."
   },
   {
     "name": "蜻蛉",
     "reading": "とんぼ",
     "english": "dragonfly",
     "weight": 1.0,
-    "flavor": "停空飛行で時間を切り取る、繊細な興味の粒子。複眼が世界の無数の真実を映す。"
+    "flavor": "停空飛行で時間を切り取る、繊細な興味の粒子。複眼が世界の無数の真実を映す。",
+    "flavor_en": "A delicate particle of interest that cuts out time through hovering flight. Compound eyes reflecting innumerable truths of the world."
   },
   {
     "name": "螢",
     "reading": "ほたる",
     "english": "firefly",
     "weight": 0.7,
-    "flavor": "短い夜にだけ灯る、儚くも鮮烈な興味の粒子。光は呼吸のように明滅していく。"
+    "flavor": "短い夜にだけ灯る、儚くも鮮烈な興味の粒子。光は呼吸のように明滅していく。",
+    "flavor_en": "An ephemeral yet vivid particle of interest, kindled only in brief nights. Its light flickers like breathing."
   },
   {
     "name": "蛾",
     "reading": "が",
     "english": "moth",
     "weight": 1.0,
-    "flavor": "光に焼かれることも厭わぬ、執着の興味を宿す粒子。夜の蝶として静かに舞う。"
+    "flavor": "光に焼かれることも厭わぬ、執着の興味を宿す粒子。夜の蝶として静かに舞う。",
+    "flavor_en": "A particle harboring the interest of attachment, unafraid even of being scorched by light. Dancing silently as a butterfly of night."
   },
   {
     "name": "甲虫",
     "reading": "かぶとむし",
     "english": "beetle",
     "weight": 0.8,
-    "flavor": "鎧をまとった、堅実で勇猛な興味の粒子。子どもの宝石箱の常連でもある。"
+    "flavor": "鎧をまとった、堅実で勇猛な興味の粒子。子どもの宝石箱の常連でもある。",
+    "flavor_en": "A steadfast and valiant particle of interest, clad in armor. Also a regular within the jewel boxes of children."
   },
   {
     "name": "蟷螂",
     "reading": "かまきり",
     "english": "mantis",
     "weight": 0.9,
-    "flavor": "祈るような前肢を持つ、冷静な狩人の興味を宿す粒子。捕食すら儀式に変える。"
+    "flavor": "祈るような前肢を持つ、冷静な狩人の興味を宿す粒子。捕食すら儀式に変える。",
+    "flavor_en": "A particle harboring the interest of a composed hunter, bearing forelimbs that seem to pray. Transforming even predation into ritual."
   },
   {
     "name": "蝗",
     "reading": "ばった",
     "english": "grasshopper",
     "weight": 1.0,
-    "flavor": "群れて空を覆う、爆発的な興味の粒子。豊穣と災厄の境界線上を跳び続ける。"
+    "flavor": "群れて空を覆う、爆発的な興味の粒子。豊穣と災厄の境界線上を跳び続ける。",
+    "flavor_en": "An explosive particle of interest that swarms and veils the sky. Forever leaping upon the boundary between abundance and calamity."
   },
   {
     "name": "蠍",
     "reading": "さそり",
     "english": "scorpion",
     "weight": 0.6,
-    "flavor": "尾に毒を秘めた、孤高で防衛的な興味の粒子。星座にもなり夜空を護っている。"
+    "flavor": "尾に毒を秘めた、孤高で防衛的な興味の粒子。星座にもなり夜空を護っている。",
+    "flavor_en": "A solitary and defensive particle of interest, harboring venom in its tail. Becoming a constellation as well, guarding the night sky."
   },
   {
     "name": "蟹",
     "reading": "かに",
     "english": "crab",
     "weight": 1.0,
-    "flavor": "横歩きで世界に挑む、頑なな興味の粒子。鋏は守りであり挨拶でもある。"
+    "flavor": "横歩きで世界に挑む、頑なな興味の粒子。鋏は守りであり挨拶でもある。",
+    "flavor_en": "A stubborn particle of interest that confronts the world with a sideways gait. Its claws are both defense and greeting."
   },
   {
     "name": "海老",
     "reading": "えび",
     "english": "shrimp",
     "weight": 1.0,
-    "flavor": "古から保たれた姿で深海を生きる、長寿の興味を宿す粒子。脱皮で若返り続ける。"
+    "flavor": "古から保たれた姿で深海を生きる、長寿の興味を宿す粒子。脱皮で若返り続ける。",
+    "flavor_en": "A particle harboring the interest of longevity, dwelling in the deep sea in a form preserved since antiquity. Renewing its youth through molting."
   }
 ]
