@@ -20,7 +20,7 @@ mod ui;
 use anyhow::Result;
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -136,9 +136,7 @@ fn run_app<B: ratatui::backend::Backend>(
     save_manager: &SaveManager,
 ) -> Result<()> {
     let tick_rate = Duration::from_millis(250);
-    let auto_save_interval = Duration::from_secs(60);
     let mut last_tick = Instant::now();
-    let mut last_save = Instant::now();
 
     loop {
         terminal.draw(|f| app.ui(f))?;
@@ -149,18 +147,16 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                // 's' is handled separately because it needs save_manager,
-                // but only outside filter input (otherwise 's' can't be typed in regex).
-                if key.code == KeyCode::Char('s') && !app.filter_mode {
-                    save_manager.save(&app.game_state)?;
-                    app.handle_save_key();
-                } else if app.handle_key(key.code)? {
+                if app.handle_key(key.code)? {
                     return Ok(());
                 }
-                // Issue #63: Settings から「即時保存」リクエストが立っていれば
-                // ここでディスクへ反映する。take_save_request はフラグを消費する。
-                if app.take_save_request() {
+                // Issue #62: mutation 駆動の即時永続化。
+                // key event を契機に状態が変わったときだけ save する (ポーリングは廃止)。
+                // dirty を立てる点は src/ui.rs の各 handler 側で管理する。
+                // Issue #63: Settings タブの言語切替も dirty フラグ経由で即時永続化する。
+                if app.dirty {
                     save_manager.save(&app.game_state)?;
+                    app.dirty = false;
                 }
             }
         }
@@ -168,11 +164,13 @@ fn run_app<B: ratatui::backend::Backend>(
         if last_tick.elapsed() >= tick_rate {
             app.on_tick();
             last_tick = Instant::now();
-        }
-
-        if last_save.elapsed() >= auto_save_interval {
-            save_manager.save(&app.game_state)?;
-            last_save = Instant::now();
+            // Issue #62: on_tick は guid_timer 満了で generate_curion を内部呼出するため
+            // 間接的に dirty が立つことがある。key event を待たずに save しないと、
+            // 無操作中に取得した curion がハードシャットダウンで失われる。
+            if app.dirty {
+                save_manager.save(&app.game_state)?;
+                app.dirty = false;
+            }
         }
     }
 }

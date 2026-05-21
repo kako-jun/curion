@@ -160,8 +160,7 @@ pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Resu
                         crate::synthesis::FailureMode::NoLoss => "no_loss",
                     };
                     println!(
-                        "[HIGH-RISK FAIL] {} + {} => x (recipe: {}, mode: {})",
-                        a_noun, b_noun, recipe_name, mode_label
+                        "[HIGH-RISK FAIL] {a_noun} + {b_noun} => x (recipe: {recipe_name}, mode: {mode_label})"
                     );
                     if let Some(s) = salvage {
                         println!("  Salvage: {} [{}]", s.noun, rarity_tag(s.rarity),);

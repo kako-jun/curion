@@ -32,7 +32,7 @@ No ads, no microtransactions, no internet required. Just one more spin.
 - **Language switch (En / Ja)** — open the Settings tab and press `←/→` to toggle the UI language; the change is saved immediately (Issue #63 Phase 1)
 - **Three-pane navigation** — tab bar + left section list + right content pane, aligned with the future PWA information architecture
 - **Nostr identity** — each player gets a keypair for future decentralized trading
-- **Auto-save** every 60 seconds, manual save with `s`
+- **Auto-save** on every meaningful action (gacha pull, equip, synthesis, claim) + on exit
 - Single binary, no runtime dependencies
 
 ### Dashboard
@@ -137,7 +137,6 @@ You can also press `Space` to spend a GUID immediately instead of waiting for th
 | `←` / `→` | Toggle language on the Settings tab (En / Ja) |
 | `Enter` | Claim achievement reward / Select synthesis ingredient |
 | `Esc` | Cancel synthesis selection / Quit |
-| `s` | Manual save |
 | `q` | Quit |
 
 ## Synthesis

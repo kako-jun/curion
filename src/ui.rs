@@ -357,13 +357,16 @@ pub struct App {
     /// 生成された瞬間に start し、display_name を 1 文字ずつ暗→明にフェードインで
     /// 浮かび上がらせる。生成体験に「届いた感」を出すための演出。
     latest_reveal: Option<RevealHandle>,
-    /// Issue #63: 設定変更直後に保存を要求するフラグ。
+    /// Issue #62: 永続化すべき mutation が発生したことを示すフラグ。
     ///
-    /// `App` 側は `SaveManager` を直接持たないため、保存が必要になった瞬間に
-    /// このフラグを立てる。メインループ (`main.rs`) が `take_save_request()`
-    /// で取り出し、その場で `SaveManager::save` を呼ぶ。これにより
-    /// 「言語切替の瞬間にディスクへ反映」を実現する。
-    save_request: bool,
+    /// ガチャ pull・装備変更・achievement claim・synthesis 成功/副産物・daily mission 自動受領、
+    /// および Issue #63 で追加された Settings タブの言語切替など、「失われると痛い」進行状態の
+    /// 更新時に `true` にセットする。main loop が key event を処理した直後にこのフラグを見て、
+    /// true なら `SaveManager::save` を呼び、フラグをクリアする。
+    ///
+    /// `on_tick` で連続的に変化するもの (プレイ時間加算、SAN 自然減衰、Rare cooldown 残量) では
+    /// dirty を立てない。これらは起動時 save と終了時 save でカバーする。
+    pub dirty: bool,
 }
 
 impl App {
@@ -394,16 +397,8 @@ impl App {
             compiled_filter: None,
             evolution_db,
             latest_reveal: None,
-            save_request: false,
+            dirty: false,
         }
-    }
-
-    /// Issue #63: 設定変更直後の即時保存要求を取り出す。
-    ///
-    /// 呼び出し側 (main loop) は `true` が返ったらその場で
-    /// `SaveManager::save` を実行する。一度取り出すとフラグはクリアされる。
-    pub fn take_save_request(&mut self) -> bool {
-        std::mem::take(&mut self.save_request)
     }
 
     /// Dashboard「最新キュリオン」名を bloom させるための reveal プリセット。
@@ -497,6 +492,8 @@ impl App {
             None => return,
         };
         self.game_state.player.toggle_equip(&id);
+        // Issue #62: 装備変更は即時永続化対象。
+        self.dirty = true;
     }
 
     /// Issue #31: 正規表現フィルタ入力モード中のキー処理。
@@ -575,25 +572,18 @@ impl App {
         self.current_tab == Tab::Collection && self.current_section_index() == 1
     }
 
-    /// 手動セーブ用（SaveManager を持たないので呼び出し元で save してから呼ぶ）
-    pub fn handle_save_key(&mut self) {
-        self.show_save_message();
-    }
-
     fn set_tab(&mut self, tab: Tab) {
         self.current_tab = tab;
         self.detail_scroll = 0;
     }
 
     /// Settings タブで `←/→` を押したときに呼ばれる。
-    /// 言語を次の値に切り替え、`save_request` フラグを立てる。
-    /// `main.rs` のループが次の tick で `take_save_request()` を見て即座に
-    /// `SaveManager::save` を呼ぶため、ユーザーから見ると言語切替は即時永続化される。
+    /// 言語を次の値に切り替え、Issue #62 で導入された共有 `dirty` フラグを立てる。
+    /// `main.rs` のループが次の tick で `dirty` を見て即座に `SaveManager::save` を呼ぶため、
+    /// ユーザーから見ると言語切替は即時永続化される。
     fn toggle_language(&mut self) {
         self.game_state.language = self.game_state.language.next();
-        // Settings の「即座に保存される」契約を満たすためのフラグ。
-        // 実際の I/O はメインループが拾って実行する。
-        self.save_request = true;
+        self.dirty = true;
     }
 
     fn next_tab(&mut self) {
@@ -667,6 +657,8 @@ impl App {
                 if let Some((achievement, _)) = achievable.get(self.detail_scroll) {
                     let achievement_id = achievement.id.clone();
                     self.game_state.claim_achievement_reward(&achievement_id);
+                    // Issue #62: 報酬受領は即時永続化対象。
+                    self.dirty = true;
                 }
             }
             Tab::Synthesis => {
@@ -742,6 +734,8 @@ impl App {
                                         // ここでは合成ミッション固有の進捗 (SynthesizeSuccess) だけを更新する。
                                         self.game_state.record_synthesis_success();
                                         self.flush_daily_mission_rewards();
+                                        // Issue #62: 合成成功は素材消費+新キュリオン獲得を伴う重要 mutation。
+                                        self.dirty = true;
 
                                         let message = if first_discovery {
                                             format!("✨ Discovered: {recipe_name}!")
@@ -783,6 +777,8 @@ impl App {
                                             self.game_state.add_curion(s);
                                             self.flush_daily_mission_rewards();
                                         }
+                                        // Issue #62: 高リスク合成失敗も素材消滅 (+ salvage) を伴う mutation。
+                                        self.dirty = true;
                                         let msg = match failure_mode {
                                             crate::synthesis::FailureMode::LoseAll => {
                                                 format!("💥 失敗: {recipe_name} (素材消滅)")
@@ -828,6 +824,8 @@ impl App {
         ));
         self.flush_daily_mission_rewards();
         self.guid_timer = Instant::now();
+        // Issue #62: ガチャ pull は最重要 mutation。即時永続化対象。
+        self.dirty = true;
         Ok(())
     }
 
@@ -838,6 +836,10 @@ impl App {
         if claimed.is_empty() {
             return;
         }
+        // Issue #62: デイリーミッション報酬受領は XP 加算を伴う mutation。
+        // generate_curion / 合成成功からも呼ばれるが、それらの呼び出し元でも dirty を
+        // 立てているため二重に true にしても害はない (key event 後の save で 1 回処理される)。
+        self.dirty = true;
         let (msg, duration) = if claimed.len() == 1 {
             let m = &claimed[0];
             (
@@ -881,10 +883,6 @@ impl App {
         }
     }
 
-    pub fn show_save_message(&mut self) {
-        self.save_message = Some(("💾 Saved!".to_string(), Instant::now()));
-    }
-
     pub fn show_login_bonus_message(&mut self, reward: &LoginBonusReward) {
         self.save_message = Some((
             format!("🎁 Day {} +{} XP", reward.day, reward.xp),
@@ -911,7 +909,7 @@ impl App {
             String::new()
         };
         self.save_message_duration = Duration::from_secs(6);
-        self.save_message = Some((format!("🕯 寿命で消滅: {}{}", preview, more), Instant::now()));
+        self.save_message = Some((format!("🕯 寿命で消滅: {preview}{more}"), Instant::now()));
     }
 
     /// Issue #63: i18n-aware display name for a `Curion`.
@@ -1485,7 +1483,7 @@ impl App {
         let remaining_minutes = (total_secs + 59) / 60;
         let hh = remaining_minutes / 60;
         let mm = remaining_minutes % 60;
-        let title = format!("デイリーミッション (リセットまで {:02}:{:02})", hh, mm);
+        let title = format!("デイリーミッション (リセットまで {hh:02}:{mm:02})");
 
         let block = focused_block(title);
         let inner = block.inner(area);
@@ -1713,7 +1711,7 @@ impl App {
         let rare_probability_line = Line::from(vec![
             Span::styled("RARE出現確率: ", Style::default().fg(COLOR_LABEL)),
             Span::styled(
-                format!("{:.1}%", rare_pct),
+                format!("{rare_pct:.1}%"),
                 Style::default()
                     .fg(if cooldown_p >= 1.0 {
                         COLOR_EPIC
@@ -1858,7 +1856,7 @@ impl App {
                     Style::default().fg(Color::Yellow),
                 ),
                 Span::styled(
-                    format!("{} 個", near_expiry_count),
+                    format!("{near_expiry_count} 個"),
                     Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
                 ),
             ])
@@ -4196,32 +4194,21 @@ mod tests {
         assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
     }
 
-    /// G-3: Toggling the language raises `save_request` so the main loop can
-    /// flush to disk.
+    /// G-3: Toggling the language raises the shared `dirty` flag so the main
+    /// loop can flush to disk on the next save tick (Issue #62 unified flag).
     #[test]
-    fn settings_tab_toggle_sets_save_request_flag() {
+    fn settings_tab_toggle_sets_dirty_flag() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
         app.handle_key(KeyCode::Left).unwrap();
         assert!(
-            app.take_save_request(),
-            "toggle should arm save_request for the main loop"
+            app.dirty,
+            "language toggle should set the shared dirty flag"
         );
     }
 
-    /// G-4: `take_save_request` is a one-shot — after consuming once, the
-    /// next call returns false until another toggle.
-    #[test]
-    fn take_save_request_is_one_shot() {
-        let mut app = empty_app();
-        app.set_tab(Tab::Settings);
-        app.handle_key(KeyCode::Left).unwrap();
-        assert!(app.take_save_request(), "first take returns true");
-        assert!(!app.take_save_request(), "second take returns false");
-    }
-
-    /// G-5: On non-Settings tabs, Left/Right do not change language nor arm
-    /// `save_request`.
+    /// G-5: On non-Settings tabs, Left/Right do not change language nor set
+    /// the `dirty` flag.
     #[test]
     fn non_settings_tab_left_right_does_not_toggle() {
         let mut app = empty_app();
@@ -4230,10 +4217,7 @@ mod tests {
         app.handle_key(KeyCode::Left).unwrap();
         app.handle_key(KeyCode::Right).unwrap();
         assert_eq!(app.game_state.language, before, "language must not change");
-        assert!(
-            !app.take_save_request(),
-            "save_request must stay false off Settings"
-        );
+        assert!(!app.dirty, "dirty must stay false off Settings");
     }
 
     /// G-6: Two toggles on Settings round-trip back to the original language.
@@ -4247,17 +4231,20 @@ mod tests {
         assert_eq!(app.game_state.language, before);
     }
 
-    /// G-7: Multiple toggles before any consumption still register as
-    /// pending; once consumed, the next read returns false.
+    /// G-7: Multiple toggles keep the shared dirty flag set; after the main
+    /// loop consumes it (sets dirty = false), the next toggle re-arms it.
     #[test]
-    fn settings_tab_repeated_toggle_keeps_save_request_until_consumed() {
+    fn settings_tab_repeated_toggle_keeps_dirty_until_consumed() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
         app.handle_key(KeyCode::Left).unwrap();
         app.handle_key(KeyCode::Right).unwrap();
         app.handle_key(KeyCode::Left).unwrap();
-        assert!(app.take_save_request(), "three toggles → still pending");
-        assert!(!app.take_save_request(), "consumed → next read is false");
+        assert!(app.dirty, "three toggles → dirty still true");
+        // Simulate the main-loop save consuming the flag.
+        app.dirty = false;
+        app.handle_key(KeyCode::Right).unwrap();
+        assert!(app.dirty, "next toggle re-arms dirty");
     }
 
     /// J-1: Pinning current behaviour — even when `language = En`, the
@@ -4276,5 +4263,186 @@ mod tests {
             match_curion(&re, &curion),
             "current behaviour: JA category label still matches in En mode"
         );
+    }
+    // ── Issue #62: event-driven save (dirty フラグ) ────────────────────
+
+    // A. dirty 状態遷移
+
+    #[test]
+    fn test_app_new_dirty_is_false() {
+        // 起動直後はまだ何も mutation していないので dirty は false。
+        let app = empty_app();
+        assert!(!app.dirty, "App::new 直後は dirty == false");
+    }
+
+    #[test]
+    fn test_dirty_can_be_cleared_externally() {
+        // main.rs 側の save ループが dirty を true→false に戻せる必要がある。
+        let mut app = empty_app();
+        app.dirty = true;
+        app.dirty = false;
+        assert!(!app.dirty, "dirty を外部から false に戻せる");
+    }
+
+    #[test]
+    fn test_dirty_idempotent_when_set_twice() {
+        // 同じイベントで dirty を二度立てても true のまま。副作用なし。
+        let mut app = empty_app();
+        app.dirty = true;
+        app.dirty = true;
+        assert!(app.dirty, "二度 true セットしても dirty は true のまま");
+    }
+
+    // B. mutation 点ごとに dirty が立つ
+
+    #[test]
+    fn test_handle_equip_toggle_sets_dirty() {
+        // 装備変更 (Issue #38) は即時永続化対象。
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.game_state.player.collection.push(make_curion(
+            "装備テスト名詞",
+            Category::Animal,
+            Rarity::Common,
+        ));
+        assert!(!app.dirty, "前提: 起動直後は dirty=false");
+
+        app.handle_equip_toggle();
+
+        assert!(app.dirty, "handle_equip_toggle で dirty=true");
+    }
+
+    #[test]
+    fn test_claim_achievement_reward_sets_dirty() {
+        // Achievements タブ section 0 で Enter → claim 試行 → dirty=true。
+        // 実装上、claim_reward の成否によらず handle_enter は dirty を立てる。
+        let mut app = empty_app();
+        app.set_tab(Tab::Achievements);
+        // section 0 (達成可能) であることを担保。
+        assert_eq!(app.current_section_index(), 0);
+
+        // get_achievable が 1 件以上返るように、適当な実績 (total_10) の進捗を
+        // is_achievable() の条件 (current >= target && !unlocked) に合わせる。
+        // get_progress_mut が None の場合はこのテストの前提が崩れているので
+        // 早期に panic させる。
+        let progress = app
+            .game_state
+            .achievement_manager
+            .get_progress_mut("total_10")
+            .expect("total_10 progress が default 登録されているはず");
+        progress.current = progress.target;
+        progress.unlocked = false;
+        progress.claimed = false;
+
+        // get_achievable に乗ることを再確認。
+        assert!(
+            !app.game_state
+                .achievement_manager
+                .get_achievable()
+                .is_empty(),
+            "前提: get_achievable が 1 件以上返る"
+        );
+        app.detail_scroll = 0;
+        assert!(!app.dirty);
+
+        app.handle_enter().expect("handle_enter should succeed");
+
+        assert!(app.dirty, "Achievements claim で dirty=true");
+    }
+
+    #[test]
+    fn test_generate_curion_sets_dirty() {
+        // ガチャ pull (空きキーまたは guid_timer 満了) は最重要 mutation。
+        let mut app = empty_app();
+        assert!(!app.dirty);
+
+        app.generate_curion()
+            .expect("generate_curion should succeed");
+
+        assert!(app.dirty, "generate_curion で dirty=true");
+    }
+
+    #[test]
+    fn test_flush_daily_mission_rewards_no_claim_does_not_set_dirty() {
+        // 何も claim できない状態 (claimed が空) では dirty を立てない。
+        // 起動直後 = ミッション進捗 0 のため auto_claim_daily_missions は空を返す前提。
+        let mut app = empty_app();
+        assert!(!app.dirty);
+
+        app.flush_daily_mission_rewards();
+
+        assert!(
+            !app.dirty,
+            "claim 可能なミッションが無いとき dirty は変化しない"
+        );
+    }
+
+    // C. 立てないべき場所（負の網羅）
+
+    #[test]
+    fn test_on_tick_does_not_set_dirty_when_no_guid_generation() {
+        // guid_timer は default 30 秒。直後 1 回の on_tick では generate_curion は走らない。
+        // ただし on_tick 内では player.add_play_time(1) は呼ばれる。これは dirty 対象外。
+        let mut app = empty_app();
+        assert!(app.guid_interval >= Duration::from_secs(5));
+        assert!(!app.dirty);
+
+        app.on_tick();
+
+        assert!(
+            !app.dirty,
+            "guid 生成が走らない on_tick では dirty は立たない"
+        );
+    }
+
+    #[test]
+    fn test_tab_switch_does_not_set_dirty() {
+        // 単なる UI 状態変更 (タブ切替) は永続化対象ではない。
+        let mut app = empty_app();
+        assert!(!app.dirty);
+
+        // 数字キーで遷移
+        app.handle_key(KeyCode::Char('2')).unwrap();
+        // Tab キーで next_tab
+        app.handle_key(KeyCode::Tab).unwrap();
+        // 直接 API でも
+        app.set_tab(Tab::Synthesis);
+        app.next_tab();
+
+        assert!(!app.dirty, "タブ切替系は dirty を立てない");
+    }
+
+    #[test]
+    fn test_filter_mode_typing_does_not_set_dirty() {
+        // フィルタ入力中の文字入力は UI 状態 (検索文字列) であり永続化対象ではない。
+        // `s` が save とみなされないこと (Issue #31 既存テストの dirty 拡張)。
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        app.handle_key(KeyCode::Char('s')).unwrap();
+        app.handle_key(KeyCode::Char('R')).unwrap();
+        app.handle_key(KeyCode::Char('A')).unwrap();
+
+        assert_eq!(app.filter_text, "sRA");
+        assert!(!app.dirty, "filter_mode 中の typing は dirty を立てない");
+    }
+
+    // F. 削除 API の回帰
+
+    #[test]
+    fn test_s_key_outside_filter_mode_no_longer_shows_saved_toast() {
+        // Issue #62 で「`s` キーで明示 save → Saved! トースト」が廃止された。
+        // Collection 以外 (Dashboard 等) で `s` を押しても save_message は None のまま。
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        assert!(app.save_message.is_none());
+
+        app.handle_key(KeyCode::Char('s')).unwrap();
+
+        assert!(
+            app.save_message.is_none(),
+            "`s` キーで Saved! トーストが出ない"
+        );
+        assert!(!app.dirty, "`s` キーは dirty も立てない");
     }
 }
