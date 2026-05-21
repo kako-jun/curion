@@ -3885,10 +3885,11 @@ mod tests {
         // 装備変更 (Issue #38) は即時永続化対象。
         let mut app = empty_app();
         app.set_tab(Tab::Collection);
-        app.game_state
-            .player
-            .collection
-            .push(make_curion("装備テスト名詞", Category::Animal, Rarity::Common));
+        app.game_state.player.collection.push(make_curion(
+            "装備テスト名詞",
+            Category::Animal,
+            Rarity::Common,
+        ));
         assert!(!app.dirty, "前提: 起動直後は dirty=false");
 
         app.handle_equip_toggle();
@@ -3920,7 +3921,10 @@ mod tests {
 
         // get_achievable に乗ることを再確認。
         assert!(
-            !app.game_state.achievement_manager.get_achievable().is_empty(),
+            !app.game_state
+                .achievement_manager
+                .get_achievable()
+                .is_empty(),
             "前提: get_achievable が 1 件以上返る"
         );
         app.detail_scroll = 0;
@@ -3937,7 +3941,8 @@ mod tests {
         let mut app = empty_app();
         assert!(!app.dirty);
 
-        app.generate_curion().expect("generate_curion should succeed");
+        app.generate_curion()
+            .expect("generate_curion should succeed");
 
         assert!(app.dirty, "generate_curion で dirty=true");
     }
