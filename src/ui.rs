@@ -1021,144 +1021,128 @@ impl App {
     }
 
     fn render_help_line(&self, f: &mut Frame<'_>, area: Rect) {
-        // Issue #31: フィルタ入力中は専用ヘルプを出す
-        if self.filter_mode {
-            let help = Line::from(vec![
-                Span::styled(" filter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 正規表現入力中  "),
-                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 入力確定 (フィルタ維持)  "),
-                Span::styled(" Esc ", Style::default().fg(Color::Black).bg(Color::Gray)),
-                Span::raw(" 解除  "),
+        let lang = self.game_state.language;
+
+        // Small helpers to keep the help-line definition concise. Each pair
+        // produces a coloured chord pill followed by its translated label.
+        let key_dark = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
                 Span::styled(
-                    " Backspace ",
+                    format!(" {label} "),
                     Style::default().fg(Color::Black).bg(Color::DarkGray),
                 ),
-                Span::raw(" 1 文字削除"),
-            ]);
-            let help_widget = Paragraph::new(help).style(Style::default().bg(Color::Black));
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+        let key_rare = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
+                Span::styled(
+                    format!(" {label} "),
+                    Style::default().fg(Color::Black).bg(COLOR_RARE),
+                ),
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+        let key_epic = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
+                Span::styled(
+                    format!(" {label} "),
+                    Style::default().fg(Color::Black).bg(COLOR_EPIC),
+                ),
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+        let key_gray = |label: &'static str, text: &str| -> [Span<'static>; 2] {
+            [
+                Span::styled(
+                    format!(" {label} "),
+                    Style::default().fg(Color::Black).bg(Color::Gray),
+                ),
+                Span::raw(format!(" {text}  ")),
+            ]
+        };
+
+        // Issue #31: フィルタ入力中は専用ヘルプを出す
+        if self.filter_mode {
+            let mut spans: Vec<Span<'static>> = Vec::new();
+            spans.extend(key_epic(
+                "filter",
+                crate::i18n::t("help.filter_typing", lang),
+            ));
+            spans.extend(key_rare(
+                "Enter",
+                crate::i18n::t("help.filter_confirm", lang),
+            ));
+            spans.extend(key_gray("Esc", crate::i18n::t("help.filter_clear", lang)));
+            spans.extend(key_dark(
+                "Backspace",
+                crate::i18n::t("help.filter_backspace", lang),
+            ));
+            let help_widget =
+                Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
             f.render_widget(help_widget, area);
             return;
         }
-        let help = match self.current_tab {
-            Tab::Collection if self.current_section_index() == 1 => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" カテゴリ移動  "),
-                Span::styled(
-                    " PgUp/PgDn ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 名詞スクロール  "),
-                Span::styled(" / ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 絞り込み  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            Tab::Collection if self.current_section_index() == 0 => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" スクロール  "),
-                Span::styled(" / ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 絞り込み  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            Tab::Achievements if self.current_section_index() == 0 => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 実績選択  "),
-                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 報酬受取  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            Tab::Synthesis => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 候補選択  "),
-                Span::styled(" Enter ", Style::default().fg(Color::Black).bg(COLOR_EPIC)),
-                Span::raw(" 合成  "),
-                Span::styled(" Esc ", Style::default().fg(Color::Black).bg(Color::Gray)),
-                Span::raw(" 戻る  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
-            _ => Line::from(vec![
-                Span::styled(" j/k ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 左ペイン  "),
-                Span::styled(
-                    " ↑/↓ ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" 詳細スクロール  "),
-                Span::styled(" Space ", Style::default().fg(Color::Black).bg(COLOR_RARE)),
-                Span::raw(" 生成  "),
-                Span::styled(
-                    " Tab/1-5 ",
-                    Style::default().fg(Color::Black).bg(Color::DarkGray),
-                ),
-                Span::raw(" タブ  "),
-                Span::styled(" s ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 保存  "),
-                Span::styled(" q ", Style::default().fg(Color::Black).bg(Color::DarkGray)),
-                Span::raw(" 終了"),
-            ]),
+
+        // Trailing tail shared by every tab: Tab/1-5 + s + q.
+        // (Settings tab in a later commit bumps the range to "Tab/1-6".)
+        let tail = |spans: &mut Vec<Span<'static>>| {
+            spans.extend(key_dark("Tab/1-5", crate::i18n::t("help.tab", lang)));
+            spans.extend(key_dark("s", crate::i18n::t("help.save", lang)));
+            spans.extend(key_dark("q", crate::i18n::t("help.quit", lang)));
         };
 
-        let help_widget = Paragraph::new(help).style(Style::default().bg(Color::Black));
+        let mut spans: Vec<Span<'static>> = Vec::new();
+        spans.extend(key_rare("j/k", crate::i18n::t("help.left_pane", lang)));
+
+        match self.current_tab {
+            Tab::Collection if self.current_section_index() == 1 => {
+                spans.extend(key_dark("↑/↓", crate::i18n::t("help.category_move", lang)));
+                spans.extend(key_dark(
+                    "PgUp/PgDn",
+                    crate::i18n::t("help.noun_scroll", lang),
+                ));
+                spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Collection if self.current_section_index() == 0 => {
+                spans.extend(key_dark("↑/↓", crate::i18n::t("help.scroll", lang)));
+                spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Achievements if self.current_section_index() == 0 => {
+                spans.extend(key_dark(
+                    "↑/↓",
+                    crate::i18n::t("help.achievement_select", lang),
+                ));
+                spans.extend(key_epic("Enter", crate::i18n::t("help.claim_reward", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Synthesis => {
+                spans.extend(key_dark(
+                    "↑/↓",
+                    crate::i18n::t("help.candidate_select", lang),
+                ));
+                spans.extend(key_epic(
+                    "Enter",
+                    crate::i18n::t("help.synthesize_now", lang),
+                ));
+                spans.extend(key_gray("Esc", crate::i18n::t("help.back", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            _ => {
+                spans.extend(key_dark("↑/↓", crate::i18n::t("help.detail_scroll", lang)));
+                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+        }
+
+        let help_widget =
+            Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Black));
         f.render_widget(help_widget, area);
     }
 
