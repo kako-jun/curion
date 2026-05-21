@@ -233,8 +233,7 @@ mod tests {
         // field by serializing a fresh state and then stripping the key.
         let state = fresh_game_state();
         let serializable = SerializableGameState::from(&state);
-        let mut value: serde_json::Value =
-            serde_json::to_value(&serializable).expect("to_value");
+        let mut value: serde_json::Value = serde_json::to_value(&serializable).expect("to_value");
         let obj = value.as_object_mut().expect("top-level object");
         assert!(
             obj.remove("language").is_some(),
