@@ -173,7 +173,12 @@ impl Curion {
         }
     }
 
-    /// キュリオンの表示用文字列
+    /// i18n-pinned JA legacy label `{Category-Ja} の {noun}`.
+    ///
+    /// Kept as a stable, language-independent form because the regex filter
+    /// (`ui::match_curion`) matches against this exact string. UI rendering
+    /// goes through `App::display_curion_name`, which honours
+    /// `GameState::language`.
     pub fn display_name(&self) -> String {
         format!("{} の {}", self.category.as_str(), self.noun)
     }

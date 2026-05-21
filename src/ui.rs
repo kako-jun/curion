@@ -256,6 +256,13 @@ pub enum Tab {
 }
 
 impl Tab {
+    /// Total number of variants in [`Tab`].
+    ///
+    /// Single source of truth for "how many tabs exist" so that `from_index`
+    /// bounds, `next` wrap-around and `App::section_indices` length stay in
+    /// sync when a new tab is added.
+    pub const COUNT: usize = 6;
+
     /// Translation-table key used to render this tab's title.
     ///
     /// Returning the i18n key (instead of a hard-coded string) lets the
@@ -284,6 +291,9 @@ impl Tab {
     }
 
     fn from_index(i: usize) -> Option<Tab> {
+        if i >= Tab::COUNT {
+            return None;
+        }
         match i {
             0 => Some(Tab::Dashboard),
             1 => Some(Tab::Collection),
@@ -296,7 +306,7 @@ impl Tab {
     }
 
     fn next(&self) -> Tab {
-        Tab::from_index((self.index() + 1) % 6).unwrap_or(Tab::Dashboard)
+        Tab::from_index((self.index() + 1) % Tab::COUNT).unwrap_or(Tab::Dashboard)
     }
 }
 
@@ -314,7 +324,7 @@ pub struct App {
     pub game_state: GameState,
     pub current_tab: Tab,
     pub detail_scroll: usize,
-    pub section_indices: [usize; 6],
+    pub section_indices: [usize; Tab::COUNT],
     pub guid_timer: Instant,
     pub guid_interval: Duration,
     pub generator: CurionGenerator,
@@ -367,7 +377,7 @@ impl App {
             game_state,
             current_tab: Tab::Dashboard,
             detail_scroll: 0,
-            section_indices: [0; 6],
+            section_indices: [0; Tab::COUNT],
             guid_timer: Instant::now(),
             guid_interval: Duration::from_secs(30),
             generator,
@@ -430,6 +440,10 @@ impl App {
                     return Ok(true);
                 }
             }
+            // Number-key shortcuts. The literal range stays `'1'..='6'` because
+            // Rust does not allow `Tab::COUNT` inside a char-range pattern, but
+            // the downstream conversion through `Tab::from_index` is bounded by
+            // `Tab::COUNT` so adding a tab only requires widening this literal.
             KeyCode::Char(c @ '1'..='6') => {
                 if let Some(tab) = Tab::from_index((c as usize) - ('1' as usize)) {
                     self.set_tab(tab);
@@ -1124,8 +1138,7 @@ impl App {
             return;
         }
 
-        // Trailing tail shared by every tab: Tab/1-5 + s + q.
-        // (Settings tab in a later commit bumps the range to "Tab/1-6".)
+        // Trailing tail shared by every tab: Tab/1-6 + s + q.
         let tail = |spans: &mut Vec<Span<'static>>| {
             spans.extend(key_dark("Tab/1-6", crate::i18n::t("help.tab", lang)));
             spans.extend(key_dark("s", crate::i18n::t("help.save", lang)));
@@ -1172,6 +1185,10 @@ impl App {
                 ));
                 spans.extend(key_gray("Esc", crate::i18n::t("help.back", lang)));
                 spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                tail(&mut spans);
+            }
+            Tab::Settings => {
+                spans.extend(key_rare("←/→", crate::i18n::t("help.lang_switch", lang)));
                 tail(&mut spans);
             }
             _ => {
@@ -4055,15 +4072,18 @@ mod tests {
 
     // ── Issue #63 Phase 1: Tab boundary / Settings / display_curion_name ──
 
-    /// B-2: Every `Tab::from_index(0..6)` resolves its `title_key()` through
-    /// the i18n dict in both languages (= the key is registered, no key-leak
-    /// fallback). Detects drift between `Tab` variants and the dict entries.
+    /// B-2: Every `Tab::from_index(0..Tab::COUNT)` resolves its `title_key()`
+    /// through the i18n dict in both languages (= every key is registered;
+    /// `t()` no longer falls back at all in debug). Detects drift between
+    /// `Tab` variants and the dict entries.
     #[test]
     fn tab_title_keys_all_resolved() {
         use crate::i18n::{t, Language};
-        for i in 0..6 {
+        for i in 0..Tab::COUNT {
             let tab = Tab::from_index(i).unwrap_or_else(|| panic!("Tab::from_index({i}) is None"));
             let key = tab.title_key();
+            // `t()` would panic in debug if the key were missing; assert the
+            // resolved text is distinct from the key itself for extra clarity.
             assert_ne!(t(key, Language::En), key, "{key} unresolved in En");
             assert_ne!(t(key, Language::Ja), key, "{key} unresolved in Ja");
         }
@@ -4081,10 +4101,10 @@ mod tests {
         assert_eq!(Tab::from_index(5), Some(Tab::Settings));
     }
 
-    /// C-3: index 6 is out of range and yields None.
+    /// C-3: `Tab::COUNT` itself is out of range and yields None.
     #[test]
     fn tab_from_index_six_is_none() {
-        assert_eq!(Tab::from_index(6), None);
+        assert_eq!(Tab::from_index(Tab::COUNT), None);
     }
 
     /// C-4: `Tab::next` wraps from Settings (last) back to Dashboard.
