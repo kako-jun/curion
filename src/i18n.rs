@@ -232,19 +232,19 @@ fn build_dict() -> HashMap<&'static str, [&'static str; 2]> {
     m
 }
 
-/// Look up `key` in the configured `lang`, falling back to English when the
-/// key is missing entirely, and finally to the key string itself.
+/// Look up `key` in the configured `lang`.
 ///
-/// Returning a `&'static str` keeps callers allocation-free for the common
-/// case where the dictionary holds every key used by the UI.
+/// In debug builds an unregistered key triggers a `debug_assert!` so that
+/// missing dictionary entries are caught immediately. In release builds the
+/// function falls back to the fixed placeholder `"?"` — no allocation, no
+/// leak. Returning a `&'static str` keeps callers allocation-free.
 #[allow(dead_code)] // Wired into ui.rs in later commits of this PR.
 pub fn t(key: &str, lang: Language) -> &'static str {
     if let Some(entry) = dict().get(key) {
         return entry[lang.index()];
     }
-    // Unknown key: surface the key so missing dictionary entries are obvious
-    // during development without panicking at runtime.
-    Box::leak(key.to_string().into_boxed_str())
+    debug_assert!(false, "unregistered i18n key: {key}");
+    "?"
 }
 
 #[cfg(test)]
@@ -271,11 +271,13 @@ mod tests {
         assert_eq!(t("tab.dashboard", Language::Ja), "ダッシュボード");
     }
 
-    /// Unknown keys do not panic and surface the key itself.
+    /// Unknown keys trigger a `debug_assert!` so that missing dictionary
+    /// entries are surfaced immediately during development. The release-mode
+    /// fallback to `"?"` is not exercised here because tests run in debug.
     #[test]
-    fn t_falls_back_to_key_for_unknown() {
-        let out = t("definitely.missing.key", Language::En);
-        assert_eq!(out, "definitely.missing.key");
+    #[should_panic(expected = "unregistered i18n key")]
+    fn t_panics_on_unregistered_key_in_debug() {
+        let _ = t("definitely.missing.key", Language::En);
     }
 
     /// Spot check that every Phase 1 category key is present in both columns.
