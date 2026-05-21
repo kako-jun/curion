@@ -204,9 +204,9 @@ fn ingredient_label(req: &IngredientRequirement) -> String {
     let core = if let Some(noun) = &req.specific_noun {
         noun.clone()
     } else if let Some(cat) = &req.category {
-        format!("{:?}", cat)
+        format!("{cat:?}")
     } else if let Some(rar) = &req.rarity {
-        format!("{:?}", rar)
+        format!("{rar:?}")
     } else {
         "?".to_string()
     };
@@ -1209,9 +1209,9 @@ mod tests {
                 make_pair_recipe("p_d", "黒い太陽", "光", "影", 0.5, FailureMode::NoLoss);
             recipe.visibility = vis;
             let label = recipe.display_label(&[], true, 9);
-            assert!(label.contains("光"), "vis={:?} label={}", vis, label);
-            assert!(label.contains("影"), "vis={:?} label={}", vis, label);
-            assert!(label.contains("黒い太陽"), "vis={:?} label={}", vis, label);
+            assert!(label.contains("光"), "vis={vis:?} label={label}");
+            assert!(label.contains("影"), "vis={vis:?} label={label}");
+            assert!(label.contains("黒い太陽"), "vis={vis:?} label={label}");
             assert!(
                 !label.contains("未確認レシピ"),
                 "discovered should not be Unknown: {label}"
