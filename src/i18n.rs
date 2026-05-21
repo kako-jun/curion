@@ -296,4 +296,62 @@ mod tests {
             assert!(!t(key, Language::Ja).is_empty(), "{key} Ja empty");
         }
     }
+
+    // ── Issue #63 Phase 1: i18n core coverage ────────────────────────
+
+    /// A-2: Calling `next()` twice cycles `En → Ja → En` (round trip).
+    #[test]
+    fn language_next_round_trip_en_ja_en() {
+        assert_eq!(Language::En.next().next(), Language::En);
+    }
+
+    /// A-3: `short_label()` returns the canonical "En" / "Ja" pair used by
+    /// the Settings tab.
+    #[test]
+    fn language_short_label_pair() {
+        assert_eq!(Language::En.short_label(), "En");
+        assert_eq!(Language::Ja.short_label(), "Ja");
+    }
+
+    /// A-4: dict column contract — `En` is index 0 and `Ja` is index 1.
+    /// Drifting this would silently swap the entire translation table.
+    #[test]
+    fn language_index_is_dict_column() {
+        assert_eq!(Language::En.index(), 0);
+        assert_eq!(Language::Ja.index(), 1);
+    }
+
+    /// A-8: No dictionary entry may carry an empty string in either column.
+    /// Empty entries would render blank labels in the UI.
+    #[test]
+    fn dict_has_no_empty_string_in_either_column() {
+        for (key, columns) in dict().iter() {
+            assert!(!columns[0].is_empty(), "{key} En column is empty");
+            assert!(!columns[1].is_empty(), "{key} Ja column is empty");
+        }
+    }
+
+    /// B-3: Every Category's `display()` is non-empty in both languages and
+    /// the En/Ja renditions are distinct (= no accidental Ja-as-En fallback).
+    #[test]
+    fn category_keys_all_resolved() {
+        use crate::curion::Category;
+        for cat in [
+            Category::Animal,
+            Category::Plant,
+            Category::Color,
+            Category::Object,
+            Category::Concept,
+            Category::Element,
+            Category::Food,
+            Category::Phenomenon,
+            Category::Abstract,
+        ] {
+            let en = cat.display(Language::En);
+            let ja = cat.display(Language::Ja);
+            assert!(!en.is_empty(), "{cat:?} En display is empty");
+            assert!(!ja.is_empty(), "{cat:?} Ja display is empty");
+            assert_ne!(en, ja, "{cat:?} En and Ja display happen to be identical");
+        }
+    }
 }

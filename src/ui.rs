@@ -4052,4 +4052,209 @@ mod tests {
             "Enter では compiled_filter も維持"
         );
     }
+
+    // ── Issue #63 Phase 1: Tab boundary / Settings / display_curion_name ──
+
+    /// B-2: Every `Tab::from_index(0..6)` resolves its `title_key()` through
+    /// the i18n dict in both languages (= the key is registered, no key-leak
+    /// fallback). Detects drift between `Tab` variants and the dict entries.
+    #[test]
+    fn tab_title_keys_all_resolved() {
+        use crate::i18n::{t, Language};
+        for i in 0..6 {
+            let tab = Tab::from_index(i).unwrap_or_else(|| panic!("Tab::from_index({i}) is None"));
+            let key = tab.title_key();
+            assert_ne!(t(key, Language::En), key, "{key} unresolved in En");
+            assert_ne!(t(key, Language::Ja), key, "{key} unresolved in Ja");
+        }
+    }
+
+    /// C-1: index 0 maps to the Dashboard tab.
+    #[test]
+    fn tab_from_index_zero_is_dashboard() {
+        assert_eq!(Tab::from_index(0), Some(Tab::Dashboard));
+    }
+
+    /// C-2: index 5 maps to the Settings tab (Issue #63 added).
+    #[test]
+    fn tab_from_index_five_is_settings() {
+        assert_eq!(Tab::from_index(5), Some(Tab::Settings));
+    }
+
+    /// C-3: index 6 is out of range and yields None.
+    #[test]
+    fn tab_from_index_six_is_none() {
+        assert_eq!(Tab::from_index(6), None);
+    }
+
+    /// C-4: `Tab::next` wraps from Settings (last) back to Dashboard.
+    #[test]
+    fn tab_next_wraps_from_settings_to_dashboard() {
+        assert_eq!(Tab::Settings.next(), Tab::Dashboard);
+    }
+
+    /// C-5: `Tab::next` goes from Synthesis to Settings.
+    /// Pins the post-#63 ordering — would have caught a stale `mod 5` wrap.
+    #[test]
+    fn tab_next_synthesis_to_settings() {
+        assert_eq!(Tab::Synthesis.next(), Tab::Settings);
+    }
+
+    /// C-6: `from_index(t.index()) == Some(t)` for every Tab.
+    #[test]
+    fn tab_index_round_trip_all_six() {
+        for tab in [
+            Tab::Dashboard,
+            Tab::Collection,
+            Tab::Achievements,
+            Tab::Stats,
+            Tab::Synthesis,
+            Tab::Settings,
+        ] {
+            assert_eq!(Tab::from_index(tab.index()), Some(tab));
+        }
+    }
+
+    /// F-1: In JA mode, `display_curion_name` matches the legacy
+    /// `Curion::display_name` format `"{Category-Ja} の {noun}"`.
+    #[test]
+    fn display_curion_name_ja_is_legacy_format() {
+        let mut app = empty_app();
+        app.game_state.language = crate::i18n::Language::Ja;
+        let curion = make_curion("犬", Category::Animal, Rarity::Common);
+        assert_eq!(app.display_curion_name(&curion), curion.display_name());
+    }
+
+    /// F-2: In EN mode, a noun present in the database is rendered as
+    /// `"{english} ({Category-En})"`.
+    #[test]
+    fn display_curion_name_en_with_english() {
+        let mut app = empty_app();
+        app.game_state.language = crate::i18n::Language::En;
+        let curion = make_curion("犬", Category::Animal, Rarity::Common);
+        // "犬" is in animals.json with english = "dog".
+        assert_eq!(app.display_curion_name(&curion), "dog (Animal)");
+    }
+
+    /// F-3: In EN mode, a noun missing from the database falls back to the
+    /// JA noun without panicking (synthesis-only nouns will hit this path
+    /// until Phase 2 fills the english field).
+    #[test]
+    fn display_curion_name_en_falls_back_to_ja_noun() {
+        let mut app = empty_app();
+        app.game_state.language = crate::i18n::Language::En;
+        let curion = make_curion("__存在しない名詞ZZZ__", Category::Animal, Rarity::Common);
+        let out = app.display_curion_name(&curion);
+        assert!(
+            out.contains("__存在しない名詞ZZZ__"),
+            "fallback should retain JA noun, got {out:?}"
+        );
+        assert!(
+            out.contains("Animal"),
+            "category should still render in En, got {out:?}"
+        );
+    }
+
+    /// G-1: On the Settings tab, Left toggles En → Ja.
+    #[test]
+    fn settings_tab_left_arrow_toggles_language() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.game_state.language = crate::i18n::Language::En;
+        app.handle_key(KeyCode::Left).unwrap();
+        assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
+    }
+
+    /// G-2: On the Settings tab, Right also toggles (same semantics as Left
+    /// because the picker only has two values).
+    #[test]
+    fn settings_tab_right_arrow_toggles_language() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.game_state.language = crate::i18n::Language::En;
+        app.handle_key(KeyCode::Right).unwrap();
+        assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
+    }
+
+    /// G-3: Toggling the language raises `pending_save` so the main loop can
+    /// flush to disk.
+    #[test]
+    fn settings_tab_toggle_sets_pending_save_flag() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.handle_key(KeyCode::Left).unwrap();
+        assert!(
+            app.take_pending_save(),
+            "toggle should arm pending_save for the main loop"
+        );
+    }
+
+    /// G-4: `take_pending_save` is a one-shot — after consuming once, the
+    /// next call returns false until another toggle.
+    #[test]
+    fn take_pending_save_is_one_shot() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.handle_key(KeyCode::Left).unwrap();
+        assert!(app.take_pending_save(), "first take returns true");
+        assert!(!app.take_pending_save(), "second take returns false");
+    }
+
+    /// G-5: On non-Settings tabs, Left/Right do not change language nor arm
+    /// `pending_save`.
+    #[test]
+    fn non_settings_tab_left_right_does_not_toggle() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        let before = app.game_state.language;
+        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Right).unwrap();
+        assert_eq!(app.game_state.language, before, "language must not change");
+        assert!(
+            !app.take_pending_save(),
+            "pending_save must stay false off Settings"
+        );
+    }
+
+    /// G-6: Two toggles on Settings round-trip back to the original language.
+    #[test]
+    fn settings_tab_left_then_right_returns_to_original_language() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        let before = app.game_state.language;
+        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Right).unwrap();
+        assert_eq!(app.game_state.language, before);
+    }
+
+    /// G-7: Multiple toggles before any consumption still register as
+    /// pending; once consumed, the next read returns false.
+    #[test]
+    fn settings_tab_repeated_toggle_keeps_pending_save_until_consumed() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Settings);
+        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Right).unwrap();
+        app.handle_key(KeyCode::Left).unwrap();
+        assert!(app.take_pending_save(), "three toggles → still pending");
+        assert!(!app.take_pending_save(), "consumed → next read is false");
+    }
+
+    /// J-1: Pinning current behaviour — even when `language = En`, the
+    /// regex filter still matches the Japanese category label `動物`
+    /// (because `match_curion` checks `category.as_str()`, which is the
+    /// fixed JA label). Phase 2 (Issue #65) may revisit this so the filter
+    /// also accepts the English category string in En mode.
+    #[test]
+    fn filter_regex_still_matches_japanese_in_en_mode() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.game_state.language = crate::i18n::Language::En;
+        let curion = make_curion("犬", Category::Animal, Rarity::Common);
+        let re = regex::Regex::new("動物").unwrap();
+        assert!(
+            match_curion(&re, &curion),
+            "current behaviour: JA category label still matches in En mode"
+        );
+    }
 }

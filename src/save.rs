@@ -186,4 +186,81 @@ mod tests {
         let manager = SaveManager::new().expect("Failed to create save manager");
         assert!(manager.save_path().to_str().is_some());
     }
+
+    // ── Issue #63 Phase 1: language round-trip via SerializableGameState ──
+
+    fn fresh_game_state() -> GameState {
+        let recipe_db = RecipeDatabase::load_embedded().expect("Failed to load recipe database");
+        let synthesis_manager = SynthesisManager::new(recipe_db);
+        GameState::new(synthesis_manager)
+    }
+
+    fn round_trip(state: &GameState) -> GameState {
+        let recipe_db = RecipeDatabase::load_embedded().expect("Failed to load recipe database");
+        let synthesis_manager = SynthesisManager::new(recipe_db);
+        let serializable = SerializableGameState::from(state);
+        let json = serde_json::to_string(&serializable).expect("serialize");
+        let parsed: SerializableGameState = serde_json::from_str(&json).expect("deserialize");
+        parsed.into_game_state(synthesis_manager)
+    }
+
+    /// H-1: A GameState with `language = En` round-trips through JSON
+    /// unchanged.
+    #[test]
+    fn serializable_round_trip_preserves_language_en() {
+        let mut state = fresh_game_state();
+        state.language = crate::i18n::Language::En;
+        let restored = round_trip(&state);
+        assert_eq!(restored.language, crate::i18n::Language::En);
+    }
+
+    /// H-2: A GameState with `language = Ja` round-trips through JSON
+    /// unchanged.
+    #[test]
+    fn serializable_round_trip_preserves_language_ja() {
+        let mut state = fresh_game_state();
+        state.language = crate::i18n::Language::Ja;
+        let restored = round_trip(&state);
+        assert_eq!(restored.language, crate::i18n::Language::Ja);
+    }
+
+    /// H-3: A legacy save JSON (no `language` field) deserializes with
+    /// `language = En` via `#[serde(default)]`. This is the migration path
+    /// for pre-#63 save files.
+    #[test]
+    fn legacy_save_without_language_field_deserializes_as_english() {
+        // Build a minimal SerializableGameState JSON without the `language`
+        // field by serializing a fresh state and then stripping the key.
+        let state = fresh_game_state();
+        let serializable = SerializableGameState::from(&state);
+        let mut value: serde_json::Value =
+            serde_json::to_value(&serializable).expect("to_value");
+        let obj = value.as_object_mut().expect("top-level object");
+        assert!(
+            obj.remove("language").is_some(),
+            "language field should exist before stripping"
+        );
+        let legacy_json = serde_json::to_string(&value).expect("serialize stripped");
+        let parsed: SerializableGameState =
+            serde_json::from_str(&legacy_json).expect("legacy deserialize");
+        assert_eq!(parsed.language, crate::i18n::Language::En);
+    }
+
+    /// H-4: A newly serialized SerializableGameState carries the `language`
+    /// field in its JSON output (= older readers see the new field).
+    #[test]
+    fn serializable_json_contains_language_field_for_new_save() {
+        let mut state = fresh_game_state();
+        state.language = crate::i18n::Language::Ja;
+        let serializable = SerializableGameState::from(&state);
+        let json = serde_json::to_string(&serializable).expect("serialize");
+        assert!(
+            json.contains("\"language\""),
+            "JSON should contain the language key, got: {json}"
+        );
+        assert!(
+            json.contains("\"Ja\""),
+            "JSON should contain the Ja variant tag, got: {json}"
+        );
+    }
 }

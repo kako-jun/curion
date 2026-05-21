@@ -562,6 +562,27 @@ mod tests {
         );
     }
 
+    /// Issue #63 E-1: `english_for` returns Some(_) for a noun present in the
+    /// embedded JSON database (e.g. "犬" → "dog").
+    #[test]
+    fn english_for_known_noun_returns_some() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+        let english = db.english_for("犬");
+        assert!(english.is_some(), "「犬」 should resolve via english_for");
+        assert!(
+            !english.unwrap().is_empty(),
+            "english_for should not return an empty string"
+        );
+    }
+
+    /// Issue #63 E-2: `english_for` returns None for nouns that do not exist
+    /// in the database (synthesis-only nouns or unknown strings).
+    #[test]
+    fn english_for_unknown_noun_returns_none() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+        assert!(db.english_for("__絶対に存在しない名詞ZZZ__").is_none());
+    }
+
     /// Issue #39: latent パイプライン経由で生成された noun は、必ず
     /// その Curion の category に属する noun データベースエントリと一致する
     /// (= nearest-neighbor が「他カテゴリの noun を引いてしまう」事故を起こさない)。

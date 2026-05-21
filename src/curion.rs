@@ -304,6 +304,55 @@ mod tests {
         );
     }
 
+    /// Issue #63 D-1: For all 9 categories, `display(Ja)` matches the legacy
+    /// `as_str()` Japanese label (legacy compatibility contract — internal
+    /// look-ups by JA string must keep working).
+    #[test]
+    fn category_display_ja_matches_as_str_for_all_nine() {
+        use crate::i18n::Language;
+        for cat in [
+            Category::Animal,
+            Category::Plant,
+            Category::Color,
+            Category::Object,
+            Category::Concept,
+            Category::Element,
+            Category::Food,
+            Category::Phenomenon,
+            Category::Abstract,
+        ] {
+            assert_eq!(
+                cat.display(Language::Ja),
+                cat.as_str(),
+                "{cat:?} Ja display must match as_str()"
+            );
+        }
+    }
+
+    /// Issue #63 D-2: For all 9 categories, `display(En)` is non-empty and
+    /// differs from `display(Ja)` (= no English entry is accidentally a JA
+    /// fallback).
+    #[test]
+    fn category_display_en_non_empty_and_distinct_from_ja_for_all_nine() {
+        use crate::i18n::Language;
+        for cat in [
+            Category::Animal,
+            Category::Plant,
+            Category::Color,
+            Category::Object,
+            Category::Concept,
+            Category::Element,
+            Category::Food,
+            Category::Phenomenon,
+            Category::Abstract,
+        ] {
+            let en = cat.display(Language::En);
+            let ja = cat.display(Language::Ja);
+            assert!(!en.is_empty(), "{cat:?} En display empty");
+            assert_ne!(en, ja, "{cat:?} En must differ from Ja");
+        }
+    }
+
     /// Issue #30: `lifespan_days = None` (旧セーブ等) は永遠扱いで期限切れにならない。
     #[test]
     fn test_is_expired_none_when_no_lifespan() {
