@@ -1303,12 +1303,14 @@ impl App {
             Style::default().fg(Color::White)
         };
 
+        let en_text = format!(" {} ", crate::i18n::Language::En.short_label());
+        let ja_text = format!(" {} ", crate::i18n::Language::Ja.short_label());
         let lines = vec![
             Line::from(vec![
                 Span::styled(format!("{label}: "), Style::default().fg(COLOR_LABEL)),
-                Span::styled(" En ", en_style),
+                Span::styled(en_text, en_style),
                 Span::raw("  "),
-                Span::styled(" Ja ", ja_style),
+                Span::styled(ja_text, ja_style),
             ]),
             Line::from(""),
             Line::from(Span::styled(help_text, Style::default().fg(COLOR_LABEL))),

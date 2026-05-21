@@ -39,7 +39,6 @@ impl Language {
     /// Stable column index inside the translation table.
     ///
     /// `En` => 0, `Ja` => 1.
-    #[allow(dead_code)] // Used by t() and Settings tab (later commit in this PR).
     pub fn index(self) -> usize {
         match self {
             Language::En => 0,
@@ -48,7 +47,6 @@ impl Language {
     }
 
     /// Short code for UI rendering ("En" / "Ja").
-    #[allow(dead_code)] // Used by Settings tab (later commit in this PR).
     pub fn short_label(self) -> &'static str {
         match self {
             Language::En => "En",
@@ -58,7 +56,6 @@ impl Language {
 
     /// Cycle through available languages. Used by the Settings tab's left/right
     /// keys to toggle between the (currently two) supported locales.
-    #[allow(dead_code)] // Used by Settings tab (later commit in this PR).
     pub fn next(self) -> Self {
         match self {
             Language::En => Language::Ja,
@@ -72,14 +69,15 @@ impl Language {
 /// Indexed by key, each value is `[english, japanese]`. The table is built
 /// once on first access via [`OnceLock`] (`LazyLock` would require MSRV >=
 /// 1.80, but this crate pins MSRV to 1.78).
-#[allow(dead_code)] // Used by t() (which itself is used in later commits of this PR).
 fn dict() -> &'static HashMap<&'static str, [&'static str; 2]> {
     static DICT: OnceLock<HashMap<&'static str, [&'static str; 2]>> = OnceLock::new();
     DICT.get_or_init(build_dict)
 }
 
-#[allow(dead_code)] // Used by dict() (which itself is used in later commits of this PR).
 fn build_dict() -> HashMap<&'static str, [&'static str; 2]> {
+    // ALL-CAPS code labels (PLAYER, RECENT ACQUISITIONS, etc.) and product names
+    // (Categories, Help, Selected) are intentionally identical between En and Ja.
+    // They function as fixed UI labels rather than translatable text.
     let mut m: HashMap<&'static str, [&'static str; 2]> = HashMap::new();
 
     // ── Tabs ─────────────────────────────────────────────────────
@@ -238,7 +236,6 @@ fn build_dict() -> HashMap<&'static str, [&'static str; 2]> {
 /// missing dictionary entries are caught immediately. In release builds the
 /// function falls back to the fixed placeholder `"?"` — no allocation, no
 /// leak. Returning a `&'static str` keeps callers allocation-free.
-#[allow(dead_code)] // Wired into ui.rs in later commits of this PR.
 pub fn t(key: &str, lang: Language) -> &'static str {
     if let Some(entry) = dict().get(key) {
         return entry[lang.index()];
