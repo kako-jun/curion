@@ -4,139 +4,159 @@
     "reading": "ひ",
     "english": "fire",
     "weight": 1.0,
-    "flavor": "全てを変質させる、最古の興味の粒子。あたためる手にもなり奪う爪にもなる。"
+    "flavor": "全てを変質させる、最古の興味の粒子。あたためる手にもなり奪う爪にもなる。",
+    "flavor_en": "The most ancient particle of curiosity, transmuting all it touches; it becomes the warming hand and the seizing claw alike."
   },
   {
     "name": "水",
     "reading": "みず",
     "english": "water",
     "weight": 1.0,
-    "flavor": "形を持たぬことで形を選び続ける、柔軟な興味の粒子。命と腐敗の両方を運ぶ。"
+    "flavor": "形を持たぬことで形を選び続ける、柔軟な興味の粒子。命と腐敗の両方を運ぶ。",
+    "flavor_en": "A pliant particle of curiosity that, by holding no form, perpetually chooses its form; it carries both life and decay."
   },
   {
     "name": "土",
     "reading": "つち",
     "english": "earth",
     "weight": 1.0,
-    "flavor": "始まりと終わりを受け取る、母性の興味を宿す粒子。踏みしめれば思考が落ち着く。"
+    "flavor": "始まりと終わりを受け取る、母性の興味を宿す粒子。踏みしめれば思考が落ち着く。",
+    "flavor_en": "A particle housing maternal curiosity that receives every beginning and ending; press your foot upon it and thought finds its center."
   },
   {
     "name": "風",
     "reading": "かぜ",
     "english": "wind",
     "weight": 1.0,
-    "flavor": "見えぬまま世界を巡る、伝令の興味を宿す粒子。記憶も匂いも全て運んでくれる。"
+    "flavor": "見えぬまま世界を巡る、伝令の興味を宿す粒子。記憶も匂いも全て運んでくれる。",
+    "flavor_en": "A particle housing the curiosity of the messenger that circuits the world unseen; it carries memory and scent and all things between."
   },
   {
     "name": "雷",
     "reading": "かみなり",
     "english": "thunder",
     "weight": 0.8,
-    "flavor": "天から伸びる白い舌、神聖と恐怖の興味を宿す粒子。瞬間に世界を真実で割る。"
+    "flavor": "天から伸びる白い舌、神聖と恐怖の興味を宿す粒子。瞬間に世界を真実で割る。",
+    "flavor_en": "A white tongue extending from the heavens, a particle housing the curiosity of the sacred and the fearful; in an instant it cleaves the world with truth."
   },
   {
     "name": "氷",
     "reading": "こおり",
     "english": "ice",
     "weight": 1.0,
-    "flavor": "時間を凍らせる結晶、保存の興味を宿す粒子。冷たさの内側に静かな秩序を蔵す。"
+    "flavor": "時間を凍らせる結晶、保存の興味を宿す粒子。冷たさの内側に静かな秩序を蔵す。",
+    "flavor_en": "A crystal that freezes time, a particle housing the curiosity of preservation; within its coldness it harbours a silent order."
   },
   {
     "name": "闇",
     "reading": "やみ",
     "english": "darkness",
     "weight": 0.6,
-    "flavor": "光が描けぬ世界を抱える、母性の興味の粒子。見えないからこそ可能性が無限大。"
+    "flavor": "光が描けぬ世界を抱える、母性の興味の粒子。見えないからこそ可能性が無限大。",
+    "flavor_en": "A maternal particle of curiosity that embraces the world light cannot draw; precisely because nothing is seen, possibility becomes infinite."
   },
   {
     "name": "聖",
     "reading": "せい",
     "english": "holy",
     "weight": 0.4,
-    "flavor": "穢れを濾過する透き通った興味の粒子。触れた瞬間に空間の周波数が整っていく。"
+    "flavor": "穢れを濾過する透き通った興味の粒子。触れた瞬間に空間の周波数が整っていく。",
+    "flavor_en": "A translucent particle of curiosity that filters away defilement; the moment it is touched, the frequency of the space itself begins to align."
   },
   {
     "name": "毒",
     "reading": "どく",
     "english": "poison",
     "weight": 0.7,
-    "flavor": "命を脅かすことで命の輪郭を引き、警告の興味を宿す粒子。薄めれば薬にも転じる。"
+    "flavor": "命を脅かすことで命の輪郭を引き、警告の興味を宿す粒子。薄めれば薬にも転じる。",
+    "flavor_en": "A particle housing the curiosity of warning that draws the outline of life by threatening it; diluted, it turns into medicine."
   },
   {
     "name": "鉄",
     "reading": "てつ",
     "english": "iron",
     "weight": 1.0,
-    "flavor": "硬さと重さで文明を支えた、骨格の興味を宿す粒子。錆びてなお歴史の証人となる。"
+    "flavor": "硬さと重さで文明を支えた、骨格の興味を宿す粒子。錆びてなお歴史の証人となる。",
+    "flavor_en": "A particle housing the curiosity of the skeleton, which supported civilization through hardness and weight; even rusted, it remains a witness to history."
   },
   {
     "name": "銅",
     "reading": "どう",
     "english": "copper",
     "weight": 1.0,
-    "flavor": "緑青に化ける優しさを持つ、時を含む興味の粒子。十年経つほど深みを増していく。"
+    "flavor": "緑青に化ける優しさを持つ、時を含む興味の粒子。十年経つほど深みを増していく。",
+    "flavor_en": "A particle of time-laden curiosity, gentle enough to transmute into verdigris; with each passing decade, its depth only deepens."
   },
   {
     "name": "銀",
     "reading": "ぎん",
     "english": "silver",
     "weight": 0.6,
-    "flavor": "月光を結晶化した、清廉な興味の粒子。汚れを写すことで持ち主の運を測る。"
+    "flavor": "月光を結晶化した、清廉な興味の粒子。汚れを写すことで持ち主の運を測る。",
+    "flavor_en": "A pure-hearted particle of curiosity, the crystallization of moonlight; by reflecting impurity, it gauges the fortune of its bearer."
   },
   {
     "name": "金",
     "reading": "きん",
     "english": "gold",
     "weight": 0.3,
-    "flavor": "永遠を象徴する、不変の興味を宿す粒子。元素の中で最も詩人に愛された輝き。"
+    "flavor": "永遠を象徴する、不変の興味を宿す粒子。元素の中で最も詩人に愛された輝き。",
+    "flavor_en": "A particle housing immutable curiosity, the very symbol of eternity; among all elements, the radiance most beloved by poets."
   },
   {
     "name": "鉛",
     "reading": "なまり",
     "english": "lead",
     "weight": 0.9,
-    "flavor": "重く沈み込む、忍耐の興味を宿す粒子。錬金術師が金を夢見た出発点でもある。"
+    "flavor": "重く沈み込む、忍耐の興味を宿す粒子。錬金術師が金を夢見た出発点でもある。",
+    "flavor_en": "A heavy, sinking particle housing the curiosity of endurance; it is also the starting point from which alchemists dreamed of gold."
   },
   {
     "name": "錫",
     "reading": "すず",
     "english": "tin",
     "weight": 0.8,
-    "flavor": "柔らかく錆びにくい、控えめな興味の粒子。器となり酒を清らかに保ってきた。"
+    "flavor": "柔らかく錆びにくい、控えめな興味の粒子。器となり酒を清らかに保ってきた。",
+    "flavor_en": "A modest particle of curiosity, soft yet slow to rust; becoming a vessel, it has long kept wine pure."
   },
   {
     "name": "水銀",
     "reading": "すいぎん",
     "english": "mercury",
     "weight": 0.5,
-    "flavor": "液体である金属、矛盾の興味を宿す粒子。掴めぬ流動性が世界の常識を揺らす。"
+    "flavor": "液体である金属、矛盾の興味を宿す粒子。掴めぬ流動性が世界の常識を揺らす。",
+    "flavor_en": "A metal that is liquid, a particle housing the curiosity of contradiction; its ungraspable fluidity unsettles the common sense of the world."
   },
   {
     "name": "硫黄",
     "reading": "いおう",
     "english": "sulfur",
     "weight": 0.7,
-    "flavor": "黄色く煙る、変容の興味を宿す粒子。香りそのものが警告と魔術を同時に運ぶ。"
+    "flavor": "黄色く煙る、変容の興味を宿す粒子。香りそのものが警告と魔術を同時に運ぶ。",
+    "flavor_en": "A yellow-smoking particle housing the curiosity of transmutation; its very scent carries warning and sorcery in a single breath."
   },
   {
     "name": "炭",
     "reading": "すみ",
     "english": "charcoal",
     "weight": 1.0,
-    "flavor": "燃えた残りこそ価値となる、再生の興味の粒子。黒の中に未来の熱が休んでいる。"
+    "flavor": "燃えた残りこそ価値となる、再生の興味の粒子。黒の中に未来の熱が休んでいる。",
+    "flavor_en": "A particle of regenerative curiosity in which what remains after burning becomes the true value; within its blackness, the heat of a future rests."
   },
   {
     "name": "塩",
     "reading": "しお",
     "english": "salt",
     "weight": 1.0,
-    "flavor": "結晶化した海、保存と清めの興味を宿す粒子。命の味を境界線として刻みつける。"
+    "flavor": "結晶化した海、保存と清めの興味を宿す粒子。命の味を境界線として刻みつける。",
+    "flavor_en": "A crystallized sea, a particle housing the curiosity of preservation and purification; it engraves the taste of life as a boundary line."
   },
   {
     "name": "砂",
     "reading": "すな",
     "english": "sand",
     "weight": 1.0,
-    "flavor": "石が時間に磨かれた終着点、無常の興味の粒子。一粒に世界の縮図が眠っている。"
+    "flavor": "石が時間に磨かれた終着点、無常の興味の粒子。一粒に世界の縮図が眠っている。",
+    "flavor_en": "The terminus where stone has been polished by time, a particle of the curiosity of impermanence; within a single grain sleeps a miniature of the world."
   }
 ]

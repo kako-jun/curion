@@ -4,174 +4,199 @@
     "reading": "さくら",
     "english": "cherry blossom",
     "weight": 1.0,
-    "flavor": "短い満開に全てを賭ける、儚さの興味を司る粒子。散り際こそ最大の表現となる。"
+    "flavor": "短い満開に全てを賭ける、儚さの興味を司る粒子。散り際こそ最大の表現となる。",
+    "flavor_en": "A particle presiding over the curiosity of transience, wagering all on a brief full bloom. The moment of falling is its greatest expression."
   },
   {
     "name": "薔薇",
     "reading": "ばら",
     "english": "rose",
     "weight": 1.0,
-    "flavor": "棘とともに咲く、誇りと愛欲の興味を宿した粒子。色ごとに異なる感情を語る。"
+    "flavor": "棘とともに咲く、誇りと愛欲の興味を宿した粒子。色ごとに異なる感情を語る。",
+    "flavor_en": "A particle harboring the curiosity of pride and desire, blooming with thorns. Each hue tells a different emotion."
   },
   {
     "name": "蓮",
     "reading": "はす",
     "english": "lotus",
     "weight": 0.7,
-    "flavor": "泥から立ち上がり清浄を保つ、悟りの興味を宿す粒子。水面の上で目覚めを誓う。"
+    "flavor": "泥から立ち上がり清浄を保つ、悟りの興味を宿す粒子。水面の上で目覚めを誓う。",
+    "flavor_en": "A particle of awakening curiosity, rising from the mire yet keeping its purity. It vows to awaken upon the surface of the water."
   },
   {
     "name": "竹",
     "reading": "たけ",
     "english": "bamboo",
     "weight": 1.0,
-    "flavor": "節を重ねてしなやかに伸びる、忍耐の興味の粒子。中空の心は折れずに歌う。"
+    "flavor": "節を重ねてしなやかに伸びる、忍耐の興味の粒子。中空の心は折れずに歌う。",
+    "flavor_en": "A particle of patient curiosity, stretching supple through stacked nodes. Its hollow heart bends but never breaks, and sings."
   },
   {
     "name": "松",
     "reading": "まつ",
     "english": "pine",
     "weight": 1.0,
-    "flavor": "千年を超えて変わらぬ、不変の興味を象徴する粒子。緑の常を雪にも貫き通す。"
+    "flavor": "千年を超えて変わらぬ、不変の興味を象徴する粒子。緑の常を雪にも貫き通す。",
+    "flavor_en": "A particle symbolizing the curiosity of immutability, unchanged across a thousand years. It carries its constant green even through snow."
   },
   {
     "name": "梅",
     "reading": "うめ",
     "english": "plum blossom",
     "weight": 1.0,
-    "flavor": "雪の中に先駆けて咲く、勇気の興味を宿す粒子。寒さに香り立つ最初の春。"
+    "flavor": "雪の中に先駆けて咲く、勇気の興味を宿す粒子。寒さに香り立つ最初の春。",
+    "flavor_en": "A particle of courageous curiosity, blooming foremost amid the snow. The first spring whose fragrance rises against the cold."
   },
   {
     "name": "菊",
     "reading": "きく",
     "english": "chrysanthemum",
     "weight": 1.0,
-    "flavor": "重なる花弁に皇統を宿す、清廉な興味の粒子。秋の終わりにこそ威厳を放つ。"
+    "flavor": "重なる花弁に皇統を宿す、清廉な興味の粒子。秋の終わりにこそ威厳を放つ。",
+    "flavor_en": "A particle of pure curiosity, harboring imperial lineage in its layered petals. Its dignity shines brightest at autumn's end."
   },
   {
     "name": "蘭",
     "reading": "らん",
     "english": "orchid",
     "weight": 0.8,
-    "flavor": "深山にひっそりと咲く、洗練された興味の粒子。気高さは目立たぬ場所で磨かれる。"
+    "flavor": "深山にひっそりと咲く、洗練された興味の粒子。気高さは目立たぬ場所で磨かれる。",
+    "flavor_en": "A refined particle of curiosity, blooming quietly deep in the mountains. Nobility is honed in places unseen."
   },
   {
     "name": "藤",
     "reading": "ふじ",
     "english": "wisteria",
     "weight": 0.9,
-    "flavor": "垂れ下がる紫房に時を編み込む、優美な興味の粒子。風が来れば波のように揺らぐ。"
+    "flavor": "垂れ下がる紫房に時を編み込む、優美な興味の粒子。風が来れば波のように揺らぐ。",
+    "flavor_en": "An elegant particle of curiosity, weaving time into its drooping violet clusters. At the wind's arrival, it sways like a wave."
   },
   {
     "name": "椿",
     "reading": "つばき",
     "english": "camellia",
     "weight": 0.9,
-    "flavor": "厳冬に首ごと落ちる、潔さの興味を宿す粒子。緋の輝きで雪の静けさを破る。"
+    "flavor": "厳冬に首ごと落ちる、潔さの興味を宿す粒子。緋の輝きで雪の静けさを破る。",
+    "flavor_en": "A particle of resolute curiosity, falling head and all in the deep of winter. Its scarlet brilliance breaks the silence of the snow."
   },
   {
     "name": "楓",
     "reading": "かえで",
     "english": "maple",
     "weight": 1.0,
-    "flavor": "秋にだけ赤く燃え上がる、変容の興味を司る粒子。落葉は別れの儀式となる。"
+    "flavor": "秋にだけ赤く燃え上がる、変容の興味を司る粒子。落葉は別れの儀式となる。",
+    "flavor_en": "A particle presiding over the curiosity of transformation, burning red only in autumn. The falling leaf becomes a rite of parting."
   },
   {
     "name": "柳",
     "reading": "やなぎ",
     "english": "willow",
     "weight": 1.0,
-    "flavor": "風に逆らわず流れる、しなやかな興味の粒子。垂れ下がる枝に水辺の物語を綴る。"
+    "flavor": "風に逆らわず流れる、しなやかな興味の粒子。垂れ下がる枝に水辺の物語を綴る。",
+    "flavor_en": "A supple particle of curiosity, flowing without resistance to the wind. Its drooping branches inscribe the tales of the waterside."
   },
   {
     "name": "檜",
     "reading": "ひのき",
     "english": "cypress",
     "weight": 0.8,
-    "flavor": "千年の社を支え続けた、清浄な興味の粒子。木目に祈りの記憶を刻んでいる。"
+    "flavor": "千年の社を支え続けた、清浄な興味の粒子。木目に祈りの記憶を刻んでいる。",
+    "flavor_en": "A pure particle of curiosity that has upheld shrines for a thousand years. The memory of prayer is carved into its grain."
   },
   {
     "name": "杉",
     "reading": "すぎ",
     "english": "cedar",
     "weight": 1.0,
-    "flavor": "天を目指して直立する、誠実な興味の粒子。森の柱としてまっすぐ立ち続ける。"
+    "flavor": "天を目指して直立する、誠実な興味の粒子。森の柱としてまっすぐ立ち続ける。",
+    "flavor_en": "An honest particle of curiosity, standing upright toward the heavens. As the pillar of the forest, it goes on standing straight."
   },
   {
     "name": "蔦",
     "reading": "つた",
     "english": "ivy",
     "weight": 1.0,
-    "flavor": "壁を緑で包み込む、執着と帰属の興味を宿す粒子。時を経るほど絡みが強くなる。"
+    "flavor": "壁を緑で包み込む、執着と帰属の興味を宿す粒子。時を経るほど絡みが強くなる。",
+    "flavor_en": "A particle harboring the curiosity of attachment and belonging, swathing walls in green. The longer time passes, the tighter its grasp."
   },
   {
     "name": "葦",
     "reading": "あし",
     "english": "reed",
     "weight": 1.0,
-    "flavor": "水辺で群れる、しなやかで詩的な興味の粒子。一本一本が世界の囁きを増幅する。"
+    "flavor": "水辺で群れる、しなやかで詩的な興味の粒子。一本一本が世界の囁きを増幅する。",
+    "flavor_en": "A supple, poetic particle of curiosity, gathering at the waterside. Each single stalk amplifies the whispering of the world."
   },
   {
     "name": "芒",
     "reading": "すすき",
     "english": "pampas grass",
     "weight": 1.0,
-    "flavor": "風になびく銀の穂を持つ、無常の興味を宿す粒子。月夜の野原に光の波を生む。"
+    "flavor": "風になびく銀の穂を持つ、無常の興味を宿す粒子。月夜の野原に光の波を生む。",
+    "flavor_en": "A particle of impermanent curiosity, bearing silver plumes that sway in the wind. In moonlit fields it births waves of light."
   },
   {
     "name": "菫",
     "reading": "すみれ",
     "english": "violet",
     "weight": 0.9,
-    "flavor": "石垣の隙間に咲く、控えめな興味の粒子。小さくとも紫の誇りは確かにある。"
+    "flavor": "石垣の隙間に咲く、控えめな興味の粒子。小さくとも紫の誇りは確かにある。",
+    "flavor_en": "A modest particle of curiosity, blooming in the cracks of stone walls. Small though it is, its violet pride is unmistakable."
   },
   {
     "name": "桔梗",
     "reading": "ききょう",
     "english": "bellflower",
     "weight": 0.8,
-    "flavor": "五角の星形を秘めた、清らかな興味の粒子。雨の前にだけ蕾を結ぶ予言者。"
+    "flavor": "五角の星形を秘めた、清らかな興味の粒子。雨の前にだけ蕾を結ぶ予言者。",
+    "flavor_en": "A pure particle of curiosity, concealing a five-pointed star within. A prophet that closes its buds only before the rain."
   },
   {
     "name": "牡丹",
     "reading": "ぼたん",
     "english": "peony",
     "weight": 0.7,
-    "flavor": "百花の王と呼ばれる、豪奢な興味の粒子。一輪で庭の主役を担う気品を持つ。"
+    "flavor": "百花の王と呼ばれる、豪奢な興味の粒子。一輪で庭の主役を担う気品を持つ。",
+    "flavor_en": "An opulent particle of curiosity, hailed as the king of a hundred flowers. A single bloom holds the grace to lead the garden."
   },
   {
     "name": "百合",
     "reading": "ゆり",
     "english": "lily",
     "weight": 0.9,
-    "flavor": "純白の鐘形に祈りを湛えた、聖なる興味の粒子。香りで空間を浄化していく。"
+    "flavor": "純白の鐘形に祈りを湛えた、聖なる興味の粒子。香りで空間を浄化していく。",
+    "flavor_en": "A sacred particle of curiosity, brimming with prayer in its pure white bell. Its fragrance gradually purifies the surrounding space."
   },
   {
     "name": "紫陽花",
     "reading": "あじさい",
     "english": "hydrangea",
     "weight": 1.0,
-    "flavor": "土と空の対話で色を変える、移ろいの興味を宿す粒子。雨こそ最大の友となる。"
+    "flavor": "土と空の対話で色を変える、移ろいの興味を宿す粒子。雨こそ最大の友となる。",
+    "flavor_en": "A particle of shifting curiosity, changing hue through the dialogue of soil and sky. The rain itself becomes its greatest companion."
   },
   {
     "name": "向日葵",
     "reading": "ひまわり",
     "english": "sunflower",
     "weight": 1.0,
-    "flavor": "太陽を追って首を巡らす、明朗な興味の粒子。種の螺旋に宇宙の比率を蔵す。"
+    "flavor": "太陽を追って首を巡らす、明朗な興味の粒子。種の螺旋に宇宙の比率を蔵す。",
+    "flavor_en": "A radiant particle of curiosity, turning its head to follow the sun. The spiral of its seeds holds the proportions of the cosmos."
   },
   {
     "name": "朝顔",
     "reading": "あさがお",
     "english": "morning glory",
     "weight": 1.0,
-    "flavor": "夏の朝にだけ咲く、勤勉な興味の粒子。蔓を伸ばす方向に未来を読み取る。"
+    "flavor": "夏の朝にだけ咲く、勤勉な興味の粒子。蔓を伸ばす方向に未来を読み取る。",
+    "flavor_en": "A diligent particle of curiosity, blooming only in the summer mornings. One reads the future in the direction its vines extend."
   },
   {
     "name": "彼岸花",
     "reading": "ひがんばな",
     "english": "red spider lily",
     "weight": 0.6,
-    "flavor": "彼岸の頃に突如咲く、境界の興味を宿す粒子。緋の群生は別世界の合図となる。"
+    "flavor": "彼岸の頃に突如咲く、境界の興味を宿す粒子。緋の群生は別世界の合図となる。",
+    "flavor_en": "A particle of liminal curiosity, blooming abruptly around the equinox. Its scarlet colonies become a signal from another world."
   }
 ]

@@ -4,139 +4,159 @@
     "reading": "ほん",
     "english": "book",
     "weight": 1.0,
-    "flavor": "閉じた表紙に世界を畳み込む、知識の興味を宿す粒子。開けば時空が立ち上がる。"
+    "flavor": "閉じた表紙に世界を畳み込む、知識の興味を宿す粒子。開けば時空が立ち上がる。",
+    "flavor_en": "A particle of knowledge, folding the world inside a closed cover. To open it is to raise time and space anew."
   },
   {
     "name": "剣",
     "reading": "けん",
     "english": "sword",
     "weight": 0.7,
-    "flavor": "意志を鋼に変えた、決断の興味を宿す粒子。刃は持ち主の覚悟と等しく研がれる。"
+    "flavor": "意志を鋼に変えた、決断の興味を宿す粒子。刃は持ち主の覚悟と等しく研がれる。",
+    "flavor_en": "A particle of resolve, where will has been forged into steel. The blade is sharpened to the measure of its bearer's resolve."
   },
   {
     "name": "鏡",
     "reading": "かがみ",
     "english": "mirror",
     "weight": 1.0,
-    "flavor": "見られる側を見つめ返す、再帰の興味を宿す粒子。真実は表面ではなく裏にある。"
+    "flavor": "見られる側を見つめ返す、再帰の興味を宿す粒子。真実は表面ではなく裏にある。",
+    "flavor_en": "A recursive particle that gazes back at the gazer. The truth resides not on its surface but behind it."
   },
   {
     "name": "鍵",
     "reading": "かぎ",
     "english": "key",
     "weight": 1.0,
-    "flavor": "閉ざされた可能性を開く、選択の興味を宿す粒子。形は答えそのものを写している。"
+    "flavor": "閉ざされた可能性を開く、選択の興味を宿す粒子。形は答えそのものを写している。",
+    "flavor_en": "A particle of choice that opens sealed possibilities. Its very shape is the silhouette of the answer."
   },
   {
     "name": "時計",
     "reading": "とけい",
     "english": "clock",
     "weight": 1.0,
-    "flavor": "時間を刻むことで時間を縛る、矛盾した興味を宿す粒子。針が世界の鼓動を測る。"
+    "flavor": "時間を刻むことで時間を縛る、矛盾した興味を宿す粒子。針が世界の鼓動を測る。",
+    "flavor_en": "A paradoxical particle that binds time by carving it. Its hands measure the heartbeat of the world."
   },
   {
     "name": "灯",
     "reading": "ひ",
     "english": "lamp",
     "weight": 1.0,
-    "flavor": "暗闇に小さな秩序を灯す、希望の興味を宿す粒子。揺らぎながら確かに導いてくる。"
+    "flavor": "暗闇に小さな秩序を灯す、希望の興味を宿す粒子。揺らぎながら確かに導いてくる。",
+    "flavor_en": "A particle of hope, kindling a small order within the dark. Trembling, yet it guides with unwavering certainty."
   },
   {
     "name": "杯",
     "reading": "さかずき",
     "english": "cup",
     "weight": 1.0,
-    "flavor": "満たされることを待つ、受容の興味を宿す粒子。器であることそのものが祈りとなる。"
+    "flavor": "満たされることを待つ、受容の興味を宿す粒子。器であることそのものが祈りとなる。",
+    "flavor_en": "A particle of acceptance, awaiting the moment of being filled. To be a vessel is itself an act of prayer."
   },
   {
     "name": "箱",
     "reading": "はこ",
     "english": "box",
     "weight": 1.0,
-    "flavor": "中身を秘めることで価値を生む、期待の興味を宿す粒子。開ける前が一番眩しい。"
+    "flavor": "中身を秘めることで価値を生む、期待の興味を宿す粒子。開ける前が一番眩しい。",
+    "flavor_en": "A particle of anticipation whose worth lies in concealment. The moment before opening shines brightest of all."
   },
   {
     "name": "扇",
     "reading": "おうぎ",
     "english": "fan",
     "weight": 0.9,
-    "flavor": "風を従えて舞う、所作の興味を宿す粒子。閉じた姿に物語をすべて畳み込む。"
+    "flavor": "風を従えて舞う、所作の興味を宿す粒子。閉じた姿に物語をすべて畳み込む。",
+    "flavor_en": "A particle of gesture, dancing while commanding the wind. Within its folded form, every story is contained."
   },
   {
     "name": "琴",
     "reading": "こと",
     "english": "koto",
     "weight": 0.6,
-    "flavor": "弦が空気を震わせる、調和の興味を宿す粒子。指先が触れて初めて魂を露わにする。"
+    "flavor": "弦が空気を震わせる、調和の興味を宿す粒子。指先が触れて初めて魂を露わにする。",
+    "flavor_en": "A particle of harmony, its strings trembling the very air. Only at the touch of fingertips does its soul reveal itself."
   },
   {
     "name": "笛",
     "reading": "ふえ",
     "english": "flute",
     "weight": 0.8,
-    "flavor": "息を音に変換する、変質の興味を宿す粒子。誰のものでもない響きが世界を貫く。"
+    "flavor": "息を音に変換する、変質の興味を宿す粒子。誰のものでもない響きが世界を貫く。",
+    "flavor_en": "A particle of transformation, converting breath into tone. A resonance belonging to no one pierces clean through the world."
   },
   {
     "name": "太鼓",
     "reading": "たいこ",
     "english": "drum",
     "weight": 0.9,
-    "flavor": "皮の張力で大地を叩く、原始の興味を宿す粒子。心音の遠い親戚として鳴り続ける。"
+    "flavor": "皮の張力で大地を叩く、原始の興味を宿す粒子。心音の遠い親戚として鳴り続ける。",
+    "flavor_en": "A primal particle that strikes the earth through stretched hide. It sounds on as a distant kin of the heartbeat."
   },
   {
     "name": "筆",
     "reading": "ふで",
     "english": "brush",
     "weight": 1.0,
-    "flavor": "墨と紙の間を取り持つ、表現の興味を宿す粒子。線一本に書き手の呼吸が宿る。"
+    "flavor": "墨と紙の間を取り持つ、表現の興味を宿す粒子。線一本に書き手の呼吸が宿る。",
+    "flavor_en": "A particle of expression, mediating between ink and paper. Within a single line dwells the breath of the one who drew it."
   },
   {
     "name": "硯",
     "reading": "すずり",
     "english": "inkstone",
     "weight": 0.7,
-    "flavor": "墨をじっくり育てる、思索の興味を宿す粒子。摩擦と水で言葉を整える静かな器。"
+    "flavor": "墨をじっくり育てる、思索の興味を宿す粒子。摩擦と水で言葉を整える静かな器。",
+    "flavor_en": "A contemplative particle that cultivates ink with patience. A quiet vessel that orders words through friction and water."
   },
   {
     "name": "玉",
     "reading": "たま",
     "english": "jewel",
     "weight": 0.5,
-    "flavor": "球体に光を閉じ込めた、完全性の興味を宿す粒子。手のひらで世界の縮図を回す。"
+    "flavor": "球体に光を閉じ込めた、完全性の興味を宿す粒子。手のひらで世界の縮図を回す。",
+    "flavor_en": "A particle of perfection, sealing light within a sphere. Upon the palm, a miniature world is set in motion."
   },
   {
     "name": "環",
     "reading": "わ",
     "english": "ring",
     "weight": 0.8,
-    "flavor": "終わりと始まりを結び直す、循環の興味を宿す粒子。閉じることで永遠を約束する。"
+    "flavor": "終わりと始まりを結び直す、循環の興味を宿す粒子。閉じることで永遠を約束する。",
+    "flavor_en": "A particle of circulation, joining end to beginning anew. By closing itself, it promises an unbroken eternity."
   },
   {
     "name": "冠",
     "reading": "かんむり",
     "english": "crown",
     "weight": 0.3,
-    "flavor": "頭上に責任を載せる、権威の興味を宿す粒子。輝きより重さこそが王の真実となる。"
+    "flavor": "頭上に責任を載せる、権威の興味を宿す粒子。輝きより重さこそが王の真実となる。",
+    "flavor_en": "A particle of authority, settling responsibility upon the head. Not its luster but its weight is the true measure of a king."
   },
   {
     "name": "袋",
     "reading": "ふくろ",
     "english": "bag",
     "weight": 1.0,
-    "flavor": "中を見せずに運ぶ、可能性の興味を宿す粒子。膨らみの形が想像力を試してくる。"
+    "flavor": "中を見せずに運ぶ、可能性の興味を宿す粒子。膨らみの形が想像力を試してくる。",
+    "flavor_en": "A particle of possibility, carrying contents unseen. The shape of its swelling puts the imagination to the test."
   },
   {
     "name": "糸",
     "reading": "いと",
     "english": "thread",
     "weight": 1.0,
-    "flavor": "見えにくいほど世界を繋ぐ、結縁の興味を宿す粒子。撚れば布、断てば自由となる。"
+    "flavor": "見えにくいほど世界を繋ぐ、結縁の興味を宿す粒子。撚れば布、断てば自由となる。",
+    "flavor_en": "A particle of binding affinity, joining the world the more invisibly it runs. Twisted, it becomes cloth; severed, it becomes freedom."
   },
   {
     "name": "針",
     "reading": "はり",
     "english": "needle",
     "weight": 1.0,
-    "flavor": "極小の鋭さで運命を縫う、精密さの興味を宿す粒子。穴を通すたびに物語が結ばれる。"
+    "flavor": "極小の鋭さで運命を縫う、精密さの興味を宿す粒子。穴を通すたびに物語が結ばれる。",
+    "flavor_en": "A particle of precision, sewing fate with a minuscule edge. Each passage through the eye binds another story together."
   }
 ]

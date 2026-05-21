@@ -4,363 +4,415 @@
     "reading": "あい",
     "english": "love",
     "weight": 1.0,
-    "flavor": "観測者と対象を区別しなくなる、結合の興味を宿す粒子。万有引力の心理学的形態。"
+    "flavor": "観測者と対象を区別しなくなる、結合の興味を宿す粒子。万有引力の心理学的形態。",
+    "flavor_en": "A particle bearing the interest of union, where observer and object cease to be distinguished. A psychological form of universal gravitation."
   },
   {
     "name": "美",
     "reading": "び",
     "english": "beauty",
     "weight": 1.0,
-    "flavor": "認識した瞬間に呼吸を変える、調和の興味を宿す粒子。理由を超えて魂を立ち止まらせる。"
+    "flavor": "認識した瞬間に呼吸を変える、調和の興味を宿す粒子。理由を超えて魂を立ち止まらせる。",
+    "flavor_en": "A particle bearing the interest of harmony, altering one's breath at the moment of recognition. It halts the soul beyond reason."
   },
   {
     "name": "自由",
     "reading": "じゆう",
     "english": "freedom",
     "weight": 1.0,
-    "flavor": "選択肢の総和ではなく選び抜く力、解放の興味の粒子。重みに耐えられる者にだけ宿る。"
+    "flavor": "選択肢の総和ではなく選び抜く力、解放の興味の粒子。重みに耐えられる者にだけ宿る。",
+    "flavor_en": "A particle of the interest of liberation, not the sum of choices but the power to choose through. It dwells only in those who can bear its weight."
   },
   {
     "name": "勇気",
     "reading": "ゆうき",
     "english": "courage",
     "weight": 1.0,
-    "flavor": "恐れを抱えたまま前へ進む、決断の興味を宿す粒子。震える手のまま剣を握れる強さ。"
+    "flavor": "恐れを抱えたまま前へ進む、決断の興味を宿す粒子。震える手のまま剣を握れる強さ。",
+    "flavor_en": "A particle bearing the interest of decision, advancing while still holding fear. The strength to grasp the sword with a trembling hand."
   },
   {
     "name": "希望",
     "reading": "きぼう",
     "english": "hope",
     "weight": 1.0,
-    "flavor": "暗闇の中で発光する、微小だが切れない興味の粒子。今ここを未来から照らしてくる。"
+    "flavor": "暗闇の中で発光する、微小だが切れない興味の粒子。今ここを未来から照らしてくる。",
+    "flavor_en": "A minute yet unbreakable particle of interest, luminescent within the darkness. It illuminates the here and now from the future."
   },
   {
     "name": "絶望",
     "reading": "ぜつぼう",
     "english": "despair",
     "weight": 0.7,
-    "flavor": "希望の対極に位置する、深淵の興味の粒子。底まで沈むことで反転の合図を放つ。"
+    "flavor": "希望の対極に位置する、深淵の興味の粒子。底まで沈むことで反転の合図を放つ。",
+    "flavor_en": "A particle of abyssal interest, positioned opposite to hope. By sinking to the bottom, it emits the signal of reversal."
   },
   {
     "name": "正義",
     "reading": "せいぎ",
     "english": "justice",
     "weight": 1.0,
-    "flavor": "誰の視点に立つかで形が変わる、揺らぐ興味の粒子。問い続ける姿勢こそが本質となる。"
+    "flavor": "誰の視点に立つかで形が変わる、揺らぐ興味の粒子。問い続ける姿勢こそが本質となる。",
+    "flavor_en": "A wavering particle of interest whose form shifts with whose viewpoint one assumes. The posture of ceaseless questioning is its true essence."
   },
   {
     "name": "知恵",
     "reading": "ちえ",
     "english": "wisdom",
     "weight": 1.0,
-    "flavor": "知識を経験で炊き上げた、滋養ある興味の粒子。本ではなく沈黙の中で熟成される。"
+    "flavor": "知識を経験で炊き上げた、滋養ある興味の粒子。本ではなく沈黙の中で熟成される。",
+    "flavor_en": "A nourishing particle of interest, knowledge slow-cooked through experience. It matures not in books but within silence."
   },
   {
     "name": "力",
     "reading": "ちから",
     "english": "power",
     "weight": 1.0,
-    "flavor": "意志と物質を結ぶ、媒介の興味を宿す粒子。向きを誤れば破壊、定めれば創造となる。"
+    "flavor": "意志と物質を結ぶ、媒介の興味を宿す粒子。向きを誤れば破壊、定めれば創造となる。",
+    "flavor_en": "A particle bearing the interest of mediation, binding will to matter. Misdirected it becomes destruction; aimed true, creation."
   },
   {
     "name": "平和",
     "reading": "へいわ",
     "english": "peace",
     "weight": 1.0,
-    "flavor": "騒がしさが収まった後に立ち上る、繊細な興味の粒子。維持するほうが手に入れるより難しい。"
+    "flavor": "騒がしさが収まった後に立ち上る、繊細な興味の粒子。維持するほうが手に入れるより難しい。",
+    "flavor_en": "A delicate particle of interest, rising after the clamor subsides. It is harder to sustain than to attain."
   },
   {
     "name": "調和",
     "reading": "ちょうわ",
     "english": "harmony",
     "weight": 1.0,
-    "flavor": "違うものが共存する音、橋渡しの興味を宿す粒子。同質ではなく差異の中にこそ宿る。"
+    "flavor": "違うものが共存する音、橋渡しの興味を宿す粒子。同質ではなく差異の中にこそ宿る。",
+    "flavor_en": "A particle bearing the interest of mediation, the sound of differing things coexisting. It dwells not in sameness but within difference itself."
   },
   {
     "name": "混沌",
     "reading": "こんとん",
     "english": "chaos",
     "weight": 0.6,
-    "flavor": "秩序が生まれる前の母なる海、創発の興味の粒子。曖昧さが新しい形を孕んでいく。"
+    "flavor": "秩序が生まれる前の母なる海、創発の興味の粒子。曖昧さが新しい形を孕んでいく。",
+    "flavor_en": "A particle of emergent interest, the maternal sea before order is born. Within its ambiguity, new forms are conceived."
   },
   {
     "name": "秩序",
     "reading": "ちつじょ",
     "english": "order",
     "weight": 0.8,
-    "flavor": "混沌に意味の梁を渡す、構造の興味を宿す粒子。維持するための摩擦も常に伴う。"
+    "flavor": "混沌に意味の梁を渡す、構造の興味を宿す粒子。維持するための摩擦も常に伴う。",
+    "flavor_en": "A particle bearing the interest of structure, laying beams of meaning across chaos. Its maintenance always entails friction."
   },
   {
     "name": "真実",
     "reading": "しんじつ",
     "english": "truth",
     "weight": 0.9,
-    "flavor": "観測者が変わっても変わらぬ核、誠実の興味の粒子。砕けても破片にもまだ宿る。"
+    "flavor": "観測者が変わっても変わらぬ核、誠実の興味の粒子。砕けても破片にもまだ宿る。",
+    "flavor_en": "A particle of sincere interest, a core unaltered though the observer changes. Even shattered, it still dwells within the fragments."
   },
   {
     "name": "嘘",
     "reading": "うそ",
     "english": "lie",
     "weight": 1.0,
-    "flavor": "本当と嘘の境界で揺れる、影の興味を宿す粒子。物語を駆動する燃料にもなれる。"
+    "flavor": "本当と嘘の境界で揺れる、影の興味を宿す粒子。物語を駆動する燃料にもなれる。",
+    "flavor_en": "A particle bearing the interest of shadow, wavering at the boundary between truth and falsehood. It can also serve as fuel that drives a narrative."
   },
   {
     "name": "運命",
     "reading": "うんめい",
     "english": "fate",
     "weight": 0.5,
-    "flavor": "選択と偶然の網目が描く模様、巨視の興味の粒子。後から振り返ると形が見えてくる。"
+    "flavor": "選択と偶然の網目が描く模様、巨視の興味の粒子。後から振り返ると形が見えてくる。",
+    "flavor_en": "A particle of macroscopic interest, a pattern woven by the lattice of choice and chance. Its form becomes visible only when looked back upon."
   },
   {
     "name": "奇跡",
     "reading": "きせき",
     "english": "miracle",
     "weight": 0.3,
-    "flavor": "確率が屈する瞬間に立ち会う、稀少な興味の粒子。日常の中にも紛れ込む小さな歓喜。"
+    "flavor": "確率が屈する瞬間に立ち会う、稀少な興味の粒子。日常の中にも紛れ込む小さな歓喜。",
+    "flavor_en": "A rare particle of interest, witnessing the moment when probability yields. A small rejoicing that slips even into everyday life."
   },
   {
     "name": "栄光",
     "reading": "えいこう",
     "english": "glory",
     "weight": 0.7,
-    "flavor": "結果が他者の眼差しを通して輝く、社会的興味の粒子。一瞬の光は影とともに長く残る。"
+    "flavor": "結果が他者の眼差しを通して輝く、社会的興味の粒子。一瞬の光は影とともに長く残る。",
+    "flavor_en": "A particle of social interest, where outcome shines through the gaze of others. A momentary light lingers long, accompanied by its shadow."
   },
   {
     "name": "屈辱",
     "reading": "くつじょく",
     "english": "humiliation",
     "weight": 0.8,
-    "flavor": "誇りが踏みにじられた跡に残る、痛みの興味を宿す粒子。再起の燃料になることもある。"
+    "flavor": "誇りが踏みにじられた跡に残る、痛みの興味を宿す粒子。再起の燃料になることもある。",
+    "flavor_en": "A particle bearing the interest of pain, remaining where pride has been trampled. It may also become the fuel for resurgence."
   },
   {
     "name": "喜び",
     "reading": "よろこび",
     "english": "joy",
     "weight": 1.0,
-    "flavor": "心拍と表情が同時に弾む、純粋な興味の粒子。分けるほどに総量が増す不思議な熱。"
+    "flavor": "心拍と表情が同時に弾む、純粋な興味の粒子。分けるほどに総量が増す不思議な熱。",
+    "flavor_en": "A pure particle of interest, where pulse and expression leap in unison. A curious warmth whose sum increases the more it is shared."
   },
   {
     "name": "悲しみ",
     "reading": "かなしみ",
     "english": "sadness",
     "weight": 1.0,
-    "flavor": "失った形の輪郭を撫でる、慰めの興味を宿す粒子。涙によって心が再構成されていく。"
+    "flavor": "失った形の輪郭を撫でる、慰めの興味を宿す粒子。涙によって心が再構成されていく。",
+    "flavor_en": "A particle bearing the interest of solace, tracing the outline of what was lost. Through tears, the heart is gradually reconstituted."
   },
   {
     "name": "怒り",
     "reading": "いかり",
     "english": "anger",
     "weight": 1.0,
-    "flavor": "境界線が破られた合図、防衛の興味を宿す粒子。鎮める術を持つ者にこそ宿る力。"
+    "flavor": "境界線が破られた合図、防衛の興味を宿す粒子。鎮める術を持つ者にこそ宿る力。",
+    "flavor_en": "A particle bearing the interest of defense, the signal that a boundary has been breached. A power that dwells only in those who possess the art to quell it."
   },
   {
     "name": "恐怖",
     "reading": "きょうふ",
     "english": "fear",
     "weight": 1.0,
-    "flavor": "未知に対する身体の先回り、警戒の興味を宿す粒子。理解できれば力に変換できる。"
+    "flavor": "未知に対する身体の先回り、警戒の興味を宿す粒子。理解できれば力に変換できる。",
+    "flavor_en": "A particle bearing the interest of vigilance, the body's foreshadowing of the unknown. Once understood, it can be converted into power."
   },
   {
     "name": "安心",
     "reading": "あんしん",
     "english": "relief",
     "weight": 1.0,
-    "flavor": "緊張が解けた身体に流れ込む、ぬるい興味の粒子。深い呼吸が出来ることが証となる。"
+    "flavor": "緊張が解けた身体に流れ込む、ぬるい興味の粒子。深い呼吸が出来ることが証となる。",
+    "flavor_en": "A lukewarm particle of interest, flowing into the body once tension dissolves. A deep breath becomes its proof."
   },
   {
     "name": "孤独",
     "reading": "こどく",
     "english": "loneliness",
     "weight": 0.9,
-    "flavor": "他者がいない時間に自分と出会う、内省の興味の粒子。深さは他者と分かち合う器を作る。"
+    "flavor": "他者がいない時間に自分と出会う、内省の興味の粒子。深さは他者と分かち合う器を作る。",
+    "flavor_en": "A particle of introspective interest, meeting oneself in the absence of others. Its depth shapes the vessel that will be shared with others."
   },
   {
     "name": "友情",
     "reading": "ゆうじょう",
     "english": "friendship",
     "weight": 1.0,
-    "flavor": "対等な眼差しを交わし合う、共鳴の興味を宿す粒子。沈黙さえ言葉として通じ合う関係。"
+    "flavor": "対等な眼差しを交わし合う、共鳴の興味を宿す粒子。沈黙さえ言葉として通じ合う関係。",
+    "flavor_en": "A particle bearing the interest of resonance, exchanging gazes of equal standing. A bond in which even silence is understood as language."
   },
   {
     "name": "信頼",
     "reading": "しんらい",
     "english": "trust",
     "weight": 1.0,
-    "flavor": "未来を相手に預ける、緩やかで強い興味の粒子。築くのは年月、壊すのは一瞬となる。"
+    "flavor": "未来を相手に預ける、緩やかで強い興味の粒子。築くのは年月、壊すのは一瞬となる。",
+    "flavor_en": "A gentle yet potent particle of interest, entrusting the future to another. Years to build, an instant to shatter."
   },
   {
     "name": "裏切り",
     "reading": "うらぎり",
     "english": "betrayal",
     "weight": 0.7,
-    "flavor": "築かれた信頼に走る亀裂、痛烈な興味の粒子。傷の形が世界の輪郭を再定義する。"
+    "flavor": "築かれた信頼に走る亀裂、痛烈な興味の粒子。傷の形が世界の輪郭を再定義する。",
+    "flavor_en": "A piercing particle of interest, a fissure running through trust once built. The shape of the wound redefines the outline of the world."
   },
   {
     "name": "魂",
     "reading": "たましい",
     "english": "soul",
     "weight": 0.6,
-    "flavor": "肉体を脱いでも残るかもしれない、形なき興味の粒子。観測できないが確かに在るもの。"
+    "flavor": "肉体を脱いでも残るかもしれない、形なき興味の粒子。観測できないが確かに在るもの。",
+    "flavor_en": "A formless particle of interest, that may yet remain when the flesh is shed. Something that cannot be observed, yet assuredly exists."
   },
   {
     "name": "精神",
     "reading": "せいしん",
     "english": "spirit",
     "weight": 0.8,
-    "flavor": "肉体を統べる司令塔、意識の興味を宿す粒子。鍛えれば現実をも書き換える力となる。"
+    "flavor": "肉体を統べる司令塔、意識の興味を宿す粒子。鍛えれば現実をも書き換える力となる。",
+    "flavor_en": "A particle bearing the interest of consciousness, the command tower that governs the body. Tempered, it becomes a force that can rewrite reality itself."
   },
   {
     "name": "意志",
     "reading": "いし",
     "english": "will",
     "weight": 0.9,
-    "flavor": "未来を現在へ手繰り寄せる、推進の興味の粒子。折れない強さよりしなる強さが本質。"
+    "flavor": "未来を現在へ手繰り寄せる、推進の興味の粒子。折れない強さよりしなる強さが本質。",
+    "flavor_en": "A particle of propulsive interest, drawing the future toward the present. Its essence lies not in unbreakable strength but in supple resilience."
   },
   {
     "name": "欲望",
     "reading": "よくぼう",
     "english": "desire",
     "weight": 0.8,
-    "flavor": "存在を駆動する燃料、原動の興味を宿す粒子。手綱を握れば翼となり離せば荒馬となる。"
+    "flavor": "存在を駆動する燃料、原動の興味を宿す粒子。手綱を握れば翼となり離せば荒馬となる。",
+    "flavor_en": "A particle bearing the interest of primal drive, the fuel that propels existence. Held by the reins it becomes wings; released, a wild horse."
   },
   {
     "name": "理性",
     "reading": "りせい",
     "english": "reason",
     "weight": 0.8,
-    "flavor": "感情の波を観測する灯台、観測の興味を宿す粒子。冷たさではなく明晰さが本質となる。"
+    "flavor": "感情の波を観測する灯台、観測の興味を宿す粒子。冷たさではなく明晰さが本質となる。",
+    "flavor_en": "A particle bearing the interest of observation, a lighthouse observing the waves of emotion. Its essence is not coldness but clarity."
   },
   {
     "name": "本能",
     "reading": "ほんのう",
     "english": "instinct",
     "weight": 0.9,
-    "flavor": "言葉以前から身体に住む、古層の興味を宿す粒子。理屈を越えて命の判断を下してくる。"
+    "flavor": "言葉以前から身体に住む、古層の興味を宿す粒子。理屈を越えて命の判断を下してくる。",
+    "flavor_en": "A particle bearing the interest of ancient strata, dwelling in the body since before language. It renders the judgment of life beyond all logic."
   },
   {
     "name": "永遠",
     "reading": "えいえん",
     "english": "eternity",
     "weight": 0.4,
-    "flavor": "終わりを持たぬ広がり、無限の興味を宿す粒子。一瞬の中にも畳まれて宿ることがある。"
+    "flavor": "終わりを持たぬ広がり、無限の興味を宿す粒子。一瞬の中にも畳まれて宿ることがある。",
+    "flavor_en": "A particle bearing the interest of the infinite, an expanse possessing no end. It may at times be folded and contained within a single instant."
   },
   {
     "name": "刹那",
     "reading": "せつな",
     "english": "moment",
     "weight": 0.7,
-    "flavor": "切り取れぬほど短い時間の名、稀少な興味の粒子。集中の中でだけ可視化される時間。"
+    "flavor": "切り取れぬほど短い時間の名、稀少な興味の粒子。集中の中でだけ可視化される時間。",
+    "flavor_en": "A rare particle of interest, the name for a span of time too brief to be excised. A duration made visible only within concentration."
   },
   {
     "name": "無限",
     "reading": "むげん",
     "english": "infinity",
     "weight": 0.3,
-    "flavor": "終わりが定義されないことの自由、開放の興味の粒子。数字を超えた概念の海となる。"
+    "flavor": "終わりが定義されないことの自由、開放の興味の粒子。数字を超えた概念の海となる。",
+    "flavor_en": "A particle of liberating interest, the freedom of having no defined end. It becomes a conceptual ocean that transcends mere number."
   },
   {
     "name": "虚無",
     "reading": "きょむ",
     "english": "nothingness",
     "weight": 0.2,
-    "flavor": "全てが消えた後に立つ広がり、静寂の興味の粒子。無こそ最大の容器だと囁いてくる。"
+    "flavor": "全てが消えた後に立つ広がり、静寂の興味の粒子。無こそ最大の容器だと囁いてくる。",
+    "flavor_en": "A particle of silent interest, the expanse that stands once all has vanished. It whispers that nothingness itself is the greatest vessel."
   },
   {
     "name": "存在",
     "reading": "そんざい",
     "english": "existence",
     "weight": 0.6,
-    "flavor": "「在る」という最も基本的な事実、根源の興味の粒子。ここに在ること自体が奇跡。"
+    "flavor": "「在る」という最も基本的な事実、根源の興味の粒子。ここに在ること自体が奇跡。",
+    "flavor_en": "A particle of foundational interest, the most basic fact of \"being.\" To be here at all is itself a miracle."
   },
   {
     "name": "創造",
     "reading": "そうぞう",
     "english": "creation",
     "weight": 0.5,
-    "flavor": "無から有を立ち上げる、火花のような興味の粒子。観測者を作り手に変える瞬間の輝き。"
+    "flavor": "無から有を立ち上げる、火花のような興味の粒子。観測者を作り手に変える瞬間の輝き。",
+    "flavor_en": "A spark-like particle of interest, raising being from nonbeing. The radiance of the moment that transforms the observer into the maker."
   },
   {
     "name": "破壊",
     "reading": "はかい",
     "english": "destruction",
     "weight": 0.6,
-    "flavor": "形を解いて素材へ戻す、解体の興味を宿す粒子。次の創造のための余白を空けていく。"
+    "flavor": "形を解いて素材へ戻す、解体の興味を宿す粒子。次の創造のための余白を空けていく。",
+    "flavor_en": "A particle bearing the interest of dismantling, dissolving form back into material. It clears the blank space for the next creation."
   },
   {
     "name": "生命",
     "reading": "せいめい",
     "english": "life",
     "weight": 0.7,
-    "flavor": "情報が温度を持って動き続ける、奇跡の興味の粒子。一秒の継続が宇宙最大の事件となる。"
+    "flavor": "情報が温度を持って動き続ける、奇跡の興味の粒子。一秒の継続が宇宙最大の事件となる。",
+    "flavor_en": "A miraculous particle of interest, information continuing to move with warmth. Its continuance for a single second is the universe's greatest event."
   },
   {
     "name": "死",
     "reading": "し",
     "english": "death",
     "weight": 0.5,
-    "flavor": "形ある全てに必ず約束された、境界の興味の粒子。怖れる対象であり指針でもある。"
+    "flavor": "形ある全てに必ず約束された、境界の興味の粒子。怖れる対象であり指針でもある。",
+    "flavor_en": "A particle of liminal interest, promised without fail to all that holds form. An object of dread, yet also a guiding compass."
   },
   {
     "name": "再生",
     "reading": "さいせい",
     "english": "rebirth",
     "weight": 0.4,
-    "flavor": "終わったはずの形が再び芽吹く、循環の興味を宿す粒子。死を栄養に変える生命の知恵。"
+    "flavor": "終わったはずの形が再び芽吹く、循環の興味を宿す粒子。死を栄養に変える生命の知恵。",
+    "flavor_en": "A particle bearing the interest of cycles, where a form supposedly ended buds forth once more. The wisdom of life that transmutes death into nourishment."
   },
   {
     "name": "記憶",
     "reading": "きおく",
     "english": "memory",
     "weight": 0.9,
-    "flavor": "過去を未来へ運ぶ薄膜、橋渡しの興味を宿す粒子。歪みながらも自分の輪郭を保つ礎。"
+    "flavor": "過去を未来へ運ぶ薄膜、橋渡しの興味を宿す粒子。歪みながらも自分の輪郭を保つ礎。",
+    "flavor_en": "A particle bearing the interest of mediation, a thin membrane that conveys the past into the future. The foundation that preserves one's outline even as it warps."
   },
   {
     "name": "忘却",
     "reading": "ぼうきゃく",
     "english": "oblivion",
     "weight": 0.6,
-    "flavor": "心を軽くする慈悲、空白の興味を宿す粒子。覚え続けるためには手放しもまた必要。"
+    "flavor": "心を軽くする慈悲、空白の興味を宿す粒子。覚え続けるためには手放しもまた必要。",
+    "flavor_en": "A particle bearing the interest of blankness, a mercy that lightens the heart. To continue remembering, one must also learn to release."
   },
   {
     "name": "時",
     "reading": "とき",
     "english": "time",
     "weight": 0.5,
-    "flavor": "戻れない方向に流れる、不可逆の興味の粒子。観測することで形を変えてしまう存在。"
+    "flavor": "戻れない方向に流れる、不可逆の興味の粒子。観測することで形を変えてしまう存在。",
+    "flavor_en": "A particle of irreversible interest, flowing in a direction from which there is no return. An existence whose very form alters by being observed."
   },
   {
     "name": "空",
     "reading": "くう",
     "english": "void",
     "weight": 0.4,
-    "flavor": "全てが在りつつ全てが空である、逆説の興味の粒子。容れ物としての宇宙の名でもある。"
+    "flavor": "全てが在りつつ全てが空である、逆説の興味の粒子。容れ物としての宇宙の名でもある。",
+    "flavor_en": "A particle of paradoxical interest, where all exists and all is empty. It is also a name for the universe as a vessel."
   },
   {
     "name": "因果",
     "reading": "いんが",
     "english": "causality",
     "weight": 0.3,
-    "flavor": "原因と結果を結ぶ見えない糸、連鎖の興味の粒子。種を蒔く手の責任を静かに示す。"
+    "flavor": "原因と結果を結ぶ見えない糸、連鎖の興味の粒子。種を蒔く手の責任を静かに示す。",
+    "flavor_en": "A particle of linked interest, the invisible thread binding cause to effect. It quietly intimates the responsibility of the hand that sows the seed."
   },
   {
     "name": "輪廻",
     "reading": "りんね",
     "english": "samsara",
     "weight": 0.2,
-    "flavor": "終わらず巡り続ける円環、回帰の興味を宿す粒子。今日の行いが遥か先で実を結ぶ。"
+    "flavor": "終わらず巡り続ける円環、回帰の興味を宿す粒子。今日の行いが遥か先で実を結ぶ。",
+    "flavor_en": "A particle bearing the interest of recurrence, an unending ring that revolves on. Today's deed bears fruit in the distant beyond."
   },
   {
     "name": "時間",
     "reading": "じかん",
     "english": "time",
     "weight": 0.5,
-    "flavor": "万物を運ぶ目に見えぬ川、不可逆の興味を宿す粒子。観測する者だけが感じ取れる流れ。"
+    "flavor": "万物を運ぶ目に見えぬ川、不可逆の興味を宿す粒子。観測する者だけが感じ取れる流れ。",
+    "flavor_en": "A particle bearing the interest of irreversibility, an unseen river that conveys all things. A current perceptible only to the one who observes."
   },
   {
     "name": "空間",
     "reading": "くうかん",
     "english": "space",
     "weight": 0.5,
-    "flavor": "存在が広がる土台、容器の興味を宿す粒子。曲がり伸び縮みする現代の柔らかな概念。"
+    "flavor": "存在が広がる土台、容器の興味を宿す粒子。曲がり伸び縮みする現代の柔らかな概念。",
+    "flavor_en": "A particle bearing the interest of containment, the foundation upon which existence extends. A modern, supple concept that bends, stretches, and contracts."
   }
 ]
