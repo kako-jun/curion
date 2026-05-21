@@ -337,6 +337,15 @@ pub struct App {
     /// 生成された瞬間に start し、display_name を 1 文字ずつ暗→明にフェードインで
     /// 浮かび上がらせる。生成体験に「届いた感」を出すための演出。
     latest_reveal: Option<RevealHandle>,
+    /// Issue #62: 永続化すべき mutation が発生したことを示すフラグ。
+    ///
+    /// ガチャ pull・装備変更・achievement claim・synthesis 成功/副産物・daily mission 自動受領など、
+    /// 「失われると痛い」進行状態の更新時に `true` にセットする。main loop が key event を
+    /// 処理した直後にこのフラグを見て、true なら `SaveManager::save` を呼び、フラグをクリアする。
+    ///
+    /// `on_tick` で連続的に変化するもの (プレイ時間加算、SAN 自然減衰、Rare cooldown 残量) では
+    /// dirty を立てない。これらは起動時 save と終了時 save でカバーする。
+    pub dirty: bool,
 }
 
 impl App {
@@ -367,6 +376,7 @@ impl App {
             compiled_filter: None,
             evolution_db,
             latest_reveal: None,
+            dirty: false,
         }
     }
 
@@ -452,6 +462,8 @@ impl App {
             None => return,
         };
         self.game_state.player.toggle_equip(&id);
+        // Issue #62: 装備変更は即時永続化対象。
+        self.dirty = true;
     }
 
     /// Issue #31: 正規表現フィルタ入力モード中のキー処理。
@@ -530,11 +542,6 @@ impl App {
         self.current_tab == Tab::Collection && self.current_section_index() == 1
     }
 
-    /// 手動セーブ用（SaveManager を持たないので呼び出し元で save してから呼ぶ）
-    pub fn handle_save_key(&mut self) {
-        self.show_save_message();
-    }
-
     fn set_tab(&mut self, tab: Tab) {
         self.current_tab = tab;
         self.detail_scroll = 0;
@@ -611,6 +618,8 @@ impl App {
                 if let Some((achievement, _)) = achievable.get(self.detail_scroll) {
                     let achievement_id = achievement.id.clone();
                     self.game_state.claim_achievement_reward(&achievement_id);
+                    // Issue #62: 報酬受領は即時永続化対象。
+                    self.dirty = true;
                 }
             }
             Tab::Synthesis => {
@@ -686,6 +695,8 @@ impl App {
                                         // ここでは合成ミッション固有の進捗 (SynthesizeSuccess) だけを更新する。
                                         self.game_state.record_synthesis_success();
                                         self.flush_daily_mission_rewards();
+                                        // Issue #62: 合成成功は素材消費+新キュリオン獲得を伴う重要 mutation。
+                                        self.dirty = true;
 
                                         let message = if first_discovery {
                                             format!("✨ Discovered: {recipe_name}!")
@@ -727,6 +738,8 @@ impl App {
                                             self.game_state.add_curion(s);
                                             self.flush_daily_mission_rewards();
                                         }
+                                        // Issue #62: 高リスク合成失敗も素材消滅 (+ salvage) を伴う mutation。
+                                        self.dirty = true;
                                         let msg = match failure_mode {
                                             crate::synthesis::FailureMode::LoseAll => {
                                                 format!("💥 失敗: {recipe_name} (素材消滅)")
@@ -772,6 +785,8 @@ impl App {
         ));
         self.flush_daily_mission_rewards();
         self.guid_timer = Instant::now();
+        // Issue #62: ガチャ pull は最重要 mutation。即時永続化対象。
+        self.dirty = true;
         Ok(())
     }
 
@@ -782,6 +797,10 @@ impl App {
         if claimed.is_empty() {
             return;
         }
+        // Issue #62: デイリーミッション報酬受領は XP 加算を伴う mutation。
+        // generate_curion / 合成成功からも呼ばれるが、それらの呼び出し元でも dirty を
+        // 立てているため二重に true にしても害はない (key event 後の save で 1 回処理される)。
+        self.dirty = true;
         let (msg, duration) = if claimed.len() == 1 {
             let m = &claimed[0];
             (
@@ -825,10 +844,6 @@ impl App {
         }
     }
 
-    pub fn show_save_message(&mut self) {
-        self.save_message = Some(("💾 Saved!".to_string(), Instant::now()));
-    }
-
     pub fn show_login_bonus_message(&mut self, reward: &LoginBonusReward) {
         self.save_message = Some((
             format!("🎁 Day {} +{} XP", reward.day, reward.xp),
@@ -855,7 +870,7 @@ impl App {
             String::new()
         };
         self.save_message_duration = Duration::from_secs(6);
-        self.save_message = Some((format!("🕯 寿命で消滅: {}{}", preview, more), Instant::now()));
+        self.save_message = Some((format!("🕯 寿命で消滅: {preview}{more}"), Instant::now()));
     }
 
     fn guid_progress(&self) -> f64 {
@@ -1347,7 +1362,7 @@ impl App {
         let remaining_minutes = (total_secs + 59) / 60;
         let hh = remaining_minutes / 60;
         let mm = remaining_minutes % 60;
-        let title = format!("デイリーミッション (リセットまで {:02}:{:02})", hh, mm);
+        let title = format!("デイリーミッション (リセットまで {hh:02}:{mm:02})");
 
         let block = focused_block(title);
         let inner = block.inner(area);
@@ -1569,7 +1584,7 @@ impl App {
         let rare_probability_line = Line::from(vec![
             Span::styled("RARE出現確率: ", Style::default().fg(COLOR_LABEL)),
             Span::styled(
-                format!("{:.1}%", rare_pct),
+                format!("{rare_pct:.1}%"),
                 Style::default()
                     .fg(if cooldown_p >= 1.0 {
                         COLOR_EPIC
@@ -1711,7 +1726,7 @@ impl App {
                     Style::default().fg(Color::Yellow),
                 ),
                 Span::styled(
-                    format!("{} 個", near_expiry_count),
+                    format!("{near_expiry_count} 個"),
                     Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
                 ),
             ])
