@@ -2929,11 +2929,17 @@ impl App {
                 ),
             ]),
         ])
-        .block(unfocused_block("PLAYER"));
+        .block(unfocused_block(crate::i18n::t(
+            "block.player",
+            self.game_state.language,
+        )));
         f.render_widget(summary, chunks[0]);
 
         let recent = Sparkline::default()
-            .block(unfocused_block("RECENT ACQUISITIONS"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.recent_acquisitions",
+                self.game_state.language,
+            )))
             .data(self.recent_acquisition_buckets(RECENT_ACTIVITY_BUCKETS))
             .style(Style::default().fg(COLOR_RARE));
         f.render_widget(recent, chunks[1]);
@@ -2957,7 +2963,10 @@ impl App {
                 .style(Style::default().fg(COLOR_LEGENDARY)),
         ];
         let rarity_chart = BarChart::default()
-            .block(unfocused_block("RARITY BREAKDOWN"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.rarity_breakdown_caps",
+                self.game_state.language,
+            )))
             .data(BarGroup::default().bars(&rarity_bars))
             .bar_width(6)
             .bar_gap(1)
@@ -2992,7 +3001,10 @@ impl App {
             .collect();
 
         let chart = BarChart::default()
-            .block(unfocused_block("CATEGORY BREAKDOWN"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.category_breakdown_caps",
+                lang,
+            )))
             .data(BarGroup::default().bars(&category_bars))
             .bar_width(5)
             .bar_gap(1)
@@ -3016,7 +3028,10 @@ impl App {
             })
             .collect();
 
-        let widget = Paragraph::new(lines).block(unfocused_block("CATEGORY DETAIL"));
+        let widget = Paragraph::new(lines).block(unfocused_block(crate::i18n::t(
+            "block.category_detail",
+            lang,
+        )));
         f.render_widget(widget, chunks[1]);
     }
 
@@ -3054,12 +3069,18 @@ impl App {
             ]),
         ];
 
-        let widget = Paragraph::new(lines).block(unfocused_block("SESSION"));
+        let widget = Paragraph::new(lines).block(unfocused_block(crate::i18n::t(
+            "block.session",
+            self.game_state.language,
+        )));
         f.render_widget(widget, chunks[0]);
 
         let login_ratio = (player.consecutive_login_days.min(30) as f64) / 30.0;
         let streak = LineGauge::default()
-            .block(unfocused_block("LOGIN STREAK"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.login_streak",
+                self.game_state.language,
+            )))
             .ratio(login_ratio)
             .label(format!(
                 "[{}] {:>2} / 30 days",
@@ -3073,7 +3094,10 @@ impl App {
         let today_ratio = (player.today_acquired.min(player.max_daily_acquired.max(1)) as f64)
             / (player.max_daily_acquired.max(1) as f64);
         let today = LineGauge::default()
-            .block(unfocused_block("TODAY VS BEST"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.today_vs_best",
+                self.game_state.language,
+            )))
             .ratio(today_ratio)
             .label(format!(
                 "[{}] {:>2} / {}",
@@ -3090,7 +3114,10 @@ impl App {
         // 日次推移を表示する。Player 側の純粋関数を呼ぶことでテスト可能にしている。
         let data = player.daily_acquisition_counts(30, chrono::Utc::now());
         let sparkline = Sparkline::default()
-            .block(unfocused_block("DAILY (last 30 days)"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.daily_30",
+                self.game_state.language,
+            )))
             .data(&data)
             .style(Style::default().fg(COLOR_RARE));
         f.render_widget(sparkline, chunks[3]);
@@ -3136,7 +3163,10 @@ impl App {
                 let help = Paragraph::new(
                     "← Select first ingredient\n\nUse ↑↓ to navigate\nPress Enter to select",
                 )
-                .block(unfocused_block("Help"))
+                .block(unfocused_block(crate::i18n::t(
+                    "block.help",
+                    self.game_state.language,
+                )))
                 .style(Style::default().fg(COLOR_LABEL));
                 f.render_widget(help, content_chunks[1]);
             }
@@ -3160,7 +3190,10 @@ impl App {
 
         if collection.is_empty() {
             let empty = Paragraph::new("No curions in collection")
-                .block(focused_block("Ingredient 1"))
+                .block(focused_block(crate::i18n::t(
+                    "block.ingredient1",
+                    self.game_state.language,
+                )))
                 .style(Style::default().fg(COLOR_BAR_HOT));
             f.render_widget(empty, area);
             return;
@@ -3190,7 +3223,10 @@ impl App {
             .collect();
 
         let list = List::new(items)
-            .block(focused_block("Select Ingredient 1"))
+            .block(focused_block(crate::i18n::t(
+                "block.select_ingredient1",
+                self.game_state.language,
+            )))
             .highlight_style(
                 Style::default()
                     .fg(Color::Black)
@@ -3398,7 +3434,10 @@ impl App {
         );
 
         let widget = Paragraph::new(text)
-            .block(unfocused_block("Selected"))
+            .block(unfocused_block(crate::i18n::t(
+                "block.selected",
+                self.game_state.language,
+            )))
             .style(Style::default().fg(COLOR_SUCCESS));
 
         f.render_widget(widget, area);
@@ -3417,7 +3456,10 @@ impl App {
 
         if candidates.is_empty() {
             let empty = Paragraph::new("No possible combinations\n\nPress Esc to go back")
-                .block(focused_block("Ingredient 2"))
+                .block(focused_block(crate::i18n::t(
+                    "block.ingredient2",
+                    self.game_state.language,
+                )))
                 .style(Style::default().fg(COLOR_BAR_HOT));
             f.render_widget(empty, area);
             return;
@@ -3488,7 +3530,10 @@ impl App {
             .collect();
 
         let list = List::new(items)
-            .block(focused_block("Select Ingredient 2"))
+            .block(focused_block(crate::i18n::t(
+                "block.select_ingredient2",
+                self.game_state.language,
+            )))
             .highlight_style(
                 Style::default()
                     .fg(Color::Black)

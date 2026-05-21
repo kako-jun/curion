@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- i18n foundation (#63 Phase 1): English is now the canonical UI locale with a runtime switch to Japanese via a new Settings tab. `←/→` toggles the language and persists it immediately. Tab names, sections, block titles, help-line labels, and category names are routed through a static `t(key, lang)` translation table. `Language { En, Ja }` (default `En`) lives on `SerializableGameState` with `#[serde(default)]` so older save files load as English. Flavor / achievement / synthesis-message English translations are tracked separately under #65.
+
 ## v0.2.0 - 2026-05-17
 
 The "single-player addiction" release: every system needed to make a focused offline session feel rewarding is now in place.
