@@ -1857,11 +1857,12 @@ impl App {
         f.render_widget(rarity_widget, chunks[11]);
 
         // Category distribution
+        let lang = self.game_state.language;
         let category_text = ALL_CATEGORIES
             .iter()
             .filter_map(|category| {
                 let count = self.collection_count_by_category(category);
-                (count > 0).then(|| format!("{}: {}個", category.as_str(), count))
+                (count > 0).then(|| format!("{}: {}個", category.display(lang), count))
             })
             .collect::<Vec<_>>()
             .join("  ");
@@ -2305,7 +2306,7 @@ impl App {
                     Style::default().fg(Color::White)
                 };
                 // CJK 混在のためバイト幅ではなく表示セル幅でパディング
-                let name = pad_display(category.as_str(), 8);
+                let name = pad_display(category.display(self.game_state.language), 8);
                 ListItem::new(format!("{prefix}{name} {owned:>3}/{total:<3}")).style(style)
             })
             .collect();
@@ -2334,7 +2335,7 @@ impl App {
 
         let title = format!(
             "全体: {total_owned}/{total_entries} ({total_pct:.1}%) | {cat_name}: {cat_owned}/{cat_total} ({cat_pct:.1}%)",
-            cat_name = category.as_str(),
+            cat_name = category.display(self.game_state.language),
         );
 
         let block = unfocused_block(title);
@@ -2813,11 +2814,12 @@ impl App {
             .constraints([Constraint::Min(9), Constraint::Min(7)])
             .split(inner);
 
+        let lang = self.game_state.language;
         let category_bars: Vec<Bar> = ALL_CATEGORIES
             .iter()
             .map(|category| {
                 Bar::default()
-                    .label(category.as_str().into())
+                    .label(category.display(lang).into())
                     .value(self.collection_count_by_category(category) as u64)
                     .style(Style::default().fg(COLOR_RARE))
             })
@@ -2839,7 +2841,7 @@ impl App {
                 let unique = self.collection_unique_count_by_category(category);
                 Line::from(vec![
                     Span::styled(
-                        format!("{:<8}", category.as_str()),
+                        format!("{:<8}", category.display(lang)),
                         Style::default().fg(COLOR_RARE),
                     ),
                     Span::raw(" "),
@@ -3306,7 +3308,7 @@ impl App {
                     candidate.noun,
                     candidate.available_count,
                     result_text,
-                    candidate.category.as_str(),
+                    candidate.category.display(self.game_state.language),
                     probability_text,
                 ))
                 .style(style)
