@@ -2,9 +2,23 @@
 
 ## Unreleased
 
+## v0.3.0 - 2026-05-22
+
+The "event-driven + bilingual" release: save is no longer a 60-second poll, and the UI can switch between English (default) and Japanese at runtime.
+
 ### Added
-- i18n foundation (#63 Phase 1): English is now the canonical UI locale with a runtime switch to Japanese via a new Settings tab. `←/→` toggles the language and persists it immediately. Tab names, sections, block titles, help-line labels, and category names are routed through a static `t(key, lang)` translation table. `Language { En, Ja }` (default `En`) lives on `SerializableGameState` with `#[serde(default)]` so older save files load as English. Flavor / achievement / synthesis-message English translations are tracked separately under #65.
-- i18n flavor data (#65 Phase 2): every one of the 268 nouns now carries a `flavor_en` field alongside the existing Japanese `flavor`. Translations preserve the curion world vocabulary ("particle of curiosity", "observer", "crystallization") with a per-category tone (abstracts most philosophical, phenomena most poetic, objects/foods symbolic but grounded). No code change yet — flavor display routing through the language gate is tracked under #68 (Phase 3).
+- i18n foundation (#63 Phase 1): English is now the canonical UI locale with a runtime switch to Japanese via a new Settings tab. `←/→` toggles the language and persists it immediately. Tab names, sections, block titles, help-line labels, and category names are routed through a static `t(key, lang)` translation table. `Language { En, Ja }` (default `En`) lives on `SerializableGameState` with `#[serde(default)]` so older save files load as English.
+- i18n flavor data (#65 Phase 2): every one of the 268 nouns now carries a `flavor_en` field alongside the existing Japanese `flavor`. Translations preserve the curion world vocabulary ("particle of curiosity", "observer", "crystallization") with a per-category tone (abstracts most philosophical, phenomena most poetic, objects/foods symbolic but grounded). Flavor display routing through the language gate is tracked under #68 (Phase 3).
+- Settings tab (6th tab): currently houses the language switch; future settings (theme, profile reset, public key display) will land here.
+
+### Changed
+- Event-driven save (#62): the 60-second auto-save poll and the manual `s` save key are gone. Persistence is now driven by an `App::dirty` flag set at the six mutation points (gacha pull, equip toggle, achievement claim, synthesis success / risky-failure, daily mission auto-claim). The main loop flushes to disk right after a key event or `on_tick` whenever `dirty` is true. Continuous values (`play_time`, SAN decay, rare cooldown) deliberately do not arm `dirty` — they are covered by startup / shutdown saves. `s` outside filter mode is now a no-op so `/`-filter typing of "s" works correctly.
+- `Curion` rendering goes through `App::display_curion_name(&Curion)`, which formats as `"{Category} の {noun}"` in Ja, `"{english} ({Category})"` in En with a runtime `NounDatabase::english_for` lookup, and falls back to `"{ja-noun} ({Category-En})"` when the English entry is missing (synthesis-only nouns).
+
+### Internal
+- `Tab::COUNT` constant + propagation through `from_index` / `next` / `section_indices` / `handle_key` so adding a tab is a single-knob change.
+- All-new `src/i18n.rs` (OnceLock-backed `t(key, lang)` table) with a debug-only `#[should_panic]` test that catches unregistered keys at the call site (release builds return `"?"`).
+- 244 tests pass (203 baseline + 11 dirty-flag + 30 i18n coverage). `cargo clippy --all-targets -- -D warnings` clean.
 
 ## v0.2.0 - 2026-05-17
 
