@@ -360,10 +360,10 @@ pub struct App {
     /// Issue #63: 設定変更直後に保存を要求するフラグ。
     ///
     /// `App` 側は `SaveManager` を直接持たないため、保存が必要になった瞬間に
-    /// このフラグを立てる。メインループ (`main.rs`) が `take_pending_save()`
+    /// このフラグを立てる。メインループ (`main.rs`) が `take_save_request()`
     /// で取り出し、その場で `SaveManager::save` を呼ぶ。これにより
     /// 「言語切替の瞬間にディスクへ反映」を実現する。
-    pending_save: bool,
+    save_request: bool,
 }
 
 impl App {
@@ -394,7 +394,7 @@ impl App {
             compiled_filter: None,
             evolution_db,
             latest_reveal: None,
-            pending_save: false,
+            save_request: false,
         }
     }
 
@@ -402,8 +402,8 @@ impl App {
     ///
     /// 呼び出し側 (main loop) は `true` が返ったらその場で
     /// `SaveManager::save` を実行する。一度取り出すとフラグはクリアされる。
-    pub fn take_pending_save(&mut self) -> bool {
-        std::mem::take(&mut self.pending_save)
+    pub fn take_save_request(&mut self) -> bool {
+        std::mem::take(&mut self.save_request)
     }
 
     /// Dashboard「最新キュリオン」名を bloom させるための reveal プリセット。
@@ -585,17 +585,15 @@ impl App {
         self.detail_scroll = 0;
     }
 
-    /// Issue #63: Settings タブで `←/→` を受けたときの言語トグル。
-    ///
-    /// `Language::next` で次の言語に切り替えるだけで、永続化 (= save) は
-    /// `main.rs` 側のオートセーブ (60 秒間隔) と終了時セーブに任せている。
-    /// 「即座に保存される」を厳密に保証したい場合は呼び出し側で
-    /// `SaveManager::save` を続けて呼ぶこと (Phase 2 で検討)。
+    /// Settings タブで `←/→` を押したときに呼ばれる。
+    /// 言語を次の値に切り替え、`save_request` フラグを立てる。
+    /// `main.rs` のループが次の tick で `take_save_request()` を見て即座に
+    /// `SaveManager::save` を呼ぶため、ユーザーから見ると言語切替は即時永続化される。
     fn toggle_language(&mut self) {
         self.game_state.language = self.game_state.language.next();
         // Settings の「即座に保存される」契約を満たすためのフラグ。
         // 実際の I/O はメインループが拾って実行する。
-        self.pending_save = true;
+        self.save_request = true;
     }
 
     fn next_tab(&mut self) {
@@ -4196,32 +4194,32 @@ mod tests {
         assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
     }
 
-    /// G-3: Toggling the language raises `pending_save` so the main loop can
+    /// G-3: Toggling the language raises `save_request` so the main loop can
     /// flush to disk.
     #[test]
-    fn settings_tab_toggle_sets_pending_save_flag() {
+    fn settings_tab_toggle_sets_save_request_flag() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
         app.handle_key(KeyCode::Left).unwrap();
         assert!(
-            app.take_pending_save(),
-            "toggle should arm pending_save for the main loop"
+            app.take_save_request(),
+            "toggle should arm save_request for the main loop"
         );
     }
 
-    /// G-4: `take_pending_save` is a one-shot — after consuming once, the
+    /// G-4: `take_save_request` is a one-shot — after consuming once, the
     /// next call returns false until another toggle.
     #[test]
-    fn take_pending_save_is_one_shot() {
+    fn take_save_request_is_one_shot() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
         app.handle_key(KeyCode::Left).unwrap();
-        assert!(app.take_pending_save(), "first take returns true");
-        assert!(!app.take_pending_save(), "second take returns false");
+        assert!(app.take_save_request(), "first take returns true");
+        assert!(!app.take_save_request(), "second take returns false");
     }
 
     /// G-5: On non-Settings tabs, Left/Right do not change language nor arm
-    /// `pending_save`.
+    /// `save_request`.
     #[test]
     fn non_settings_tab_left_right_does_not_toggle() {
         let mut app = empty_app();
@@ -4231,8 +4229,8 @@ mod tests {
         app.handle_key(KeyCode::Right).unwrap();
         assert_eq!(app.game_state.language, before, "language must not change");
         assert!(
-            !app.take_pending_save(),
-            "pending_save must stay false off Settings"
+            !app.take_save_request(),
+            "save_request must stay false off Settings"
         );
     }
 
@@ -4250,14 +4248,14 @@ mod tests {
     /// G-7: Multiple toggles before any consumption still register as
     /// pending; once consumed, the next read returns false.
     #[test]
-    fn settings_tab_repeated_toggle_keeps_pending_save_until_consumed() {
+    fn settings_tab_repeated_toggle_keeps_save_request_until_consumed() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
         app.handle_key(KeyCode::Left).unwrap();
         app.handle_key(KeyCode::Right).unwrap();
         app.handle_key(KeyCode::Left).unwrap();
-        assert!(app.take_pending_save(), "three toggles → still pending");
-        assert!(!app.take_pending_save(), "consumed → next read is false");
+        assert!(app.take_save_request(), "three toggles → still pending");
+        assert!(!app.take_save_request(), "consumed → next read is false");
     }
 
     /// J-1: Pinning current behaviour — even when `language = En`, the
