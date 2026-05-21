@@ -3848,4 +3848,181 @@ mod tests {
             "Enter では compiled_filter も維持"
         );
     }
+
+    // ── Issue #62: event-driven save (dirty フラグ) ────────────────────
+
+    // A. dirty 状態遷移
+
+    #[test]
+    fn test_app_new_dirty_is_false() {
+        // 起動直後はまだ何も mutation していないので dirty は false。
+        let app = empty_app();
+        assert!(!app.dirty, "App::new 直後は dirty == false");
+    }
+
+    #[test]
+    fn test_dirty_can_be_cleared_externally() {
+        // main.rs 側の save ループが dirty を true→false に戻せる必要がある。
+        let mut app = empty_app();
+        app.dirty = true;
+        app.dirty = false;
+        assert!(!app.dirty, "dirty を外部から false に戻せる");
+    }
+
+    #[test]
+    fn test_dirty_idempotent_when_set_twice() {
+        // 同じイベントで dirty を二度立てても true のまま。副作用なし。
+        let mut app = empty_app();
+        app.dirty = true;
+        app.dirty = true;
+        assert!(app.dirty, "二度 true セットしても dirty は true のまま");
+    }
+
+    // B. mutation 点ごとに dirty が立つ
+
+    #[test]
+    fn test_handle_equip_toggle_sets_dirty() {
+        // 装備変更 (Issue #38) は即時永続化対象。
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.game_state
+            .player
+            .collection
+            .push(make_curion("装備テスト名詞", Category::Animal, Rarity::Common));
+        assert!(!app.dirty, "前提: 起動直後は dirty=false");
+
+        app.handle_equip_toggle();
+
+        assert!(app.dirty, "handle_equip_toggle で dirty=true");
+    }
+
+    #[test]
+    fn test_claim_achievement_reward_sets_dirty() {
+        // Achievements タブ section 0 で Enter → claim 試行 → dirty=true。
+        // 実装上、claim_reward の成否によらず handle_enter は dirty を立てる。
+        let mut app = empty_app();
+        app.set_tab(Tab::Achievements);
+        // section 0 (達成可能) であることを担保。
+        assert_eq!(app.current_section_index(), 0);
+
+        // get_achievable が 1 件以上返るように、適当な実績 (total_10) の進捗を
+        // is_achievable() の条件 (current >= target && !unlocked) に合わせる。
+        // get_progress_mut が None の場合はこのテストの前提が崩れているので
+        // 早期に panic させる。
+        let progress = app
+            .game_state
+            .achievement_manager
+            .get_progress_mut("total_10")
+            .expect("total_10 progress が default 登録されているはず");
+        progress.current = progress.target;
+        progress.unlocked = false;
+        progress.claimed = false;
+
+        // get_achievable に乗ることを再確認。
+        assert!(
+            !app.game_state.achievement_manager.get_achievable().is_empty(),
+            "前提: get_achievable が 1 件以上返る"
+        );
+        app.detail_scroll = 0;
+        assert!(!app.dirty);
+
+        app.handle_enter().expect("handle_enter should succeed");
+
+        assert!(app.dirty, "Achievements claim で dirty=true");
+    }
+
+    #[test]
+    fn test_generate_curion_sets_dirty() {
+        // ガチャ pull (空きキーまたは guid_timer 満了) は最重要 mutation。
+        let mut app = empty_app();
+        assert!(!app.dirty);
+
+        app.generate_curion().expect("generate_curion should succeed");
+
+        assert!(app.dirty, "generate_curion で dirty=true");
+    }
+
+    #[test]
+    fn test_flush_daily_mission_rewards_no_claim_does_not_set_dirty() {
+        // 何も claim できない状態 (claimed が空) では dirty を立てない。
+        // 起動直後 = ミッション進捗 0 のため auto_claim_daily_missions は空を返す前提。
+        let mut app = empty_app();
+        assert!(!app.dirty);
+
+        app.flush_daily_mission_rewards();
+
+        assert!(
+            !app.dirty,
+            "claim 可能なミッションが無いとき dirty は変化しない"
+        );
+    }
+
+    // C. 立てないべき場所（負の網羅）
+
+    #[test]
+    fn test_on_tick_does_not_set_dirty_when_no_guid_generation() {
+        // guid_timer は default 30 秒。直後 1 回の on_tick では generate_curion は走らない。
+        // ただし on_tick 内では player.add_play_time(1) は呼ばれる。これは dirty 対象外。
+        let mut app = empty_app();
+        assert!(app.guid_interval >= Duration::from_secs(5));
+        assert!(!app.dirty);
+
+        app.on_tick();
+
+        assert!(
+            !app.dirty,
+            "guid 生成が走らない on_tick では dirty は立たない"
+        );
+    }
+
+    #[test]
+    fn test_tab_switch_does_not_set_dirty() {
+        // 単なる UI 状態変更 (タブ切替) は永続化対象ではない。
+        let mut app = empty_app();
+        assert!(!app.dirty);
+
+        // 数字キーで遷移
+        app.handle_key(KeyCode::Char('2')).unwrap();
+        // Tab キーで next_tab
+        app.handle_key(KeyCode::Tab).unwrap();
+        // 直接 API でも
+        app.set_tab(Tab::Synthesis);
+        app.next_tab();
+
+        assert!(!app.dirty, "タブ切替系は dirty を立てない");
+    }
+
+    #[test]
+    fn test_filter_mode_typing_does_not_set_dirty() {
+        // フィルタ入力中の文字入力は UI 状態 (検索文字列) であり永続化対象ではない。
+        // `s` が save とみなされないこと (Issue #31 既存テストの dirty 拡張)。
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.handle_key(KeyCode::Char('/')).unwrap();
+        app.handle_key(KeyCode::Char('s')).unwrap();
+        app.handle_key(KeyCode::Char('R')).unwrap();
+        app.handle_key(KeyCode::Char('A')).unwrap();
+
+        assert_eq!(app.filter_text, "sRA");
+        assert!(!app.dirty, "filter_mode 中の typing は dirty を立てない");
+    }
+
+    // F. 削除 API の回帰
+
+    #[test]
+    fn test_s_key_outside_filter_mode_no_longer_shows_saved_toast() {
+        // Issue #62 で「`s` キーで明示 save → Saved! トースト」が廃止された。
+        // Collection 以外 (Dashboard 等) で `s` を押しても save_message は None のまま。
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        assert!(app.save_message.is_none());
+
+        app.handle_key(KeyCode::Char('s')).unwrap();
+
+        assert!(
+            app.save_message.is_none(),
+            "`s` キーで Saved! トーストが出ない"
+        );
+        assert!(!app.dirty, "`s` キーは dirty も立てない");
+    }
 }
