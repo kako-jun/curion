@@ -427,13 +427,13 @@ mod tests {
     #[test]
     fn flavor_for_en_returns_english_when_present() {
         let db = NounDatabase::load_embedded().expect("Failed to load noun database");
-        // phenomena.json の最初のエントリ (夜明け) は flavor_en が "A particle of hope..." で始まる
-        let en = db.flavor_for("夜明け", Language::En).expect("EN flavor");
+        // phenomena.json の最初のエントリ (朝) は flavor_en が "A particle of hope..." で始まる
+        let en = db.flavor_for("朝", Language::En).expect("EN flavor");
         assert!(
             en.starts_with("A particle") || en.starts_with("A "),
             "EN flavor should be English, got: {en:?}"
         );
-        let ja = db.flavor_for("夜明け", Language::Ja).expect("JA flavor");
+        let ja = db.flavor_for("朝", Language::Ja).expect("JA flavor");
         assert_ne!(en, ja, "EN flavor should differ from JA");
     }
 
