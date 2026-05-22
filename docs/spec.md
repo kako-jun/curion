@@ -43,7 +43,15 @@ Noun data is stored in `data/nouns/*.json` (one file per category). Each entry h
 | `english` | yes | Canonical English label. Surfaced through `App::display_curion_name` when the language is `En`. |
 | `weight` | yes | Relative spawn weight inside the category. |
 | `flavor` | yes | Japanese flavor text (SF / philosophical short prose). |
-| `flavor_en` | yes (since #65 Phase 2) | English flavor text. Phase 3 (Issue #68) will route flavor rendering through the language gate; until then the UI always displays `flavor`. |
+| `flavor_en` | yes (since #65 Phase 2) | English flavor text. Phase 3 (Issue #68) is complete: flavor rendering is now routed through the language gate via `NounDatabase::flavor_for(noun, lang)`. The helper falls back to JA `flavor` when `flavor_en` is empty or absent (same pattern as Phase 4). |
+
+### Phase 3 (Issue #68): Flavor i18n
+
+The noun database exposes `NounDatabase::flavor_for(noun_name, lang)` which returns the flavor for the requested language, falling back to JA when the EN entry is empty. All UI sites that render flavor (the Collection detail pane and the Dictionary entry list) thread `game_state.language` through this helper so `--lang en` no longer leaks JA flavor text. Synthesis-only nouns (`蒸気` / `残骸` etc.) still return `None` and let the caller render its own placeholder (`(フレーバー未登録)` / `(no flavor)`).
+
+Phase 3b also unified the `flavor_en` vocabulary: occurrences of `"interest"` used in the sense of "curiosity" were rewritten to `curiosity` across `abstracts.json` (52), `animals.json` (59), and `foods.json` (2) to align with the repository name `curion` (= curiosity). English idioms such as `point of interest` were left untouched, but none existed in the dataset.
+
+The JA `flavor` strings are intentionally left unchanged in this phase. JA narration uses both "興味" and "好奇" with stylistic intent (per-category tone, as established in Phase 2 of #65), and consolidating them would alter prose rhythm without a player-visible benefit. A separate follow-up may revisit JA wording if a future content audit identifies inconsistencies that hurt readability.
 
 ### Phase 4 (Issue #71): Content i18n
 
@@ -505,7 +513,7 @@ Left pane sections:
   - 寿命なし (旧セーブ): `寿命: --`
 - Attribute bars (interest, beauty) shown inline
 - Bottom detail pane (`Constraint::Length(4)`, Issue #22 + #27): two lines for the curion currently at the top of the visible list. Wraps if the flavor exceeds the line width.
-  - Line 1: SF flavor text (Issue #22). Missing flavor falls back to `(フレーバー未登録)`.
+  - Line 1: SF flavor text (Issue #22, Issue #68 Phase 3a). The flavor is selected via `NounDatabase::flavor_for(noun, game_state.language)` so EN sessions render `flavor_en` (with JA fallback when empty). Missing flavor falls back to `(フレーバー未登録)` (JA) / `(no flavor)` (EN).
   - Line 2: acquisition history (Issue #27) — `入手: YYYY-MM-DD HH:MM  (通算 N回目の収集)` in local TZ. Legacy save curions without `acquisition_index` show `(履歴情報なし)` instead of the count.
 
 **Encyclopedia right pane:**

@@ -6,6 +6,10 @@
 - `docs/design.md` をルート直下の `DESIGN.md` に戻した。他リポ (selona / open-sen / osaka-kenpo / xmj 等) の慣習に合わせ、UI デザインシステム文書はリポルート直下 `DESIGN.md` に置く方針で統一。v0.2.0 で `docs/` 配下に移したが、ルートに集約する形に揃え直した。内容変更なし。
 
 ### Added
+- i18n Phase 3 (#68): flavor 表示を lang gate に通した + flavor_en の語彙統一。
+  - `NounEntry` に `flavor_en` フィールドを追加 (JSON 側は #65 Phase 2 で既に追加済) し、`NounDatabase::flavor_for(noun, lang)` を lang 引数付きに拡張。EN 時は `flavor_en` を返し、空文字または未設定なら JA `flavor` にフォールバック (Phase 4 同パターン)。合成専用 noun (`蒸気` / `残骸` 等) は従来通り None。
+  - UI の flavor 表示 2 箇所 (Collection 詳細ペイン / Dictionary 図鑑エントリ) を `flavor_for(noun, game_state.language)` 経由に切替。`--lang en` 時の JA flavor 漏出を解消。詳細ペインの未登録プレースホルダも EN 時 `(no flavor)` に切替。
+  - `data/nouns/*.json` の `flavor_en` 内で curiosity 同義に使われていた `interest` を `curiosity` に統一 (abstracts: 52 件 / animals: 59 件 / foods: 2 件)。リポ名 `curion` (= curiosity) との表記整合を最大化。英語慣用句 `point of interest` 等は対象外だがデータ中に存在しなかった。
 - i18n Phase 4 (#71): Achievement / Daily Mission / Evolution / Synthesis recipe のゲーム内本文を lang gate に通した。
   - `data/evolutions/lines.json` の 5 系列に `display_name_en` を追加。`EvolutionLine::display_name_for(lang)` で取得。
   - `data/recipes/basic_recipes.json` の 17 レシピに `name_en` と `description_en` を追加。`SynthesisRecipe::name_for(lang)` / `description_for(lang)` を提供。Unknown レシピのラベル "未確認レシピ #NN" は EN 時 "Unrecorded recipe #NN" に切り替わる。

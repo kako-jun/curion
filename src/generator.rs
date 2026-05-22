@@ -1,4 +1,5 @@
 use crate::curion::{Category, Curion, Rarity};
+use crate::i18n::Language;
 use crate::latent::{
     cosine_similarity, latent_from_seed, project_unit, prototype_for_noun, LatentVector,
 };
@@ -27,8 +28,16 @@ pub struct NounEntry {
     pub weight: f64,
     /// SF 寓話風のフレーバーテキスト（Issue #22）。
     /// 既存 JSON との後方互換性のため `#[serde(default)]` で省略可能。
+    /// Phase 3 (#68) で `flavor_for(noun, lang)` 経由の lang gate に通している。
+    /// 現状 268 件全件で埋まっており `test_flavor_field_loaded_for_all_nouns` で保証。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flavor: Option<String>,
+    /// Issue #65 Phase 2 で追加した英語版フレーバー。
+    /// 既存 JSON との後方互換性のため `#[serde(default)]` で省略可能。
+    /// Phase 3 (#68) で `flavor_for(noun, lang)` 経由の lang gate に通している。
+    /// 空文字または未設定の場合は JA `flavor` にフォールバックする (Phase 4 と同じパターン)。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flavor_en: Option<String>,
 }
 
 /// 名詞データベース
@@ -80,9 +89,21 @@ impl NounDatabase {
             .find(|e| e.name == noun_name)
     }
 
-    /// 名詞名から該当するフレーバーテキストを取得する（未設定なら None）
-    pub fn flavor_for(&self, noun_name: &str) -> Option<&str> {
-        self.find_entry(noun_name).and_then(|e| e.flavor.as_deref())
+    /// 名詞名から該当するフレーバーテキストを言語別に取得する（未設定なら None）。
+    ///
+    /// Issue #68 Phase 3a: `lang == En` のときは `flavor_en` を返し、空文字
+    /// または未設定なら JA `flavor` にフォールバックする (Phase 4 同パターン)。
+    /// 合成専用 noun (`蒸気` / `残骸` 等、`data/nouns/*.json` に存在しない名詞)
+    /// は `None` を返す。
+    pub fn flavor_for(&self, noun_name: &str, lang: Language) -> Option<&str> {
+        let entry = self.find_entry(noun_name)?;
+        match lang {
+            Language::Ja => entry.flavor.as_deref(),
+            Language::En => match entry.flavor_en.as_deref() {
+                Some(s) if !s.is_empty() => Some(s),
+                _ => entry.flavor.as_deref(),
+            },
+        }
     }
 
     /// Issue #63: noun の Japanese ID から English 表示名を引く。
@@ -387,12 +408,85 @@ mod tests {
         );
     }
 
-    /// Issue #22: flavor_for ヘルパは存在しない名詞には None を返す。
+    /// Issue #22 / Issue #68 Phase 3a: flavor_for ヘルパは存在しない名詞には None を返し、
+    /// 言語別の flavor を取得できる。
     #[test]
     fn test_flavor_for_helper() {
         let db = NounDatabase::load_embedded().expect("Failed to load noun database");
-        assert!(db.flavor_for("魚").is_some(), "魚 should have a flavor");
-        assert!(db.flavor_for("__not_exist__").is_none());
+        assert!(
+            db.flavor_for("魚", Language::Ja).is_some(),
+            "魚 should have a JA flavor"
+        );
+        assert!(
+            db.flavor_for("魚", Language::En).is_some(),
+            "魚 should resolve an EN flavor (en or JA fallback)"
+        );
+        assert!(db.flavor_for("__not_exist__", Language::Ja).is_none());
+        assert!(db.flavor_for("__not_exist__", Language::En).is_none());
+    }
+
+    /// Issue #68 Phase 3a: `flavor_en` が設定されているときは En で英文を返す。
+    #[test]
+    fn flavor_for_en_returns_english_when_present() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+        // phenomena.json の最初のエントリ (朝) は flavor_en が "A particle of hope..." で始まる
+        let en = db.flavor_for("朝", Language::En).expect("EN flavor");
+        assert!(
+            en.is_ascii() || !en.contains('。'),
+            "EN flavor should not contain JA sentence terminator, got: {en:?}"
+        );
+        assert!(
+            en.starts_with("A "),
+            "EN flavor should start with English article, got: {en:?}"
+        );
+        let ja = db.flavor_for("朝", Language::Ja).expect("JA flavor");
+        assert_ne!(en, ja, "EN flavor should differ from JA");
+    }
+
+    /// Issue #68 Phase 3a: `flavor_en` が空文字または未設定の場合は JA にフォールバック。
+    #[test]
+    fn flavor_for_falls_back_to_ja_when_en_empty() {
+        // 空文字 flavor_en
+        let entry_empty = NounEntry {
+            name: "テスト".to_string(),
+            reading: "てすと".to_string(),
+            english: "test".to_string(),
+            weight: 1.0,
+            flavor: Some("日本語フレーバー。".to_string()),
+            flavor_en: Some(String::new()),
+        };
+        // None flavor_en
+        let entry_none = NounEntry {
+            name: "テスト2".to_string(),
+            reading: "てすと2".to_string(),
+            english: "test2".to_string(),
+            weight: 1.0,
+            flavor: Some("日本語フレーバー2。".to_string()),
+            flavor_en: None,
+        };
+
+        let mut entries = HashMap::new();
+        entries.insert(Category::Abstract, vec![entry_empty, entry_none]);
+        let db = NounDatabase { entries };
+
+        assert_eq!(
+            db.flavor_for("テスト", Language::En),
+            Some("日本語フレーバー。"),
+            "empty flavor_en should fall back to JA"
+        );
+        assert_eq!(
+            db.flavor_for("テスト2", Language::En),
+            Some("日本語フレーバー2。"),
+            "missing flavor_en should fall back to JA"
+        );
+    }
+
+    /// Issue #68 Phase 3a: 存在しない名詞は EN/JA いずれも None。
+    #[test]
+    fn flavor_for_returns_none_for_unknown_noun() {
+        let db = NounDatabase::load_embedded().expect("Failed to load noun database");
+        assert!(db.flavor_for("__unknown_noun__", Language::Ja).is_none());
+        assert!(db.flavor_for("__unknown_noun__", Language::En).is_none());
     }
 
     // -----------------------------------------------------------------

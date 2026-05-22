@@ -249,7 +249,7 @@ Right pane layout:
   - Timestamp: DarkGray
   - Detail pane (Issue #22 + #27): unfocused_block("詳細: {noun}") with two body lines for
     the curion currently at the top of the visible list. `Wrap { trim: true }` is applied.
-    Line 1: SF flavor text (Color::Gray); missing flavor falls back to `(フレーバー未登録)`.
+    Line 1: SF flavor text (Color::Gray), routed through `NounDatabase::flavor_for(noun, game_state.language)` so EN sessions render `flavor_en` (Issue #68 Phase 3a). Missing flavor falls back to `(フレーバー未登録)` (JA) / `(no flavor)` (EN).
     Line 2 (Issue #27, Color::DarkGray): acquisition history —
       `入手: YYYY-MM-DD HH:MM  (通算 N回目の収集)`, where the timestamp is rendered in the
       local TZ. Legacy save curions without `acquisition_index` show `(履歴情報なし)`.
@@ -264,7 +264,9 @@ Right pane layout:
         Acquired: "noun        ★★   [RARE] YYYY-MM-DD ×count"
                   (rarity color on stars+label, white bold noun, DarkGray date,
                    COLOR_SUCCESS count)
-                  Flavor line (Issue #22, only when acquired and flavor is present):
+                  Flavor line (Issue #22, only when acquired and flavor is present;
+                  Issue #68 Phase 3a routes selection through
+                  `NounDatabase::flavor_for(noun, game_state.language)` for EN/JA):
                   "  {flavor}" (indented 2 cells, COLOR_LABEL = DarkGray).
                   If the flavor exceeds inner width, it is truncated at display-cell
                   width and `…` is appended (see `truncate_display`).
