@@ -373,6 +373,14 @@ pub struct App {
     /// `on_tick` で連続的に変化するもの (プレイ時間加算、SAN 自然減衰、Rare cooldown 残量) では
     /// dirty を立てない。これらは起動時 save と終了時 save でカバーする。
     pub dirty: bool,
+    /// Issue #74 follow-up: vim 風の `gg` モーション用 pending フラグ。
+    ///
+    /// `g` を 1 回押すと true にセットし、次に来たキーで判定する:
+    /// - 2 回目も `g` なら先頭ジャンプ (gg)
+    /// - それ以外のキーは pending_g をクリアして本来のハンドリングへ
+    ///
+    /// タイムアウトは設けない。シンプルに状態だけで管理する。
+    pub pending_g: bool,
 }
 
 impl App {
@@ -404,6 +412,38 @@ impl App {
             evolution_db,
             latest_reveal: None,
             dirty: false,
+            pending_g: false,
+        }
+    }
+
+    /// Issue #74 follow-up: 現在のスクロール対象を先頭 (index 0) に戻す。
+    /// `gg` モーションのターゲット。
+    fn jump_to_top(&mut self) {
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = 0;
+        } else if self.current_tab == Tab::Synthesis
+            && self.synthesis_state == SynthesisUIState::SelectingSecond
+        {
+            self.synthesis_scroll = 0;
+        } else {
+            self.detail_scroll = 0;
+        }
+    }
+
+    /// Issue #74 follow-up: 現在のスクロール対象を末尾までジャンプ。
+    /// `G` モーションのターゲット。末尾値は usize::MAX / 2 を入れて、
+    /// render 側のクランプに任せる方式 (既存 scroll_down と同じ saturating
+    /// な振る舞いに整合)。
+    fn jump_to_bottom(&mut self) {
+        let bottom = usize::MAX / 2;
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = bottom;
+        } else if self.current_tab == Tab::Synthesis
+            && self.synthesis_state == SynthesisUIState::SelectingSecond
+        {
+            self.synthesis_scroll = bottom;
+        } else {
+            self.detail_scroll = bottom;
         }
     }
 
@@ -428,6 +468,29 @@ impl App {
         if self.filter_mode {
             return self.handle_filter_key(key);
         }
+
+        // Issue #74 follow-up: vim 風 `gg` / `G` モーション。
+        // `g` を 2 回連打すると先頭ジャンプ、`G` は単独で末尾ジャンプ。
+        // `g` 以外のキーが来たら pending_g はクリアする (タイムアウト無し、
+        // シンプルに状態だけで判定)。
+        if let KeyCode::Char('g') = key {
+            if self.pending_g {
+                self.pending_g = false;
+                self.jump_to_top();
+            } else {
+                self.pending_g = true;
+            }
+            return Ok(false);
+        }
+        // `g` 以外のキーが来た時点で pending_g はクリア。
+        // 以降の通常ハンドリングを継続する。
+        self.pending_g = false;
+
+        if let KeyCode::Char('G') = key {
+            self.jump_to_bottom();
+            return Ok(false);
+        }
+
         match key {
             KeyCode::Char('q') => return Ok(true),
             KeyCode::Char('/') if self.current_tab == Tab::Collection => {
@@ -4599,6 +4662,87 @@ mod tests {
         assert_eq!(
             app.dictionary_scroll, 5,
             "PageUp/PageDown は廃止済みなので no-op"
+        );
+    }
+
+    /// Issue #74 follow-up: `gg` は Dashboard で detail_scroll を先頭に戻す。
+    #[test]
+    fn gg_jumps_to_top_from_middle_in_dashboard() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 5;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(app.pending_g, "1 回目の g で pending_g が立つ");
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(!app.pending_g, "2 回目の g で pending_g はクリア");
+        assert_eq!(app.detail_scroll, 0, "gg で detail_scroll が先頭に戻る");
+    }
+
+    /// Issue #74 follow-up: 図鑑モードでも `gg` は dictionary_scroll を先頭に戻す。
+    #[test]
+    fn gg_jumps_to_top_in_dictionary_mode() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        app.dictionary_scroll = 10;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert_eq!(
+            app.dictionary_scroll, 0,
+            "図鑑モードで gg は dictionary_scroll を先頭に戻す"
+        );
+    }
+
+    /// Issue #74 follow-up: `g` を 1 回押した後に別のキーを押すと pending_g は
+    /// クリアされ、次の単独 `g` では先頭ジャンプしない。
+    #[test]
+    fn g_then_other_key_cancels_pending_g() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 5;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(app.pending_g);
+        // 別のキー (j) で pending_g がクリアされる
+        app.handle_key(KeyCode::Char('j')).unwrap();
+        assert!(!app.pending_g, "j を押すと pending_g はクリアされる");
+        // この時点で detail_scroll は j のぶん +1 (5 -> 6)
+        assert_eq!(app.detail_scroll, 6);
+        // 次の単独 g では pending_g が立つだけで先頭ジャンプはしない
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(app.pending_g);
+        assert_eq!(
+            app.detail_scroll, 6,
+            "単独の g では先頭ジャンプしない (2 回目の g が必要)"
+        );
+    }
+
+    /// Issue #74 follow-up: `G` (Shift+g) は単独で末尾相当の値にジャンプ。
+    /// 末尾値は usize::MAX / 2 で、render 側のクランプに任せる方式。
+    #[test]
+    fn shift_g_jumps_to_bottom() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 0;
+        app.handle_key(KeyCode::Char('G')).unwrap();
+        assert_eq!(
+            app.detail_scroll,
+            usize::MAX / 2,
+            "G は末尾相当 (usize::MAX/2) を入れて render 側クランプに任せる"
+        );
+    }
+
+    /// Issue #74 follow-up: Synthesis SelectingSecond でも `gg` は
+    /// synthesis_scroll を先頭に戻す。
+    #[test]
+    fn gg_works_in_synthesis_selecting_second() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Synthesis);
+        app.synthesis_state = SynthesisUIState::SelectingSecond;
+        app.synthesis_scroll = 7;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert_eq!(
+            app.synthesis_scroll, 0,
+            "Synthesis SelectingSecond で gg は synthesis_scroll を先頭に戻す"
         );
     }
 
