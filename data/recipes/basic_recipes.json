@@ -154,9 +154,9 @@
   {
     "id": "recipe_006",
     "name": "月光狼",
-    "name_en": "moonlight wolf",
+    "name_en": "Moonlight Wolf",
     "description": "狼と月が出会うとき、神秘的な月光狼が誕生する",
-    "description_en": "when the wolf meets the moon, a mystical moonlight wolf is born",
+    "description_en": "when the wolf meets the moon, a mystical Moonlight Wolf is born",
     "ingredients": [
       {
         "specific_noun": "狼",
@@ -187,9 +187,9 @@
   {
     "id": "recipe_007",
     "name": "炎龍",
-    "name_en": "flame dragon",
+    "name_en": "Flame Dragon",
     "description": "龍に火の力を宿すと伝説の炎龍が現れる",
-    "description_en": "channelling fire into a dragon summons the legendary flame dragon",
+    "description_en": "channelling fire into a dragon summons the legendary Flame Dragon",
     "ingredients": [
       {
         "specific_noun": "龍",
@@ -220,9 +220,9 @@
   {
     "id": "recipe_008",
     "name": "氷鳳凰",
-    "name_en": "ice phoenix",
+    "name_en": "Ice Phoenix",
     "description": "鳳凰に氷の力を与えると神秘の氷鳳凰が生まれる",
-    "description_en": "imbuing the phoenix with ice gives rise to the mystical ice phoenix",
+    "description_en": "imbuing the phoenix with ice gives rise to the mystical Ice Phoenix",
     "ingredients": [
       {
         "specific_noun": "鳳凰",
@@ -253,9 +253,9 @@
   {
     "id": "recipe_009",
     "name": "愛猫",
-    "name_en": "beloved cat",
+    "name_en": "Cherished Companion",
     "description": "猫と愛が融合すると愛らしいペットが生まれる",
-    "description_en": "cat and love fuse into an adorable companion",
+    "description_en": "cat and love fuse into a Cherished Companion",
     "ingredients": [
       {
         "specific_noun": "猫",
@@ -412,7 +412,7 @@
   {
     "id": "recipe_014",
     "name": "陰陽",
-    "name_en": "yin-yang",
+    "name_en": "Yin-Yang",
     "description": "光と闇、相反する二つの力が調和する",
     "description_en": "light and darkness, two opposing forces, reach harmony",
     "ingredients": [
@@ -479,9 +479,9 @@
   {
     "id": "recipe_016",
     "name": "禁断の神",
-    "name_en": "forbidden god",
+    "name_en": "Forbidden Divinity",
     "description": "混沌と秩序を無理やり融合させ、神なるものを呼び寄せる",
-    "description_en": "forcibly fusing chaos and order calls forth a divine being",
+    "description_en": "forcibly fusing chaos and order calls forth a Forbidden Divinity",
     "ingredients": [
       {
         "specific_noun": "混沌",
@@ -515,7 +515,7 @@
   {
     "id": "recipe_017",
     "name": "黒い太陽",
-    "name_en": "black sun",
+    "name_en": "Black Sun",
     "description": "光と影を強引に結合する。失敗すれば残骸の灰だけが残る",
     "description_en": "forcefully bind light and shadow; failure leaves only ashen remains",
     "ingredients": [

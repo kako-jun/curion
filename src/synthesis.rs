@@ -8,12 +8,23 @@ use uuid::Uuid;
 const RECIPES_JSON: &str = include_str!("../data/recipes/basic_recipes.json");
 
 /// 合成レシピ
+///
+/// # `name_en` の大文字小文字方針 (Issue #71 Phase 4)
+///
+/// - 合成結果が**固有の生き物・神話的存在の名前**になるものは Title Case で書く
+///   (例: `Moonlight Wolf`, `Flame Dragon`, `Ice Phoenix`, `Forbidden Divinity`)。
+/// - 合成結果が**一般物質名・現象名・抽象概念**のものは lower case で書く
+///   (例: `steam`, `mud`, `lava`, `hope`, `despair`, `cosmos`)。
+///
+/// レシピデータ (`data/recipes/basic_recipes.json`) もこの方針に従って整える。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SynthesisRecipe {
     pub id: String,
     pub name: String,
     pub description: String,
     /// Issue #71 Phase 4: 英語版レシピ名。空文字なら `name` (JA) にフォールバックする。
+    ///
+    /// 大文字小文字の方針は [`SynthesisRecipe`] の doc コメントを参照。
     #[serde(default)]
     pub name_en: String,
     /// Issue #71 Phase 4: 英語版説明文。空文字なら `description` (JA) にフォールバックする。
@@ -1311,6 +1322,10 @@ mod tests {
     }
 
     /// Issue #71 Phase 4: `name_for(En)` は 17 件すべて非空かつ JA と異なる。
+    ///
+    /// 全レシピで `name_en` 必須を構造的に強制するためのテスト。
+    /// 空文字フォールバックを許容する設計に変える場合 (例: `Option<String>` に
+    /// 寄せて `name_en` 未設定時は JA を返す方式) は、このテストを再考すること。
     #[test]
     fn test_recipe_name_for_en_is_translated_for_all_recipes() {
         let db = RecipeDatabase::load_embedded().expect("recipes load");

@@ -315,8 +315,8 @@ impl AchievementManager {
                         .to_string(),
                     )
                     .with_en(
-                        format!("{rarity:?} Hunter {count}"),
-                        format!("Collect {count} {rarity:?} curions"),
+                        format!("{} Hunter {count}", rarity.display(Language::En)),
+                        format!("Collect {count} {} curions", rarity.display(Language::En)),
                         reward_title_en,
                     ),
                 );
@@ -389,7 +389,7 @@ impl AchievementManager {
                     "🔥".to_string(),
                 )
                 .with_en(
-                    format!("Persistence Is Power {days}"),
+                    format!("Persistence Is Power — {days} days"),
                     format!("Log in for {days} consecutive days"),
                     if days >= 101 {
                         Some("Unyielding Will".to_string())
@@ -417,7 +417,7 @@ impl AchievementManager {
                     "⏰".to_string(),
                 )
                 .with_en(
-                    format!("Veteran {hours}"),
+                    format!("Veteran — {hours}h"),
                     format!("Play for {hours} hours"),
                     if hours >= 503 {
                         Some("Master of Time".to_string())
