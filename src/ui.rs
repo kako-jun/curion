@@ -454,14 +454,16 @@ impl App {
             // Issue #72 / #74: vim 風キーマップに統一。
             // - h/l: タブ層の左右移動 (previous_tab / next_tab)
             // - j/k: スクロール下/上 (旧 ↓/↑ の置換)
-            // - J/K (Shift+j/k): Collection タブのセクション切替 (旧 j/k)
+            // - J/K (Shift+j/k): セクション切替。複数セクションを持つ全タブで動作する。
+            //   セクションが 1 つしかないタブ (Settings) では current_sections().len() == 1 のため
+            //   next_section / previous_section が clamp して no-op になる
             // - 矢印キー・PageUp/PageDown・Tab キーは廃止
             KeyCode::Char('h') => self.previous_tab(),
             KeyCode::Char('l') => self.next_tab(),
             KeyCode::Char('j') => self.scroll_down(),
             KeyCode::Char('k') => self.scroll_up(),
-            KeyCode::Char('J') if self.current_tab == Tab::Collection => self.next_section(),
-            KeyCode::Char('K') if self.current_tab == Tab::Collection => self.previous_section(),
+            KeyCode::Char('J') => self.next_section(),
+            KeyCode::Char('K') => self.previous_section(),
             KeyCode::Enter => self.handle_enter()?,
             // Issue #38: Collection 所持一覧で `e` を押すと、現在 focus 中の curion を
             // 装備/解除する (詳細ペインに表示中のもの)。装備中の curion を再度 `e` で
@@ -1147,6 +1149,10 @@ impl App {
             spans.extend(key_dark("q", crate::i18n::t("help.quit", lang)));
         };
 
+        // Issue #74 follow-up: J/K セクション切替は複数セクションを持つ全タブで有効。
+        // Settings は単一セクションなので出さない。
+        let has_multi_sections = self.current_sections().len() > 1;
+
         let mut spans: Vec<Span<'static>> = Vec::new();
 
         match self.current_tab {
@@ -1169,6 +1175,9 @@ impl App {
                     "j/k",
                     crate::i18n::t("help.achievement_select", lang),
                 ));
+                if has_multi_sections {
+                    spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
+                }
                 spans.extend(key_epic("Enter", crate::i18n::t("help.claim_reward", lang)));
                 spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
                 tail(&mut spans);
@@ -1178,6 +1187,9 @@ impl App {
                     "j/k",
                     crate::i18n::t("help.candidate_select", lang),
                 ));
+                if has_multi_sections {
+                    spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
+                }
                 spans.extend(key_epic(
                     "Enter",
                     crate::i18n::t("help.synthesize_now", lang),
@@ -1192,6 +1204,9 @@ impl App {
             }
             _ => {
                 spans.extend(key_dark("j/k", crate::i18n::t("help.detail_scroll", lang)));
+                if has_multi_sections {
+                    spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
+                }
                 spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
                 tail(&mut spans);
             }
@@ -4512,18 +4527,50 @@ mod tests {
         assert_eq!(app.current_section_index(), 0);
     }
 
-    /// Collection 以外のタブでは `J` / `K` は no-op (current_tab を変えない)。
+    /// Issue #74 follow-up: Dashboard で `J` を押すとセクションが次へ進む。
     #[test]
-    fn shift_jk_no_op_outside_collection() {
+    fn shift_j_advances_section_on_dashboard() {
         let mut app = empty_app();
         app.set_tab(Tab::Dashboard);
-        let before_tab = app.current_tab;
+        assert_eq!(app.current_section_index(), 0);
         app.handle_key(KeyCode::Char('J')).unwrap();
+        assert_eq!(
+            app.section_indices[Tab::Dashboard.index()],
+            1,
+            "Dashboard でも J はセクションを次へ進める"
+        );
+    }
+
+    /// Issue #74 follow-up: Achievements で `J` を押すとセクションが次へ進む。
+    #[test]
+    fn shift_j_advances_section_on_achievements() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Achievements);
+        assert_eq!(app.current_section_index(), 0);
+        app.handle_key(KeyCode::Char('J')).unwrap();
+        assert_eq!(
+            app.section_indices[Tab::Achievements.index()],
+            1,
+            "Achievements でも J はセクションを次へ進める"
+        );
+    }
+
+    /// Issue #74 follow-up: Stats で `K` を押すとセクションが前へ戻る (or 飽和して 0)。
+    #[test]
+    fn shift_k_retreats_section_on_stats() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Stats);
+        app.section_indices[Tab::Stats.index()] = 2;
         app.handle_key(KeyCode::Char('K')).unwrap();
         assert_eq!(
-            app.current_tab, before_tab,
-            "Dashboard で J/K はタブを変えない"
+            app.section_indices[Tab::Stats.index()],
+            1,
+            "Stats でも K はセクションを前へ戻す"
         );
+        // 0 まで戻して、もう一度 K を押しても飽和して 0 のまま
+        app.section_indices[Tab::Stats.index()] = 0;
+        app.handle_key(KeyCode::Char('K')).unwrap();
+        assert_eq!(app.section_indices[Tab::Stats.index()], 0);
     }
 
     /// Issue #72: 矢印キー (Up/Down/Left/Right) は廃止。Dashboard で押しても
