@@ -1354,8 +1354,9 @@ impl App {
 
     /// Issue #63: Settings タブの描画。現状は言語切替 1 項目のみ。
     ///
-    /// `←/→` で言語をトグルし、現在の選択を太字で表示する。永続化は
-    /// `handle_key` 側で行うので、ここでは表示だけに専念する。
+    /// `Enter` で言語をトグルし、現在の選択を太字で表示する (Issue #74 で
+    /// 旧 `←/→` から `Enter` に変更)。永続化は `handle_key` 側で行うので、
+    /// ここでは表示だけに専念する。
     fn render_settings_section(&self, f: &mut Frame<'_>, area: Rect) {
         let lang = self.game_state.language;
         let block = focused_block(crate::i18n::t("block.settings", lang));

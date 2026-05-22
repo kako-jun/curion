@@ -29,7 +29,7 @@ No ads, no microtransactions, no internet required. Just one more spin.
 - **268 collectible nouns** across 9 categories (Animal, Plant, Color, Object, Concept, Element, Food, Phenomenon, Abstract), each with SF flavor text (#22)
 - **4-tier rarity system** — Common, Rare, Epic, Legendary
 - **6-tab TUI** built with ratatui — Dashboard, Collection, Achievements, Stats, Synthesis, Settings
-- **Language switch (En / Ja)** — open the Settings tab and press `←/→` to toggle the UI language; the change is saved immediately (Issue #63 Phase 1)
+- **Language switch (En / Ja)** — open the Settings tab and press `Enter` to toggle the UI language; the change is saved immediately (Issue #63 Phase 1)
 - **Three-pane navigation** — tab bar + left section list + right content pane, aligned with the future PWA information architecture
 - **Nostr identity** — each player gets a keypair for future decentralized trading
 - **Auto-save** on every meaningful action (gacha pull, equip, synthesis, claim) + on exit
@@ -128,16 +128,18 @@ You can also press `Space` to spend a GUID immediately instead of waiting for th
 ### Key Bindings
 
 | Key | Action |
-|---|---|
-| `1`-`6` | Switch to tab (Dashboard / Collection / Achievements / Stats / Synthesis / Settings) |
-| `Tab` | Next tab |
-| `Space` | Generate a curion now (spends the current GUID) |
-| `j` / `k` | Move between left-pane sections |
-| `Up` / `Down` | Scroll or select inside the right pane |
-| `←` / `→` | Toggle language on the Settings tab (En / Ja) |
-| `Enter` | Claim achievement reward / Select synthesis ingredient |
-| `Esc` | Cancel synthesis selection / Quit |
+|-----|--------|
+| `h` / `l` | Previous / next tab |
+| `j` / `k` | Scroll down / up |
+| `J` / `K` | Next / previous section (for tabs with multiple sections) |
+| `1`-`6` | Jump to tab directly |
+| `Enter` | Tab-specific action (e.g. toggle language on Settings, claim reward, select synthesis ingredient) |
+| `Space` | Generate a curion (Dashboard) |
+| `e` | Equip / unequip focused curion (Collection list) |
+| `/` | Filter (Collection) |
+| `Esc` | Cancel synthesis selection / clear filter / quit |
 | `q` | Quit |
+| `gg` / `G` | Jump to top / bottom (hidden Vim motion) |
 
 ## Synthesis
 
