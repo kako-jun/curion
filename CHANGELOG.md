@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+- i18n Phase 4 (#71): Achievement / Daily Mission / Evolution / Synthesis recipe のゲーム内本文を lang gate に通した。
+  - `data/evolutions/lines.json` の 5 系列に `display_name_en` を追加。`EvolutionLine::display_name_for(lang)` で取得。
+  - `data/recipes/basic_recipes.json` の 17 レシピに `name_en` と `description_en` を追加。`SynthesisRecipe::name_for(lang)` / `description_for(lang)` を提供。Unknown レシピのラベル "未確認レシピ #NN" は EN 時 "Unrecorded recipe #NN" に切り替わる。
+  - `Achievement` に `name_en` / `description_en` / `reward_title_en` を追加し、`with_en(...)` builder で register 時に英訳を流し込む。`name_for(lang)` / `description_for(lang)` / `reward_title_for(lang)` を提供。
+  - `DailyMission` テンプレートに `description_en` を追加し、`DailyMission::description_for(lang)` を提供。
+  - `SynthesisManager::try_synthesize_lang` / `try_synthesize_with_rolls_lang` を追加し、合成成功・発見・高リスク失敗・No recipe のトースト文を `--lang en` 起動時に英語化。Dashboard の進化進捗、Achievements タブ、デイリーミッション、レシピ一覧の各タブ本文を lang 経由で表示。
+
 ### Removed
 - Interactive モードの `save` コマンドを削除 (#73, #62 follow-up)。永続化は startup / exit / tui / Ctrl-D の自動セーブに一本化。
 - 矢印キー (Up/Down/Left/Right) / PageUp / PageDown / Tab キーの TUI 入力ハンドラを廃止 (#72)。

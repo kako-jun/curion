@@ -1,4 +1,5 @@
 use crate::curion::{Category, Curion, Rarity};
+use crate::i18n::Language;
 use chrono::NaiveDate;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
@@ -27,6 +28,9 @@ pub struct DailyMission {
     pub id: String,
     /// 表示用説明
     pub description: String,
+    /// Issue #71 Phase 4: 英語版説明。空文字なら `description` (JA) にフォールバック。
+    #[serde(default)]
+    pub description_en: String,
     /// 種別
     pub kind: DailyMissionKind,
     /// 目標値
@@ -47,6 +51,20 @@ impl DailyMission {
         self.current >= self.target
     }
 
+    /// Issue #71 Phase 4: 言語別の説明文。`description_en` が空なら JA フォールバック。
+    pub fn description_for(&self, lang: Language) -> &str {
+        match lang {
+            Language::Ja => &self.description,
+            Language::En => {
+                if self.description_en.is_empty() {
+                    &self.description
+                } else {
+                    &self.description_en
+                }
+            }
+        }
+    }
+
     /// 進捗率 (0.0..=1.0)
     pub fn progress_ratio(&self) -> f64 {
         if self.target == 0 {
@@ -60,6 +78,8 @@ impl DailyMission {
 struct MissionTemplate {
     id: &'static str,
     description: &'static str,
+    /// Issue #71 Phase 4: 英語版説明。
+    description_en: &'static str,
     kind: DailyMissionKind,
     target: usize,
     reward_xp: u32,
@@ -71,6 +91,7 @@ const TEMPLATES: &[MissionTemplate] = &[
     MissionTemplate {
         id: "collect_any_10",
         description: "10個のキュリオンを収集",
+        description_en: "Collect 10 curions",
         kind: DailyMissionKind::CollectAny(10),
         target: 10,
         reward_xp: 100,
@@ -78,6 +99,7 @@ const TEMPLATES: &[MissionTemplate] = &[
     MissionTemplate {
         id: "collect_rare_at_least_3",
         description: "Rare 以上を 3 個獲得",
+        description_en: "Get 3 curions of Rare or above",
         kind: DailyMissionKind::CollectRarityAtLeast(Rarity::Rare, 3),
         target: 3,
         reward_xp: 200,
@@ -85,6 +107,7 @@ const TEMPLATES: &[MissionTemplate] = &[
     MissionTemplate {
         id: "synthesize_success_1",
         description: "合成を 1 回成功させる",
+        description_en: "Succeed at synthesis once",
         kind: DailyMissionKind::SynthesizeSuccess(1),
         target: 1,
         reward_xp: 300,
@@ -92,6 +115,7 @@ const TEMPLATES: &[MissionTemplate] = &[
     MissionTemplate {
         id: "collect_from_categories_5",
         description: "5 種類の異なるカテゴリから収集",
+        description_en: "Collect from 5 different categories",
         kind: DailyMissionKind::CollectFromCategories(5),
         target: 5,
         reward_xp: 150,
@@ -146,6 +170,7 @@ impl DailyMissionManager {
                 DailyMission {
                     id: tpl.id.to_string(),
                     description: tpl.description.to_string(),
+                    description_en: tpl.description_en.to_string(),
                     kind: tpl.kind.clone(),
                     target: tpl.target,
                     current: 0,
@@ -362,6 +387,7 @@ mod tests {
         mgr.missions = vec![DailyMission {
             id: "collect_any_10".to_string(),
             description: "10 個".to_string(),
+            description_en: String::new(),
             kind: DailyMissionKind::CollectAny(10),
             target: 10,
             current: 0,
@@ -382,6 +408,7 @@ mod tests {
         mgr.missions = vec![DailyMission {
             id: "collect_rare_at_least_3".to_string(),
             description: "Rare 以上 3 個".to_string(),
+            description_en: String::new(),
             kind: DailyMissionKind::CollectRarityAtLeast(Rarity::Rare, 3),
             target: 3,
             current: 0,
@@ -411,6 +438,7 @@ mod tests {
         mgr.missions = vec![DailyMission {
             id: "collect_from_categories_5".to_string(),
             description: "5 種類".to_string(),
+            description_en: String::new(),
             kind: DailyMissionKind::CollectFromCategories(5),
             target: 5,
             current: 0,
@@ -439,6 +467,7 @@ mod tests {
             DailyMission {
                 id: "synthesize_success_1".to_string(),
                 description: "合成 1 回".to_string(),
+                description_en: String::new(),
                 kind: DailyMissionKind::SynthesizeSuccess(1),
                 target: 1,
                 current: 0,
@@ -449,6 +478,7 @@ mod tests {
             DailyMission {
                 id: "collect_any_10".to_string(),
                 description: "10 個".to_string(),
+                description_en: String::new(),
                 kind: DailyMissionKind::CollectAny(10),
                 target: 10,
                 current: 0,
@@ -473,6 +503,7 @@ mod tests {
             DailyMission {
                 id: "collect_any_10".to_string(),
                 description: "10 個".to_string(),
+                description_en: String::new(),
                 kind: DailyMissionKind::CollectAny(10),
                 target: 10,
                 current: 10,
@@ -484,6 +515,7 @@ mod tests {
             DailyMission {
                 id: "synthesize_success_1".to_string(),
                 description: "合成 1 回".to_string(),
+                description_en: String::new(),
                 kind: DailyMissionKind::SynthesizeSuccess(1),
                 target: 1,
                 current: 1,
@@ -495,6 +527,7 @@ mod tests {
             DailyMission {
                 id: "collect_rare_at_least_3".to_string(),
                 description: "Rare 以上 3 個".to_string(),
+                description_en: String::new(),
                 kind: DailyMissionKind::CollectRarityAtLeast(Rarity::Rare, 3),
                 target: 3,
                 current: 1,
@@ -517,6 +550,7 @@ mod tests {
         mgr.missions = vec![DailyMission {
             id: "collect_any_10".to_string(),
             description: "10 個".to_string(),
+            description_en: String::new(),
             kind: DailyMissionKind::CollectAny(10),
             target: 10,
             current: 10,
@@ -540,6 +574,7 @@ mod tests {
             DailyMission {
                 id: "collect_any_10".to_string(),
                 description: "10 個".to_string(),
+                description_en: String::new(),
                 kind: DailyMissionKind::CollectAny(10),
                 target: 10,
                 current: 10,
@@ -550,6 +585,7 @@ mod tests {
             DailyMission {
                 id: "synthesize_success_1".to_string(),
                 description: "合成 1 回".to_string(),
+                description_en: String::new(),
                 kind: DailyMissionKind::SynthesizeSuccess(1),
                 target: 1,
                 current: 1,
@@ -565,6 +601,40 @@ mod tests {
         mgr.record_synthesis_success();
         assert_eq!(mgr.missions[0].current, 10);
         assert_eq!(mgr.missions[1].current, 1);
+    }
+
+    /// Issue #71 Phase 4: `generate_for_date` で生成されたミッションは
+    /// `description_for(En)` が空でなく、JA と異なる。
+    #[test]
+    fn test_daily_mission_description_for_lang() {
+        let date = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
+        let missions = DailyMissionManager::generate_for_date(date);
+        assert_eq!(missions.len(), 3);
+        for m in &missions {
+            let ja = m.description_for(Language::Ja);
+            let en = m.description_for(Language::En);
+            assert!(!ja.is_empty(), "{}: JA empty", m.id);
+            assert!(!en.is_empty(), "{}: EN empty", m.id);
+            assert_ne!(ja, en, "{}: JA equals EN", m.id);
+        }
+    }
+
+    /// Issue #71 Phase 4: `description_en` 空のレガシーミッションは JA フォールバック。
+    #[test]
+    fn test_daily_mission_description_for_lang_fallbacks() {
+        let date = NaiveDate::from_ymd_opt(2026, 5, 16).unwrap();
+        let m = DailyMission {
+            id: "legacy".to_string(),
+            description: "JA only".to_string(),
+            description_en: String::new(),
+            kind: DailyMissionKind::CollectAny(1),
+            target: 1,
+            current: 0,
+            reward_xp: 0,
+            expires_at: date,
+            claimed: false,
+        };
+        assert_eq!(m.description_for(Language::En), "JA only");
     }
 
     #[test]

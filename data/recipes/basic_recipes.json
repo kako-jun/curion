@@ -2,7 +2,9 @@
   {
     "id": "recipe_001",
     "name": "蒸気",
+    "name_en": "steam",
     "description": "水と火を組み合わせると蒸気が生まれる",
+    "description_en": "water and fire combine into steam",
     "ingredients": [
       {
         "specific_noun": "水",
@@ -30,7 +32,9 @@
   {
     "id": "recipe_002",
     "name": "泥",
+    "name_en": "mud",
     "description": "土と水を混ぜると泥になる",
+    "description_en": "earth and water blend into mud",
     "ingredients": [
       {
         "specific_noun": "土",
@@ -58,7 +62,9 @@
   {
     "id": "recipe_003",
     "name": "溶岩",
+    "name_en": "lava",
     "description": "火と土が合わさり溶岩が生まれる",
+    "description_en": "fire and earth fuse into lava",
     "ingredients": [
       {
         "specific_noun": "火",
@@ -88,7 +94,9 @@
   {
     "id": "recipe_004",
     "name": "紫",
+    "name_en": "purple",
     "description": "赤と青を混ぜると紫色になる",
+    "description_en": "red and blue mix to make purple",
     "ingredients": [
       {
         "specific_noun": "赤",
@@ -116,7 +124,9 @@
   {
     "id": "recipe_005",
     "name": "緑",
+    "name_en": "green",
     "description": "青と黄を混ぜると緑色になる",
+    "description_en": "blue and yellow mix to make green",
     "ingredients": [
       {
         "specific_noun": "青",
@@ -144,7 +154,9 @@
   {
     "id": "recipe_006",
     "name": "月光狼",
+    "name_en": "moonlight wolf",
     "description": "狼と月が出会うとき、神秘的な月光狼が誕生する",
+    "description_en": "when the wolf meets the moon, a mystical moonlight wolf is born",
     "ingredients": [
       {
         "specific_noun": "狼",
@@ -175,7 +187,9 @@
   {
     "id": "recipe_007",
     "name": "炎龍",
+    "name_en": "flame dragon",
     "description": "龍に火の力を宿すと伝説の炎龍が現れる",
+    "description_en": "channelling fire into a dragon summons the legendary flame dragon",
     "ingredients": [
       {
         "specific_noun": "龍",
@@ -206,7 +220,9 @@
   {
     "id": "recipe_008",
     "name": "氷鳳凰",
+    "name_en": "ice phoenix",
     "description": "鳳凰に氷の力を与えると神秘の氷鳳凰が生まれる",
+    "description_en": "imbuing the phoenix with ice gives rise to the mystical ice phoenix",
     "ingredients": [
       {
         "specific_noun": "鳳凰",
@@ -237,7 +253,9 @@
   {
     "id": "recipe_009",
     "name": "愛猫",
+    "name_en": "beloved cat",
     "description": "猫と愛が融合すると愛らしいペットが生まれる",
+    "description_en": "cat and love fuse into an adorable companion",
     "ingredients": [
       {
         "specific_noun": "猫",
@@ -267,7 +285,9 @@
   {
     "id": "recipe_010",
     "name": "美愛",
+    "name_en": "beautiful love",
     "description": "愛と美が溶け合い、至高の概念が誕生する",
+    "description_en": "love and beauty dissolve into a supreme concept",
     "ingredients": [
       {
         "specific_noun": "愛",
@@ -297,7 +317,9 @@
   {
     "id": "recipe_011",
     "name": "聖剣",
+    "name_en": "holy sword",
     "description": "正義の心と剣が一体化し、聖なる剣が完成する",
+    "description_en": "a heart of justice and a sword unite into a holy blade",
     "ingredients": [
       {
         "specific_noun": "正義",
@@ -328,7 +350,9 @@
   {
     "id": "recipe_012",
     "name": "希望",
+    "name_en": "hope",
     "description": "夢と光が交わるとき、希望が芽生える",
+    "description_en": "where dream meets light, hope takes root",
     "ingredients": [
       {
         "specific_noun": "夢",
@@ -358,7 +382,9 @@
   {
     "id": "recipe_013",
     "name": "絶望",
+    "name_en": "despair",
     "description": "影と闇が重なると絶望が生まれる",
+    "description_en": "shadow layered on darkness gives birth to despair",
     "ingredients": [
       {
         "specific_noun": "影",
@@ -386,7 +412,9 @@
   {
     "id": "recipe_014",
     "name": "陰陽",
+    "name_en": "yin-yang",
     "description": "光と闇、相反する二つの力が調和する",
+    "description_en": "light and darkness, two opposing forces, reach harmony",
     "ingredients": [
       {
         "specific_noun": "光",
@@ -418,7 +446,9 @@
   {
     "id": "recipe_015",
     "name": "宇宙",
+    "name_en": "cosmos",
     "description": "時間と空間が融合し、無限の宇宙が広がる",
+    "description_en": "time and space merge, unfolding an infinite cosmos",
     "ingredients": [
       {
         "specific_noun": "時間",
@@ -449,7 +479,9 @@
   {
     "id": "recipe_016",
     "name": "禁断の神",
+    "name_en": "forbidden god",
     "description": "混沌と秩序を無理やり融合させ、神なるものを呼び寄せる",
+    "description_en": "forcibly fusing chaos and order calls forth a divine being",
     "ingredients": [
       {
         "specific_noun": "混沌",
@@ -483,7 +515,9 @@
   {
     "id": "recipe_017",
     "name": "黒い太陽",
+    "name_en": "black sun",
     "description": "光と影を強引に結合する。失敗すれば残骸の灰だけが残る",
+    "description_en": "forcefully bind light and shadow; failure leaves only ashen remains",
     "ingredients": [
       {
         "specific_noun": "光",

@@ -783,10 +783,11 @@ impl App {
                                 .cloned()
                             {
                                 let ingredients = vec![first_curion.clone(), second_curion.clone()];
+                                let lang = self.game_state.language;
                                 let result = self
                                     .game_state
                                     .synthesis_manager
-                                    .try_synthesize(ingredients)?;
+                                    .try_synthesize_lang(ingredients, lang)?;
 
                                 match result {
                                     SynthesisAttemptResult::Success {
@@ -807,10 +808,27 @@ impl App {
                                         // Issue #62: 合成成功は素材消費+新キュリオン獲得を伴う重要 mutation。
                                         self.dirty = true;
 
-                                        let message = if first_discovery {
-                                            format!("✨ Discovered: {recipe_name}!")
-                                        } else {
-                                            format!("Created: {}", curion.noun)
+                                        let message = match lang {
+                                            crate::i18n::Language::Ja => {
+                                                if first_discovery {
+                                                    format!("✨ 発見: {recipe_name}!")
+                                                } else {
+                                                    format!("生成: {}", curion.noun)
+                                                }
+                                            }
+                                            crate::i18n::Language::En => {
+                                                let result_label = self
+                                                    .generator
+                                                    .database()
+                                                    .english_for(&curion.noun)
+                                                    .map(|s| s.to_string())
+                                                    .unwrap_or_else(|| curion.noun.clone());
+                                                if first_discovery {
+                                                    format!("✨ Discovered: {recipe_name}!")
+                                                } else {
+                                                    format!("Created: {result_label}")
+                                                }
+                                            }
                                         };
                                         self.save_message = Some((message, Instant::now()));
 
@@ -823,8 +841,11 @@ impl App {
                                         self.save_message = Some((hint, Instant::now()));
                                     }
                                     SynthesisAttemptResult::NoRecipe => {
-                                        self.save_message =
-                                            Some(("No recipe found".to_string(), Instant::now()));
+                                        let msg = match lang {
+                                            crate::i18n::Language::Ja => "レシピが見つかりません",
+                                            crate::i18n::Language::En => "No recipe found",
+                                        };
+                                        self.save_message = Some((msg.to_string(), Instant::now()));
                                     }
                                     // Issue #35: 高リスク合成失敗の処理。
                                     // - lost_ingredients を collection から id 一致で除去
@@ -849,16 +870,37 @@ impl App {
                                         }
                                         // Issue #62: 高リスク合成失敗も素材消滅 (+ salvage) を伴う mutation。
                                         self.dirty = true;
-                                        let msg = match failure_mode {
-                                            crate::synthesis::FailureMode::LoseAll => {
-                                                format!("💥 失敗: {recipe_name} (素材消滅)")
-                                            }
-                                            crate::synthesis::FailureMode::Salvage { .. } => {
-                                                format!("💔 失敗: {recipe_name} (残骸を獲得)")
-                                            }
-                                            crate::synthesis::FailureMode::NoLoss => {
-                                                format!("⚠ 失敗: {recipe_name} (保険発動)")
-                                            }
+                                        let msg = match (lang, &failure_mode) {
+                                            (
+                                                crate::i18n::Language::Ja,
+                                                crate::synthesis::FailureMode::LoseAll,
+                                            ) => format!("💥 失敗: {recipe_name} (素材消滅)"),
+                                            (
+                                                crate::i18n::Language::Ja,
+                                                crate::synthesis::FailureMode::Salvage { .. },
+                                            ) => format!("💔 失敗: {recipe_name} (残骸を獲得)"),
+                                            (
+                                                crate::i18n::Language::Ja,
+                                                crate::synthesis::FailureMode::NoLoss,
+                                            ) => format!("⚠ 失敗: {recipe_name} (保険発動)"),
+                                            (
+                                                crate::i18n::Language::En,
+                                                crate::synthesis::FailureMode::LoseAll,
+                                            ) => format!(
+                                                "💥 Failed: {recipe_name} (ingredients lost)"
+                                            ),
+                                            (
+                                                crate::i18n::Language::En,
+                                                crate::synthesis::FailureMode::Salvage { .. },
+                                            ) => format!(
+                                                "💔 Failed: {recipe_name} (salvage acquired)"
+                                            ),
+                                            (
+                                                crate::i18n::Language::En,
+                                                crate::synthesis::FailureMode::NoLoss,
+                                            ) => format!(
+                                                "⚠ Failed: {recipe_name} (insurance triggered)"
+                                            ),
                                         };
                                         self.save_message = Some((msg, Instant::now()));
 
@@ -1549,6 +1591,7 @@ impl App {
     fn render_daily_missions(&self, f: &mut Frame<'_>, area: Rect) {
         use chrono::Local;
 
+        let lang = self.game_state.language;
         let missions = &self.game_state.player.daily_mission_manager.missions;
 
         // タイトル: 翌 0:00 までの残り時間を chrono::Duration で計算し、
@@ -1565,14 +1608,25 @@ impl App {
         let remaining_minutes = (total_secs + 59) / 60;
         let hh = remaining_minutes / 60;
         let mm = remaining_minutes % 60;
-        let title = format!("デイリーミッション (リセットまで {hh:02}:{mm:02})");
+        let title = match lang {
+            crate::i18n::Language::Ja => {
+                format!("デイリーミッション (リセットまで {hh:02}:{mm:02})")
+            }
+            crate::i18n::Language::En => {
+                format!("Daily Missions (resets in {hh:02}:{mm:02})")
+            }
+        };
 
         let block = focused_block(title);
         let inner = block.inner(area);
         f.render_widget(block, area);
 
         if missions.is_empty() {
-            let empty = Paragraph::new("まだデータがありません")
+            let empty_msg = match lang {
+                crate::i18n::Language::Ja => "まだデータがありません",
+                crate::i18n::Language::En => "No data yet",
+            };
+            let empty = Paragraph::new(empty_msg)
                 .style(Style::default().fg(COLOR_LABEL))
                 .alignment(Alignment::Center);
             f.render_widget(empty, inner);
@@ -1591,9 +1645,13 @@ impl App {
                 .constraints(constraints)
                 .split(inner);
             // ヘッダ行
+            let compact_header = match lang {
+                crate::i18n::Language::Ja => "デイリーミッション (簡易表示)",
+                crate::i18n::Language::En => "Daily Missions (compact)",
+            };
             f.render_widget(
                 Paragraph::new(Line::from(Span::styled(
-                    "デイリーミッション (簡易表示)",
+                    compact_header,
                     Style::default().fg(COLOR_LABEL),
                 ))),
                 chunks[0],
@@ -1613,7 +1671,7 @@ impl App {
                 let line = Line::from(vec![
                     Span::raw(icon),
                     Span::raw(" "),
-                    Span::raw(mission.description.clone()),
+                    Span::raw(mission.description_for(lang).to_string()),
                     Span::raw(format!(
                         " {}/{} +{}XP",
                         mission.current.min(mission.target),
@@ -1651,7 +1709,7 @@ impl App {
                 Span::raw(icon),
                 Span::raw(" "),
                 Span::styled(
-                    mission.description.clone(),
+                    mission.description_for(lang).to_string(),
                     Style::default()
                         .fg(if completed {
                             COLOR_SUCCESS
@@ -1689,8 +1747,16 @@ impl App {
                     Style::default().fg(COLOR_SUCCESS),
                 )])
             } else {
+                let reward_label = match lang {
+                    crate::i18n::Language::Ja => {
+                        format!("  報酬: +{} XP", mission.reward_xp)
+                    }
+                    crate::i18n::Language::En => {
+                        format!("  Reward: +{} XP", mission.reward_xp)
+                    }
+                };
                 Line::from(vec![Span::styled(
-                    format!("  報酬: +{} XP", mission.reward_xp),
+                    reward_label,
                     Style::default().fg(COLOR_LABEL),
                 )])
             };
@@ -1976,19 +2042,24 @@ impl App {
         // UI 側は値を読んで色付けするだけ。
         let mut evo_progress = self.evolution_db.calculate_progress(&player.collection);
         sort_progress_by_urgency(&mut evo_progress);
+        let lang = self.game_state.language;
+        let (evo_prefix, complete_label) = match lang {
+            crate::i18n::Language::Ja => ("進化: ", "  ⭐ 完成"),
+            crate::i18n::Language::En => ("Evolve: ", "  ⭐ Complete"),
+        };
         let evo_lines: Vec<Line<'_>> = evo_progress
             .iter()
             .take(3)
             .map(|p| {
                 if p.is_complete() {
                     Line::from(vec![
-                        Span::styled("進化: ", Style::default().fg(COLOR_LABEL)),
+                        Span::styled(evo_prefix, Style::default().fg(COLOR_LABEL)),
                         Span::styled(
-                            p.line.display_name.clone(),
+                            p.line.display_name_for(lang).to_string(),
                             Style::default().fg(Color::White),
                         ),
                         Span::styled(
-                            "  ⭐ 完成",
+                            complete_label,
                             Style::default()
                                 .fg(Color::Green)
                                 .add_modifier(Modifier::BOLD),
@@ -2009,14 +2080,29 @@ impl App {
                     };
                     let next_text = match (p.next_stage_noun, p.next_stage_required) {
                         (Some(noun), Some(_req)) => {
-                            format!(" (あと {} ×{} で次段階)", noun, p.remaining_to_next)
+                            let noun_display = self
+                                .generator
+                                .database()
+                                .english_for(noun)
+                                .filter(|_| lang == crate::i18n::Language::En)
+                                .unwrap_or(noun);
+                            match lang {
+                                crate::i18n::Language::Ja => format!(
+                                    " (あと {} ×{} で次段階)",
+                                    noun_display, p.remaining_to_next
+                                ),
+                                crate::i18n::Language::En => format!(
+                                    " ({} more {} to next stage)",
+                                    p.remaining_to_next, noun_display
+                                ),
+                            }
                         }
                         _ => String::new(),
                     };
                     Line::from(vec![
-                        Span::styled("進化: ", Style::default().fg(COLOR_LABEL)),
+                        Span::styled(evo_prefix, Style::default().fg(COLOR_LABEL)),
                         Span::styled(
-                            p.line.display_name.clone(),
+                            p.line.display_name_for(lang).to_string(),
                             Style::default().fg(Color::White),
                         ),
                         Span::raw("  "),
@@ -2132,7 +2218,10 @@ impl App {
     }
 
     fn render_dashboard_bottom(&self, f: &mut Frame<'_>, area: Rect) {
-        let almost_complete = self.game_state.get_almost_complete_achievements(10);
+        let lang = self.game_state.language;
+        let almost_complete = self
+            .game_state
+            .get_almost_complete_achievements_lang(10, lang);
 
         let mut items: Vec<ListItem> = Vec::new();
 
@@ -2151,20 +2240,41 @@ impl App {
                 ""
             };
 
-            let urgency = if ratio >= 0.95 {
-                "緊急！ "
-            } else if ratio >= 0.80 {
-                "もうすぐ！ "
-            } else {
-                ""
+            let urgency = match lang {
+                crate::i18n::Language::Ja => {
+                    if ratio >= 0.95 {
+                        "緊急！ "
+                    } else if ratio >= 0.80 {
+                        "もうすぐ！ "
+                    } else {
+                        ""
+                    }
+                }
+                crate::i18n::Language::En => {
+                    if ratio >= 0.95 {
+                        "URGENT! "
+                    } else if ratio >= 0.80 {
+                        "ALMOST! "
+                    } else {
+                        ""
+                    }
+                }
             };
 
+            let line_text = match lang {
+                crate::i18n::Language::Ja => {
+                    format!("{urgency}あと {remaining} で「{name}」達成！")
+                }
+                crate::i18n::Language::En => {
+                    format!("{urgency}{remaining} more to unlock \"{name}\"!")
+                }
+            };
             items.push(ListItem::new(vec![
                 Line::from(vec![
                     Span::raw(icon),
                     Span::raw(" "),
                     Span::styled(
-                        format!("{urgency}あと {remaining} で「{name}」達成！"),
+                        line_text,
                         Style::default().fg(color).add_modifier(Modifier::BOLD),
                     ),
                 ]),
@@ -2185,14 +2295,23 @@ impl App {
         let xp_remaining = player.xp_for_next_level() - player.xp;
         let xp_ratio = player.xp_progress_ratio();
 
+        let level_label = match lang {
+            crate::i18n::Language::Ja => format!(
+                "🏆 次のレベルまで: あと {} XP (Lv.{} → Lv.{})",
+                xp_remaining,
+                player.level,
+                player.level + 1
+            ),
+            crate::i18n::Language::En => format!(
+                "🏆 To next level: {} XP remaining (Lv.{} → Lv.{})",
+                xp_remaining,
+                player.level,
+                player.level + 1
+            ),
+        };
         items.push(ListItem::new(vec![
             Line::from(vec![Span::styled(
-                format!(
-                    "🏆 次のレベルまで: あと {} XP (Lv.{} → Lv.{})",
-                    xp_remaining,
-                    player.level,
-                    player.level + 1
-                ),
+                level_label,
                 Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
             )]),
             Line::from(vec![
@@ -2849,9 +2968,15 @@ impl App {
         let total = self.game_state.achievement_manager.get_total_count();
         let percentage = self.game_state.achievement_manager.get_unlock_percentage();
 
-        let block = focused_block(format!(
-            "{title} | {unlocked} / {total} 解除済み ({percentage}%)"
-        ));
+        let lang = self.game_state.language;
+        let block = focused_block(match lang {
+            crate::i18n::Language::Ja => {
+                format!("{title} | {unlocked} / {total} 解除済み ({percentage}%)")
+            }
+            crate::i18n::Language::En => {
+                format!("{title} | {unlocked} / {total} unlocked ({percentage}%)")
+            }
+        });
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -2890,13 +3015,16 @@ impl App {
                     Span::raw(icon),
                     Span::raw(" "),
                     Span::styled(
-                        format!("[{}] {}", achievement.icon, achievement.name),
+                        format!("[{}] {}", achievement.icon, achievement.name_for(lang)),
                         Style::default()
                             .fg(Color::White)
                             .add_modifier(Modifier::BOLD),
                     ),
                 ]),
-                Line::from(vec![Span::raw("  "), Span::raw(&achievement.description)]),
+                Line::from(vec![
+                    Span::raw("  "),
+                    Span::raw(achievement.description_for(lang).to_string()),
+                ]),
             ]);
             let header_area = Rect {
                 x: item_inner.x,
@@ -2930,31 +3058,42 @@ impl App {
             };
             f.render_widget(gauge, gauge_area);
 
+            let reward_label = match lang {
+                crate::i18n::Language::Ja => "報酬: ",
+                crate::i18n::Language::En => "Reward: ",
+            };
+            let title_span = achievement
+                .reward_title_for(lang)
+                .map(|title| {
+                    let s = match lang {
+                        crate::i18n::Language::Ja => format!(", 称号「{title}」"),
+                        crate::i18n::Language::En => format!(", title \"{title}\""),
+                    };
+                    Span::styled(s, Style::default().fg(COLOR_EPIC))
+                })
+                .unwrap_or_else(|| Span::raw(""));
+            let unlocked_span = progress
+                .unlocked_at
+                .map(|date| {
+                    let s = match lang {
+                        crate::i18n::Language::Ja => {
+                            format!("  解除日: {}", date.format("%Y-%m-%d"))
+                        }
+                        crate::i18n::Language::En => {
+                            format!("  Unlocked: {}", date.format("%Y-%m-%d"))
+                        }
+                    };
+                    Span::styled(s, Style::default().fg(Color::DarkGray))
+                })
+                .unwrap_or_else(|| Span::raw(""));
             let reward = Paragraph::new(Line::from(vec![
-                Span::raw("報酬: "),
+                Span::raw(reward_label),
                 Span::styled(
                     format!("{} XP", achievement.reward_xp),
                     Style::default().fg(COLOR_LEGENDARY),
                 ),
-                achievement
-                    .reward_title
-                    .as_ref()
-                    .map(|title| {
-                        Span::styled(
-                            format!(", 称号「{title}」"),
-                            Style::default().fg(COLOR_EPIC),
-                        )
-                    })
-                    .unwrap_or_else(|| Span::raw("")),
-                progress
-                    .unlocked_at
-                    .map(|date| {
-                        Span::styled(
-                            format!("  解除日: {}", date.format("%Y-%m-%d")),
-                            Style::default().fg(Color::DarkGray),
-                        )
-                    })
-                    .unwrap_or_else(|| Span::raw("")),
+                title_span,
+                unlocked_span,
             ]));
             let reward_area = Rect {
                 x: item_inner.x,
@@ -3434,7 +3573,8 @@ impl App {
                 // Issue #37: 名前と式の行。Unknown は recipe.name を出さず、display_label
                 // の "未確認レシピ #NN" だけにする。Partial/Public は recipe.name は表示しつつ
                 // 式部分 (材料 → 結果) を visibility に従って隠す。
-                let display_label = recipe.display_label(collection, discovered, idx);
+                let display_label =
+                    recipe.display_label(collection, discovered, idx, self.game_state.language);
                 let name_line =
                     if effective_visibility == crate::synthesis::RecipeVisibility::Unknown {
                         Line::from(vec![
@@ -3457,7 +3597,7 @@ impl App {
                             ),
                             Span::raw(" "),
                             Span::styled(
-                                recipe.name.clone(),
+                                recipe.name_for(self.game_state.language).to_string(),
                                 Style::default().fg(name_color).add_modifier(Modifier::BOLD),
                             ),
                         ])
@@ -3499,7 +3639,11 @@ impl App {
                         Style::default().fg(Color::DarkGray),
                     )),
                     _ => Line::from(Span::styled(
-                        format!("    {} -> {}", recipe.description, display_label),
+                        format!(
+                            "    {} -> {}",
+                            recipe.description_for(self.game_state.language),
+                            display_label
+                        ),
                         Style::default().fg(name_color),
                     )),
                 };
