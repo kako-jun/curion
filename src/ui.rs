@@ -2503,14 +2503,19 @@ impl App {
             filtered.get(focus_index).copied()
         };
 
+        let lang = self.game_state.language;
+        let flavor_unset = match lang {
+            crate::i18n::Language::Ja => "(フレーバー未登録)",
+            crate::i18n::Language::En => "(no flavor)",
+        };
         let flavor_text: String = focused
             .and_then(|c| {
                 self.generator
                     .database()
-                    .flavor_for(&c.noun)
+                    .flavor_for(&c.noun, lang)
                     .map(|s| s.to_string())
             })
-            .unwrap_or_else(|| "(フレーバー未登録)".to_string());
+            .unwrap_or_else(|| flavor_unset.to_string());
         // Issue #38: 装備中の curion なら title に [装備中] マーカー
         let equipped_id = player.equipment.curion_id.as_deref();
         let is_focused_equipped = focused
@@ -2824,7 +2829,10 @@ impl App {
 
         let mut out: Vec<Line<'_>> = vec![main_line];
         if acquired {
-            if let Some(flavor) = entry.flavor.as_deref() {
+            // Issue #68 Phase 3a: flavor も lang gate を通す。EN 表示時に flavor_en があれば英文を、
+            // 空または未設定なら JA フォールバック。
+            let lang = self.game_state.language;
+            if let Some(flavor) = self.generator.database().flavor_for(&entry.name, lang) {
                 // インデント `  ` の表示幅を引いて切り詰める
                 let indent = "  ";
                 let budget = inner_width.saturating_sub(UnicodeWidthStr::width(indent));
