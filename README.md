@@ -161,7 +161,7 @@ by experimenting.
 ## Documentation
 
 - [Game Spec](docs/spec.md) — full game design document
-- [Design System](docs/design.md) — color palette, widget rules, per-tab layout
+- [Design System](DESIGN.md) — color palette, widget rules, per-tab layout
 
 ## Roadmap
 
