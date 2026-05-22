@@ -27,7 +27,6 @@ const COMMANDS: &[&str] = &[
     "achievements",
     "ach",
     "stats",
-    "save",
     "tui",
     "help",
     "?",
@@ -298,15 +297,6 @@ pub fn run_interactive_mode(profile_manager: &ProfileManager) -> Result<()> {
                     }
                     "stats" => {
                         cmd_stats(&game_state, session_start.elapsed().as_secs());
-                    }
-                    "save" => {
-                        game_state
-                            .player
-                            .add_play_time(session_start.elapsed().as_secs());
-                        match save_manager.save(&game_state) {
-                            Ok(()) => println!("Game saved."),
-                            Err(e) => eprintln!("Save failed: {e:?}"),
-                        }
                     }
                     "tui" => {
                         // プレイ時間を加算してセーブ
@@ -666,7 +656,6 @@ fn show_help() {
     println!("  \x1b[1;33mcollection\x1b[0m (col)         Show your collection");
     println!("  \x1b[1;33machievements\x1b[0m (ach)       Show achievements");
     println!("  \x1b[1;33mstats\x1b[0m                    Show statistics");
-    println!("  \x1b[1;33msave\x1b[0m                     Manual save");
     println!("  \x1b[1;33mtui\x1b[0m                      Switch to TUI mode");
     println!("  \x1b[1;33mhelp\x1b[0m, \x1b[1;33m?\x1b[0m                 Show this help");
     println!("  \x1b[1;33mexit\x1b[0m, \x1b[1;33mquit\x1b[0m              Exit the game");
