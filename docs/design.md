@@ -300,6 +300,8 @@ Each achievement card (6 lines height, unfocused_block border):
   Line 2:   Description text
   Line 3: LineGauge: [████░░░░] 75% (15/20) — Green when complete, Gray in progress
   Line 4: 報酬: N XP, 称号「...」 (Legendary/Epic), 解除日: YYYY-MM-DD (DarkGray)
+          (En mode: "Reward: N XP, title \"...\", Unlocked: YYYY-MM-DD" — routed through
+           `Achievement::name_for / description_for / reward_title_for(lang)` since #71 Phase 4)
   Lines 5-6: (padding/blank)
 
 - 達成可能: unlocked && !claimed (ready to claim with Enter)

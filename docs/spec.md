@@ -45,6 +45,21 @@ Noun data is stored in `data/nouns/*.json` (one file per category). Each entry h
 | `flavor` | yes | Japanese flavor text (SF / philosophical short prose). |
 | `flavor_en` | yes (since #65 Phase 2) | English flavor text. Phase 3 (Issue #68) will route flavor rendering through the language gate; until then the UI always displays `flavor`. |
 
+### Phase 4 (Issue #71): Content i18n
+
+In addition to noun `english` / `flavor_en`, the following game-content fields carry an `_en` variant and are accessed through `*_for(lang)` helpers so the TUI renders the active `Language` consistently:
+
+- `EvolutionLine.display_name_en` (`data/evolutions/lines.json`, 5 entries) — accessed via `EvolutionLine::display_name_for(lang)`.
+- `SynthesisRecipe.name_en` / `description_en` (`data/recipes/basic_recipes.json`, 17 entries) — accessed via `Recipe::name_for(lang)` / `description_for(lang)` / `display_label(_, _, lang)`.
+- `Achievement.name_en` / `description_en` / `reward_title_en` (27 achievements registered in `src/achievement.rs`) — accessed via `Achievement::name_for(lang)` / `description_for(lang)` / `reward_title_for(lang)`.
+- `MissionTemplate.description_en` / `DailyMission.description_en` (4 templates in `src/daily_mission.rs`) — accessed via `DailyMission::description_for(lang)`.
+
+All `_en` fields are deserialized with `#[serde(default)]` (or default `String::new()` for templates) and the `*_for(lang)` helpers fall back to the JA variant when the `_en` value is empty, keeping older saves and data files forward-compatible.
+
+The legacy `SynthesisManager::try_synthesize` (no `lang`) is `#[deprecated]` since v0.4.0; new call sites must use `try_synthesize_lang(_, language)` so synthesis success / failure / discovery hints surface in the active language.
+
+`Recipe.name_en` follows a casing rule: mythical or proper-noun results (e.g. `Flame Dragon`, `Moonlight Wolf`, `Yin-Yang`, `Forbidden Divinity`) use Title Case; common substances (`steam`, `mud`, `lava`) stay lower case.
+
 Synthesis-only nouns generated at runtime (e.g. `蒸気`, `残骸`) may not have an entry in this database, in which case English lookups fall back to the JA noun.
 
 ## Latent Vector Pipeline (Issue #39)
