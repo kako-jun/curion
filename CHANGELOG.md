@@ -4,6 +4,10 @@
 
 ### Removed
 - Interactive モードの `save` コマンドを削除 (#73, #62 follow-up)。永続化は startup / exit / tui / Ctrl-D の自動セーブに一本化。
+- 矢印キー (Up/Down/Left/Right) / PageUp / PageDown / Tab キーの TUI 入力ハンドラを廃止 (#72)。
+
+### Changed
+- TUI キーマップを vim 風に統一 (#74): `h/l` でタブ移動、`j/k` でスクロール、`J/K` でセクション切替（複数セクションを持つ全タブ）、Settings タブの言語切替を `←/→` から `Enter` に変更、`gg` で先頭・`G` で末尾へジャンプ（隠しモーション）。
 
 ## v0.3.0 - 2026-05-22
 
