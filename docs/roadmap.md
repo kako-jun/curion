@@ -16,9 +16,9 @@
 - [x] 3層ナビゲーション (タブバー → 左ペイン → 右ペイン)
 - [x] Cookie Clicker風のダッシュボード
 - [x] 進捗バー・統計表示
-- [x] docs/design.md 準拠のビジュアル強化（Gauge / LineGauge / Sparkline / BarChart / border states）
+- [x] DESIGN.md 準拠のビジュアル強化（Gauge / LineGauge / Sparkline / BarChart / border states）
 - [x] イベント駆動の自動セーブ (操作ごとに即時 + 終了時)
-- [x] docs/design.md を実装参照基準へ拡張（全タブレイアウト原則・状態定義・将来画面プレースホルダ規則）
+- [x] DESIGN.md を実装参照基準へ拡張（全タブレイアウト原則・状態定義・将来画面プレースホルダ規則）
 
 ### Phase 3: 合成システム
 - [x] 合成レシピデータベース

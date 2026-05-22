@@ -42,7 +42,7 @@
 - `src/ui.rs` - TUI実装
 - `src/achievement.rs` - 実績管理
 - `src/save.rs` - データ永続化
-- `docs/design.md` - UI設計書
+- `DESIGN.md` - UI設計書
 
 ---
 

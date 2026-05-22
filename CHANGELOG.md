@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- `docs/design.md` をルート直下の `DESIGN.md` に戻した。他リポ (selona / open-sen / osaka-kenpo / xmj 等) の慣習に合わせ、UI デザインシステム文書はリポルート直下 `DESIGN.md` に置く方針で統一。v0.2.0 で `docs/` 配下に移したが、ルートに集約する形に揃え直した。内容変更なし。
+
 ### Added
 - i18n Phase 4 (#71): Achievement / Daily Mission / Evolution / Synthesis recipe のゲーム内本文を lang gate に通した。
   - `data/evolutions/lines.json` の 5 系列に `display_name_en` を追加。`EvolutionLine::display_name_for(lang)` で取得。

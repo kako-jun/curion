@@ -2615,7 +2615,7 @@ impl App {
 
         let panes = Layout::default()
             .direction(Direction::Horizontal)
-            // Categories pane width (docs/design.md spec)
+            // Categories pane width (DESIGN.md spec)
             .constraints([Constraint::Length(22), Constraint::Min(0)])
             .split(inner);
 
