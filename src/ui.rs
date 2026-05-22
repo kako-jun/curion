@@ -1962,7 +1962,12 @@ impl App {
 
         // Issue #32: 次のマイルストーン表示 (= 「あと少し感」を常時演出)
         // XP / 各種実績の残量から最も小さいものを 1 行で出す。
-        let milestone_line = if let Some(hint) = self.game_state.next_milestone() {
+        let lang = self.game_state.language;
+        let milestone_line = if let Some(hint) = self.game_state.next_milestone(lang) {
+            let remaining_text = match lang {
+                crate::i18n::Language::Ja => format!(" (あと {})", hint.remaining),
+                crate::i18n::Language::En => format!(" ({} more)", hint.remaining),
+            };
             Line::from(vec![
                 Span::styled("next milestone: ", Style::default().fg(COLOR_LABEL)),
                 Span::styled(
@@ -1970,15 +1975,19 @@ impl App {
                     Style::default().fg(COLOR_EPIC).add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
-                    format!(" (あと {})", hint.remaining),
+                    remaining_text,
                     Style::default()
                         .fg(COLOR_LEGENDARY)
                         .add_modifier(Modifier::BOLD),
                 ),
             ])
         } else {
+            let done_text = match lang {
+                crate::i18n::Language::Ja => "next milestone: 全マイルストーン達成済み",
+                crate::i18n::Language::En => "next milestone: all achievements unlocked",
+            };
             Line::from(vec![Span::styled(
-                "next milestone: 全マイルストーン達成済み",
+                done_text,
                 Style::default().fg(COLOR_LABEL),
             )])
         };

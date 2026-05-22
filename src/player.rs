@@ -984,7 +984,7 @@ impl GameState {
     ///    PlayTime を網羅。残量は `target - current` を実績名ベースで生成)
     ///
     /// 全部達成済み、または開始 0% から始まる長期目標しか残っていない場合は `None`。
-    pub fn next_milestone(&self) -> Option<MilestoneHint> {
+    pub fn next_milestone(&self, lang: crate::i18n::Language) -> Option<MilestoneHint> {
         let mut candidates: Vec<MilestoneHint> = Vec::new();
         candidates.push(self.player.next_level_milestone());
 
@@ -1003,7 +1003,7 @@ impl GameState {
                 continue;
             }
             candidates.push(MilestoneHint {
-                label: format!("{} {}", achievement.icon, achievement.name),
+                label: format!("{} {}", achievement.icon, achievement.name_for(lang)),
                 remaining: remaining as u32,
             });
         }
