@@ -13,7 +13,7 @@
     "english": "wheat",
     "weight": 1.0,
     "flavor": "風になびく金色の海、豊穣の興味を宿す粒子。挽かれてなお誰かの朝を温める。",
-    "flavor_en": "A golden sea swaying in the wind, a particle harboring the interest of abundance. Even when ground to flour, it warms someone's morning."
+    "flavor_en": "A golden sea swaying in the wind, a particle harboring the curiosity of abundance. Even when ground to flour, it warms someone's morning."
   },
   {
     "name": "豆",
@@ -125,7 +125,7 @@
     "english": "soy sauce",
     "weight": 1.0,
     "flavor": "黒く薫る液体、調和の興味を宿す粒子。一滴で皿の世界を引き締めてくれる。",
-    "flavor_en": "A dark, fragrant liquid, a particle harboring the interest of harmony. A single drop tightens the entire world of the plate."
+    "flavor_en": "A dark, fragrant liquid, a particle harboring the curiosity of harmony. A single drop tightens the entire world of the plate."
   },
   {
     "name": "酒",
