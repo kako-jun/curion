@@ -984,7 +984,7 @@ impl GameState {
     ///    PlayTime を網羅。残量は `target - current` を実績名ベースで生成)
     ///
     /// 全部達成済み、または開始 0% から始まる長期目標しか残っていない場合は `None`。
-    pub fn next_milestone(&self) -> Option<MilestoneHint> {
+    pub fn next_milestone(&self, lang: crate::i18n::Language) -> Option<MilestoneHint> {
         let mut candidates: Vec<MilestoneHint> = Vec::new();
         candidates.push(self.player.next_level_milestone());
 
@@ -1003,7 +1003,7 @@ impl GameState {
                 continue;
             }
             candidates.push(MilestoneHint {
-                label: format!("{} {}", achievement.icon, achievement.name),
+                label: format!("{} {}", achievement.icon, achievement.name_for(lang)),
                 remaining: remaining as u32,
             });
         }
@@ -1016,6 +1016,15 @@ impl GameState {
         &self,
         limit: usize,
     ) -> Vec<(String, AchievementProgress, f64)> {
+        self.get_almost_complete_achievements_lang(limit, crate::i18n::Language::Ja)
+    }
+
+    /// Issue #71 Phase 4: 言語別の名前を返すバリアント。
+    pub fn get_almost_complete_achievements_lang(
+        &self,
+        limit: usize,
+        lang: crate::i18n::Language,
+    ) -> Vec<(String, AchievementProgress, f64)> {
         let mut list: Vec<_> = self
             .achievement_manager
             .get_sorted_by_progress()
@@ -1023,7 +1032,7 @@ impl GameState {
             .filter(|(_, progress)| !progress.unlocked && progress.progress_ratio() >= 0.3)
             .map(|(achievement, progress)| {
                 (
-                    achievement.name.clone(),
+                    achievement.name_for(lang).to_string(),
                     progress.clone(),
                     progress.progress_ratio(),
                 )
@@ -1172,6 +1181,7 @@ mod tests {
         state.player.daily_mission_manager.missions = vec![DailyMission {
             id: "collect_any_10".to_string(),
             description: "10 個".to_string(),
+            description_en: String::new(),
             kind: DailyMissionKind::CollectAny(10),
             target: 10,
             current: 10,
@@ -1267,6 +1277,7 @@ mod tests {
         state.player.daily_mission_manager.missions = vec![DailyMission {
             id: "collect_any_10".to_string(),
             description: "10 個収集".to_string(),
+            description_en: String::new(),
             kind: DailyMissionKind::CollectAny(10),
             target: 10,
             current: 10,
@@ -1346,6 +1357,7 @@ mod tests {
         state.player.daily_mission_manager.missions = vec![DailyMission {
             id: "collect_any_10".to_string(),
             description: "10 個収集".to_string(),
+            description_en: String::new(),
             kind: DailyMissionKind::CollectAny(10),
             target: 10,
             current: 10,

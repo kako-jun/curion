@@ -21,6 +21,23 @@ impl Rarity {
             Rarity::Legendary => 0.01, // 1%
         }
     }
+
+    /// Issue #71 Phase 4: 言語別の表示名。
+    ///
+    /// `{rarity:?}` のデバッグフォーマットに頼らず、明示的に翻訳を返す。
+    /// JA はカタカナ、EN は Title Case の英単語。
+    pub fn display(&self, lang: crate::i18n::Language) -> &'static str {
+        match (self, lang) {
+            (Rarity::Common, crate::i18n::Language::Ja) => "コモン",
+            (Rarity::Rare, crate::i18n::Language::Ja) => "レア",
+            (Rarity::Epic, crate::i18n::Language::Ja) => "エピック",
+            (Rarity::Legendary, crate::i18n::Language::Ja) => "レジェンダリー",
+            (Rarity::Common, crate::i18n::Language::En) => "Common",
+            (Rarity::Rare, crate::i18n::Language::En) => "Rare",
+            (Rarity::Epic, crate::i18n::Language::En) => "Epic",
+            (Rarity::Legendary, crate::i18n::Language::En) => "Legendary",
+        }
+    }
 }
 
 /// キュリオンのカテゴリ

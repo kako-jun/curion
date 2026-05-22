@@ -1,4 +1,5 @@
 use crate::curion::{Category, Curion, Rarity};
+use crate::i18n::Language;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -7,11 +8,28 @@ use uuid::Uuid;
 const RECIPES_JSON: &str = include_str!("../data/recipes/basic_recipes.json");
 
 /// 合成レシピ
+///
+/// # `name_en` の大文字小文字方針 (Issue #71 Phase 4)
+///
+/// - 合成結果が**固有の生き物・神話的存在の名前**になるものは Title Case で書く
+///   (例: `Moonlight Wolf`, `Flame Dragon`, `Ice Phoenix`, `Forbidden Divinity`)。
+/// - 合成結果が**一般物質名・現象名・抽象概念**のものは lower case で書く
+///   (例: `steam`, `mud`, `lava`, `hope`, `despair`, `cosmos`)。
+///
+/// レシピデータ (`data/recipes/basic_recipes.json`) もこの方針に従って整える。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SynthesisRecipe {
     pub id: String,
     pub name: String,
     pub description: String,
+    /// Issue #71 Phase 4: 英語版レシピ名。空文字なら `name` (JA) にフォールバックする。
+    ///
+    /// 大文字小文字の方針は [`SynthesisRecipe`] の doc コメントを参照。
+    #[serde(default)]
+    pub name_en: String,
+    /// Issue #71 Phase 4: 英語版説明文。空文字なら `description` (JA) にフォールバックする。
+    #[serde(default)]
+    pub description_en: String,
     pub ingredients: Vec<IngredientRequirement>,
     pub result: SynthesisResult,
     pub discovery_rate: f64, // 初見成功率（0.0〜1.0）
@@ -152,6 +170,34 @@ impl SynthesisRecipe {
         p.total.saturating_sub(p.satisfied)
     }
 
+    /// Issue #71 Phase 4: 言語別のレシピ名。`name_en` が空なら JA `name` にフォールバック。
+    pub fn name_for(&self, lang: Language) -> &str {
+        match lang {
+            Language::Ja => &self.name,
+            Language::En => {
+                if self.name_en.is_empty() {
+                    &self.name
+                } else {
+                    &self.name_en
+                }
+            }
+        }
+    }
+
+    /// Issue #71 Phase 4: 言語別のレシピ説明。`description_en` が空なら JA にフォールバック。
+    pub fn description_for(&self, lang: Language) -> &str {
+        match lang {
+            Language::Ja => &self.description,
+            Language::En => {
+                if self.description_en.is_empty() {
+                    &self.description
+                } else {
+                    &self.description_en
+                }
+            }
+        }
+    }
+
     /// Issue #37: レシピ一覧に出す 1 行表示用ラベルを返す。
     ///
     /// - `is_discovered == true` なら `visibility` に関係なく完全表示 ("水 + 火 → 蒸気")
@@ -161,11 +207,14 @@ impl SynthesisRecipe {
     ///
     /// `index` は呼び出し側 (UI) が一覧上の表示順から渡す 0-origin の値。
     /// `Unknown` のラベルは `#01` から表示されるよう内部で +1 する。
+    ///
+    /// Issue #71 Phase 4: `lang` を受け取り「未確認レシピ」を言語別に表示する。
     pub fn display_label(
         &self,
         _collection: &[Curion],
         is_discovered: bool,
         index: usize,
+        lang: Language,
     ) -> String {
         // 発見済みは常に完全表示。
         if is_discovered || self.visibility == RecipeVisibility::Public {
@@ -191,9 +240,10 @@ impl SynthesisRecipe {
                 }
                 format!("{} → ?", parts.join(" + "))
             }
-            RecipeVisibility::Unknown => {
-                format!("未確認レシピ #{:02}", index + 1)
-            }
+            RecipeVisibility::Unknown => match lang {
+                Language::Ja => format!("未確認レシピ #{:02}", index + 1),
+                Language::En => format!("Unrecorded recipe #{:02}", index + 1),
+            },
         }
     }
 }
@@ -398,11 +448,32 @@ impl SynthesisManager {
         self.discovered_recipes.insert(recipe_id, true);
     }
 
-    /// 合成を試みる
+    /// 合成を試みる (旧 API)。
+    ///
+    /// 既定で `Language::Ja` を返すため、多言語対応コードでは
+    /// [`try_synthesize_lang`](Self::try_synthesize_lang) を使うこと。
+    #[deprecated(
+        since = "0.4.0",
+        note = "Use try_synthesize_lang. This wrapper defaults to Language::Ja and will be removed."
+    )]
+    #[allow(dead_code)]
     pub fn try_synthesize(&mut self, ingredients: Vec<Curion>) -> Result<SynthesisAttemptResult> {
+        self.try_synthesize_lang(ingredients, Language::Ja)
+    }
+
+    /// Issue #71 Phase 4: 言語指定付きで合成を試みる。
+    ///
+    /// `recipe_name` を `lang` に従って組み立てるため、UI 側で英語化されたレシピ名を
+    /// `Success` / `HighRiskFailure` に直接乗せられる。`try_synthesize` は JA を
+    /// 既定として委譲する (後方互換)。
+    pub fn try_synthesize_lang(
+        &mut self,
+        ingredients: Vec<Curion>,
+        lang: Language,
+    ) -> Result<SynthesisAttemptResult> {
         let discovery_roll: f64 = rand::random();
         let risk_roll: f64 = rand::random();
-        self.try_synthesize_with_rolls(ingredients, discovery_roll, risk_roll)
+        self.try_synthesize_with_rolls_lang(ingredients, discovery_roll, risk_roll, lang)
     }
 
     /// Issue #35: テスト用に乱数を外部注入できる内部 API。
@@ -412,11 +483,23 @@ impl SynthesisManager {
     /// - `risk_roll`: `success_rate` 判定に使う。`risk_roll > success_rate` で `HighRiskFailure`。
     ///
     /// `try_synthesize` の薄いラッパで本実装。
+    #[cfg(test)]
     pub fn try_synthesize_with_rolls(
         &mut self,
         ingredients: Vec<Curion>,
         discovery_roll: f64,
         risk_roll: f64,
+    ) -> Result<SynthesisAttemptResult> {
+        self.try_synthesize_with_rolls_lang(ingredients, discovery_roll, risk_roll, Language::Ja)
+    }
+
+    /// Issue #71 Phase 4: `try_synthesize_with_rolls` の言語対応版。
+    pub fn try_synthesize_with_rolls_lang(
+        &mut self,
+        ingredients: Vec<Curion>,
+        discovery_roll: f64,
+        risk_roll: f64,
+        lang: Language,
     ) -> Result<SynthesisAttemptResult> {
         // マッチするレシピを検索
         let matching_recipes = self.recipe_db.find_matching_recipes(&ingredients);
@@ -430,7 +513,7 @@ impl SynthesisManager {
 
         // 必要なデータを先にコピー
         let recipe_id = recipe.id.clone();
-        let recipe_name = recipe.name.clone();
+        let recipe_name = recipe.name_for(lang).to_string();
         let discovery_rate = recipe.discovery_rate;
         let success_rate = recipe.success_rate;
         let failure_mode = recipe.failure_mode.clone();
@@ -442,8 +525,12 @@ impl SynthesisManager {
         // 未発見の場合、discovery_rateで成功判定
         if !is_discovered {
             if discovery_roll > discovery_rate {
+                let hint = match lang {
+                    Language::Ja => "何かが起こりそうだが、まだ完全には理解できていない...",
+                    Language::En => "Something almost happens, but you don't yet understand it...",
+                };
                 return Ok(SynthesisAttemptResult::DiscoveryFailed {
-                    hint: "何かが起こりそうだが、まだ完全には理解できていない...".to_string(),
+                    hint: hint.to_string(),
                 });
             }
             // 発見成功！
@@ -701,6 +788,8 @@ mod tests {
             id: "test_recipe".to_string(),
             name: "テストレシピ".to_string(),
             description: "for unit test".to_string(),
+            name_en: String::new(),
+            description_en: String::new(),
             ingredients: vec![],
             result: SynthesisResult {
                 noun: "結果".to_string(),
@@ -730,6 +819,8 @@ mod tests {
             id: id.to_string(),
             name: result_noun.to_string(),
             description: "test pair recipe".to_string(),
+            name_en: String::new(),
+            description_en: String::new(),
             ingredients: vec![
                 IngredientRequirement {
                     specific_noun: Some(ingredient_a.to_string()),
@@ -1141,7 +1232,7 @@ mod tests {
     fn test_display_label_public_uses_full_names() {
         let recipe = make_pair_recipe("p_pub", "蒸気", "水", "火", 1.0, FailureMode::NoLoss);
         // visibility は make_pair_recipe で Public がデフォルト
-        let label = recipe.display_label(&[], false, 0);
+        let label = recipe.display_label(&[], false, 0, Language::Ja);
         assert!(label.contains("水"), "label={label}");
         assert!(label.contains("火"), "label={label}");
         assert!(label.contains("蒸気"), "label={label}");
@@ -1161,7 +1252,7 @@ mod tests {
         );
         recipe.visibility = RecipeVisibility::Partial;
 
-        let label = recipe.display_label(&[], false, 5);
+        let label = recipe.display_label(&[], false, 5, Language::Ja);
         assert!(
             label.contains("光"),
             "first ingredient should be shown: {label}"
@@ -1186,7 +1277,7 @@ mod tests {
         recipe.visibility = RecipeVisibility::Unknown;
 
         // index 6 → "#07" (0-origin +1, 2 桁 0 埋め)
-        let label = recipe.display_label(&[], false, 6);
+        let label = recipe.display_label(&[], false, 6, Language::Ja);
         assert!(label.contains("未確認レシピ"), "label={label}");
         assert!(
             label.contains("#07"),
@@ -1208,7 +1299,7 @@ mod tests {
             let mut recipe =
                 make_pair_recipe("p_d", "黒い太陽", "光", "影", 0.5, FailureMode::NoLoss);
             recipe.visibility = vis;
-            let label = recipe.display_label(&[], true, 9);
+            let label = recipe.display_label(&[], true, 9, Language::Ja);
             assert!(label.contains("光"), "vis={vis:?} label={label}");
             assert!(label.contains("影"), "vis={vis:?} label={label}");
             assert!(label.contains("黒い太陽"), "vis={vis:?} label={label}");
@@ -1217,5 +1308,76 @@ mod tests {
                 "discovered should not be Unknown: {label}"
             );
         }
+    }
+
+    // ---------- Issue #71 Phase 4: lang gate ----------
+
+    /// Issue #71 Phase 4: `name_for(Ja)` は JA `name` をそのまま返す。
+    #[test]
+    fn test_recipe_name_for_ja_matches_legacy() {
+        let db = RecipeDatabase::load_embedded().expect("recipes load");
+        for r in db.all_recipes() {
+            assert_eq!(r.name_for(Language::Ja), r.name);
+        }
+    }
+
+    /// Issue #71 Phase 4: `name_for(En)` は 17 件すべて非空かつ JA と異なる。
+    ///
+    /// 全レシピで `name_en` 必須を構造的に強制するためのテスト。
+    /// 空文字フォールバックを許容する設計に変える場合 (例: `Option<String>` に
+    /// 寄せて `name_en` 未設定時は JA を返す方式) は、このテストを再考すること。
+    #[test]
+    fn test_recipe_name_for_en_is_translated_for_all_recipes() {
+        let db = RecipeDatabase::load_embedded().expect("recipes load");
+        assert_eq!(db.all_recipes().len(), 17);
+        for r in db.all_recipes() {
+            let en = r.name_for(Language::En);
+            assert!(!en.is_empty(), "{}: name_en is empty", r.id);
+            assert_ne!(en, r.name, "{}: name_en equals name (JA)", r.id);
+        }
+    }
+
+    /// Issue #71 Phase 4: `description_for(En)` も 17 件すべて非空。
+    #[test]
+    fn test_recipe_description_for_en_is_translated_for_all_recipes() {
+        let db = RecipeDatabase::load_embedded().expect("recipes load");
+        for r in db.all_recipes() {
+            let en = r.description_for(Language::En);
+            assert!(!en.is_empty(), "{}: description_en is empty", r.id);
+            assert_ne!(en, r.description, "{}: description_en equals JA", r.id);
+        }
+    }
+
+    /// Issue #71 Phase 4: `name_en`/`description_en` が空のレガシーデータは JA フォールバック。
+    #[test]
+    fn test_recipe_for_lang_fallbacks_when_en_empty() {
+        let mut r = sample_recipe(1.0);
+        r.name = "テスト".to_string();
+        r.description = "JA only".to_string();
+        r.name_en = String::new();
+        r.description_en = String::new();
+        assert_eq!(r.name_for(Language::En), "テスト");
+        assert_eq!(r.description_for(Language::En), "JA only");
+    }
+
+    /// Issue #71 Phase 4: Unknown レシピの "未確認レシピ" 表示が言語別に切り替わる。
+    #[test]
+    fn test_display_label_unknown_lang_gate() {
+        let mut recipe = make_pair_recipe(
+            "p_unk_lang",
+            "禁断",
+            "混沌",
+            "秩序",
+            0.25,
+            FailureMode::LoseAll,
+        );
+        recipe.visibility = RecipeVisibility::Unknown;
+        let ja = recipe.display_label(&[], false, 6, Language::Ja);
+        let en = recipe.display_label(&[], false, 6, Language::En);
+        assert!(ja.contains("未確認レシピ"), "ja={ja}");
+        assert!(ja.contains("#07"));
+        assert!(en.contains("Unrecorded recipe"), "en={en}");
+        assert!(en.contains("#07"));
+        assert!(!en.contains("未確認"), "en should not include JA: {en}");
     }
 }

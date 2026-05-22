@@ -33,6 +33,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::curion::Curion;
+use crate::i18n::Language;
 
 /// 埋め込みデータ。`data/evolutions/lines.json` をビルド時に取り込む。
 const EVOLUTIONS_JSON: &str = include_str!("../data/evolutions/lines.json");
@@ -58,11 +59,31 @@ pub struct EvolutionLine {
     pub id: String,
     /// UI 表示用ラベル (例: "魚 → 蛇 → 龍")。
     pub display_name: String,
+    /// English UI 表示用ラベル (例: "fish → snake → dragon")。Issue #71 Phase 4。
+    #[serde(default)]
+    pub display_name_en: String,
     /// 段階リスト。`stage` 昇順で並んでいる前提。
     pub stages: Vec<EvolutionStage>,
 }
 
 impl EvolutionLine {
+    /// 言語別の表示名 (Issue #71 Phase 4)。
+    ///
+    /// `Language::En` のときに `display_name_en` が空文字なら (旧データ互換)
+    /// JA の `display_name` を fallback として返す。
+    pub fn display_name_for(&self, lang: Language) -> &str {
+        match lang {
+            Language::Ja => &self.display_name,
+            Language::En => {
+                if self.display_name_en.is_empty() {
+                    &self.display_name
+                } else {
+                    &self.display_name_en
+                }
+            }
+        }
+    }
+
     /// 最大 stage 番号。空配列に対しては 0 を返す (異常データ防御)。
     pub fn max_stage(&self) -> u8 {
         self.stages.iter().map(|s| s.stage).max().unwrap_or(0)
@@ -436,6 +457,41 @@ mod tests {
         assert_eq!(light.current_stage, 1);
         assert_eq!(light.remaining_to_next, 1);
         assert!(light.is_almost_complete());
+    }
+
+    /// Issue #71 Phase 4: `display_name_for(Ja)` は既存 JA 文字列を返す。
+    #[test]
+    fn test_display_name_for_ja_matches_legacy() {
+        let db = db();
+        for line in db.all_lines() {
+            assert_eq!(line.display_name_for(Language::Ja), line.display_name);
+        }
+    }
+
+    /// Issue #71 Phase 4: `display_name_for(En)` は英訳を返す (5 系列すべて非空)。
+    #[test]
+    fn test_display_name_for_en_is_translated() {
+        let db = db();
+        for line in db.all_lines() {
+            let en = line.display_name_for(Language::En);
+            assert!(!en.is_empty(), "{}: En display_name is empty", line.id);
+            assert_ne!(en, line.display_name, "{}: En must differ from JA", line.id);
+        }
+    }
+
+    /// Issue #71 Phase 4: `display_name_en` が空のとき (legacy データ互換) は
+    /// JA にフォールバックする。
+    #[test]
+    fn test_display_name_for_en_fallbacks_to_ja_when_empty() {
+        let mut line = EvolutionLine {
+            id: "legacy".to_string(),
+            display_name: "魚 → 蛇 → 龍".to_string(),
+            display_name_en: String::new(),
+            stages: vec![],
+        };
+        assert_eq!(line.display_name_for(Language::En), "魚 → 蛇 → 龍");
+        line.display_name_en = "fish → snake → dragon".to_string();
+        assert_eq!(line.display_name_for(Language::En), "fish → snake → dragon");
     }
 
     /// 9. 関係のない noun を持っていても進化進捗には影響しない。

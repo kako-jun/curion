@@ -447,7 +447,11 @@ fn cmd_synthesize(name1: &str, name2: &str, game_state: &mut GameState) -> Resul
     let second_id = second.id.clone();
     let ingredients = vec![first, second];
 
-    match game_state.synthesis_manager.try_synthesize(ingredients)? {
+    let lang = game_state.language;
+    match game_state
+        .synthesis_manager
+        .try_synthesize_lang(ingredients, lang)?
+    {
         SynthesisAttemptResult::Success {
             curion,
             recipe_name,
