@@ -51,6 +51,8 @@ The noun database exposes `NounDatabase::flavor_for(noun_name, lang)` which retu
 
 Phase 3b also unified the `flavor_en` vocabulary: occurrences of `"interest"` used in the sense of "curiosity" were rewritten to `curiosity` across `abstracts.json` (52), `animals.json` (59), and `foods.json` (2) to align with the repository name `curion` (= curiosity). English idioms such as `point of interest` were left untouched, but none existed in the dataset.
 
+The JA `flavor` strings are intentionally left unchanged in this phase. JA narration uses both "興味" and "好奇" with stylistic intent (per-category tone, as established in Phase 2 of #65), and consolidating them would alter prose rhythm without a player-visible benefit. A separate follow-up may revisit JA wording if a future content audit identifies inconsistencies that hurt readability.
+
 ### Phase 4 (Issue #71): Content i18n
 
 In addition to noun `english` / `flavor_en`, the following game-content fields carry an `_en` variant and are accessed through `*_for(lang)` helpers so the TUI renders the active `Language` consistently:

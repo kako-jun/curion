@@ -28,6 +28,8 @@ pub struct NounEntry {
     pub weight: f64,
     /// SF 寓話風のフレーバーテキスト（Issue #22）。
     /// 既存 JSON との後方互換性のため `#[serde(default)]` で省略可能。
+    /// Phase 3 (#68) で `flavor_for(noun, lang)` 経由の lang gate に通している。
+    /// 現状 268 件全件で埋まっており `test_flavor_field_loaded_for_all_nouns` で保証。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flavor: Option<String>,
     /// Issue #65 Phase 2 で追加した英語版フレーバー。
@@ -430,8 +432,12 @@ mod tests {
         // phenomena.json の最初のエントリ (朝) は flavor_en が "A particle of hope..." で始まる
         let en = db.flavor_for("朝", Language::En).expect("EN flavor");
         assert!(
-            en.starts_with("A particle") || en.starts_with("A "),
-            "EN flavor should be English, got: {en:?}"
+            en.is_ascii() || !en.contains('。'),
+            "EN flavor should not contain JA sentence terminator, got: {en:?}"
+        );
+        assert!(
+            en.starts_with("A "),
+            "EN flavor should start with English article, got: {en:?}"
         );
         let ja = db.flavor_for("朝", Language::Ja).expect("JA flavor");
         assert_ne!(en, ja, "EN flavor should differ from JA");
