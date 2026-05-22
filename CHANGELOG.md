@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Removed
+- Interactive モードの `save` コマンドを削除 (#73, #62 follow-up)。永続化は startup / exit / tui / Ctrl-D の自動セーブに一本化。
+
 ## v0.3.0 - 2026-05-22
 
 The "event-driven + bilingual" release: save is no longer a 60-second poll, and the UI can switch between English (default) and Japanese at runtime.
