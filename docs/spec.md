@@ -371,7 +371,7 @@ Level N → N+1 XP requirement uses a **non-linear "cliffhanger" table** (Issue 
 
 ## TUI Layout
 
-6 tabs, switched via Tab key or number keys 1-6.
+6 tabs, switched via h/l keys or number keys 1-6.
 
 Each tab now uses a 3-layer layout:
 
@@ -503,8 +503,9 @@ Left pane sections:
 - Noun ordering follows the embedded JSON data order; no rearrangement based on ownership
 - Each entry consumes 1 line (locked) or 2 lines (acquired + flavor). The dictionary scroll unit remains the noun entry count; the visible window is clipped at the line level.
 - Key bindings inside this section:
-  - `↑/↓` move focus between categories (resets noun scroll to 0)
-  - `PgUp/PgDn` scroll the noun list within the focused category
+  - `j/k` scroll: in Encyclopedia they move focus between categories (resets noun scroll to 0)
+  - `J/K` switch between section panes
+  - `gg/G` jump to the top / bottom of the noun list (hidden Vim motion)
 
 ### Tab 3: Achievements
 
@@ -558,9 +559,10 @@ Left pane sections:
 
 Right pane behavior:
 - Language: shows the current UI language with the active choice highlighted.
-  `←/→` toggle between `En` (canonical, default) and `Ja`. The change is
-  persisted immediately — `toggle_language` sets `save_request` and the main
-  loop consumes it on the next tick to invoke `SaveManager::save`.
+  `Enter` toggles between `En` (canonical, default) and `Ja` on the Settings
+  tab. The change is persisted immediately — `toggle_language` sets
+  `save_request` and the main loop consumes it on the next tick to invoke
+  `SaveManager::save`.
 
 ### Curion display-name formatting (Issue #63)
 
@@ -581,12 +583,13 @@ the active `Language`:
 ### Global
 | Key | Action |
 |---|---|
-| Tab / 1-6 | Switch tabs |
+| h / l | Previous / next tab |
+| 1-6 | Jump to tab directly |
 | q / Esc | Quit |
-| ? | Help |
-| j / k | Move selection in the left pane |
-| Up / Down | Scroll or select inside the right pane |
-| ←/→ | Toggle language (Settings tab only) |
+| j / k | Scroll down / up |
+| J / K | Next / previous section (for tabs with multiple sections) |
+| gg / G | Jump to top / bottom of the current scroll target (hidden Vim motion) |
+| Enter | Toggle language (Settings tab only) / claim reward / select synthesis ingredient |
 
 ### Dashboard
 | Key | Action |
@@ -597,8 +600,7 @@ the active `Language`:
 ### Collection / Achievements / Stats / Synthesis
 | Key | Action |
 |---|---|
-| Up/Down | Scroll or select content in the right pane (Collection > Encyclopedia: move category focus) |
-| PgUp/PgDn | Collection > Encyclopedia: scroll noun list within focused category |
+| j/k | Scroll or select content in the right pane (Collection > Encyclopedia: move category focus). `gg/G` jump to top/bottom of the noun list within the focused category. |
 | Enter | Claim reward / start synthesis step |
 | e | Collection > Owned List: toggle equip on the focused curion (Issue #38). Re-pressing `e` on the same curion clears the slot. |
 | / | Collection: open regex filter input (Issue #31). Filters Owned List and Encyclopedia by noun / `{category} の {noun}` / rarity label (`COMMON`/`RARE`/`EPIC`/`LEGENDARY`) / category name. Type the pattern live; Enter keeps the filter and exits input mode; Esc clears the filter and exits input mode; Backspace deletes one character. Invalid regex shows a red error inline without crashing. |

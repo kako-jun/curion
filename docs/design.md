@@ -272,8 +272,9 @@ Right pane layout:
       Each entry consumes 1 or 2 lines. dictionary_scroll counts entries (not lines);
       the visible window is clipped at line granularity to fit `inner.height`.
   - Key bindings inside this section:
-    - ↑/↓: move category focus (resets dictionary_scroll)
-    - PgUp/PgDn: scroll noun list within focused category by 10
+    - j/k: scroll within focused category (in Encyclopedia: move category focus, resets dictionary_scroll)
+    - gg/G: jump to top / bottom of the noun list within the focused category (hidden Vim motion)
+    - J/K: switch between section panes
   - When feature #31 (Regex Filter) is added:
     - Filter input line at top of right pane
     - Filtered results below

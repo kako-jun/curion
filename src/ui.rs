@@ -308,6 +308,12 @@ impl Tab {
     fn next(&self) -> Tab {
         Tab::from_index((self.index() + 1) % Tab::COUNT).unwrap_or(Tab::Dashboard)
     }
+
+    /// Issue #74: タブ層の左方向移動。`next` と対になる wrap-around 実装。
+    /// 先頭 (Dashboard) で呼ぶと末尾 (Settings) にラップする。
+    fn previous(&self) -> Tab {
+        Tab::from_index((self.index() + Tab::COUNT - 1) % Tab::COUNT).unwrap_or(Tab::Dashboard)
+    }
 }
 
 /// 合成UI状態
@@ -367,6 +373,14 @@ pub struct App {
     /// `on_tick` で連続的に変化するもの (プレイ時間加算、SAN 自然減衰、Rare cooldown 残量) では
     /// dirty を立てない。これらは起動時 save と終了時 save でカバーする。
     pub dirty: bool,
+    /// Issue #74 follow-up: vim 風の `gg` モーション用 pending フラグ。
+    ///
+    /// `g` を 1 回押すと true にセットし、次に来たキーで判定する:
+    /// - 2 回目も `g` なら先頭ジャンプ (gg)
+    /// - それ以外のキーは pending_g をクリアして本来のハンドリングへ
+    ///
+    /// タイムアウトは設けない。シンプルに状態だけで管理する。
+    pub pending_g: bool,
 }
 
 impl App {
@@ -398,6 +412,38 @@ impl App {
             evolution_db,
             latest_reveal: None,
             dirty: false,
+            pending_g: false,
+        }
+    }
+
+    /// Issue #74 follow-up: 現在のスクロール対象を先頭 (index 0) に戻す。
+    /// `gg` モーションのターゲット。
+    fn jump_to_top(&mut self) {
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = 0;
+        } else if self.current_tab == Tab::Synthesis
+            && self.synthesis_state == SynthesisUIState::SelectingSecond
+        {
+            self.synthesis_scroll = 0;
+        } else {
+            self.detail_scroll = 0;
+        }
+    }
+
+    /// Issue #74 follow-up: 現在のスクロール対象を末尾までジャンプ。
+    /// `G` モーションのターゲット。末尾値は usize::MAX / 2 を入れて、
+    /// render 側のクランプに任せる方式 (既存 scroll_down と同じ saturating
+    /// な振る舞いに整合)。
+    fn jump_to_bottom(&mut self) {
+        let bottom = usize::MAX / 2;
+        if self.is_collection_dictionary() {
+            self.dictionary_scroll = bottom;
+        } else if self.current_tab == Tab::Synthesis
+            && self.synthesis_state == SynthesisUIState::SelectingSecond
+        {
+            self.synthesis_scroll = bottom;
+        } else {
+            self.detail_scroll = bottom;
         }
     }
 
@@ -422,6 +468,29 @@ impl App {
         if self.filter_mode {
             return self.handle_filter_key(key);
         }
+
+        // Issue #74 follow-up: vim 風 `gg` / `G` モーション。
+        // `g` を 2 回連打すると先頭ジャンプ、`G` は単独で末尾ジャンプ。
+        // `g` 以外のキーが来たら pending_g はクリアする (タイムアウト無し、
+        // シンプルに状態だけで判定)。
+        if let KeyCode::Char('g') = key {
+            if self.pending_g {
+                self.pending_g = false;
+                self.jump_to_top();
+            } else {
+                self.pending_g = true;
+            }
+            return Ok(false);
+        }
+        // `g` 以外のキーが来た時点で pending_g はクリア。
+        // 以降の通常ハンドリングを継続する。
+        self.pending_g = false;
+
+        if let KeyCode::Char('G') = key {
+            self.jump_to_bottom();
+            return Ok(false);
+        }
+
         match key {
             KeyCode::Char('q') => return Ok(true),
             KeyCode::Char('/') if self.current_tab == Tab::Collection => {
@@ -444,19 +513,20 @@ impl App {
                     self.set_tab(tab);
                 }
             }
-            KeyCode::Tab => self.next_tab(),
             KeyCode::Char(' ') => self.generate_curion()?,
-            KeyCode::Char('k') => self.previous_section(),
-            KeyCode::Char('j') => self.next_section(),
-            KeyCode::Up => self.scroll_up(),
-            KeyCode::Down => self.scroll_down(),
-            // Issue #63: Settings タブで ←/→ により言語を切り替える。
-            // Settings タブ以外では現状ノーオペ (将来別設定の左右切替に拡張する余地)。
-            KeyCode::Left | KeyCode::Right if self.current_tab == Tab::Settings => {
-                self.toggle_language();
-            }
-            KeyCode::PageUp => self.page_up(),
-            KeyCode::PageDown => self.page_down(),
+            // Issue #72 / #74: vim 風キーマップに統一。
+            // - h/l: タブ層の左右移動 (previous_tab / next_tab)
+            // - j/k: スクロール下/上 (旧 ↓/↑ の置換)
+            // - J/K (Shift+j/k): セクション切替。複数セクションを持つ全タブで動作する。
+            //   セクションが 1 つしかないタブ (Settings) では current_sections().len() == 1 のため
+            //   next_section / previous_section が clamp して no-op になる
+            // - 矢印キー・PageUp/PageDown・Tab キーは廃止
+            KeyCode::Char('h') => self.previous_tab(),
+            KeyCode::Char('l') => self.next_tab(),
+            KeyCode::Char('j') => self.scroll_down(),
+            KeyCode::Char('k') => self.scroll_up(),
+            KeyCode::Char('J') => self.next_section(),
+            KeyCode::Char('K') => self.previous_section(),
             KeyCode::Enter => self.handle_enter()?,
             // Issue #38: Collection 所持一覧で `e` を押すと、現在 focus 中の curion を
             // 装備/解除する (詳細ペインに表示中のもの)。装備中の curion を再度 `e` で
@@ -577,7 +647,7 @@ impl App {
         self.detail_scroll = 0;
     }
 
-    /// Settings タブで `←/→` を押したときに呼ばれる。
+    /// Settings タブで `Enter` を押したときに呼ばれる (Issue #74 で `←/→` から変更)。
     /// 言語を次の値に切り替え、Issue #62 で導入された共有 `dirty` フラグを立てる。
     /// `main.rs` のループが次の tick で `dirty` を見て即座に `SaveManager::save` を呼ぶため、
     /// ユーザーから見ると言語切替は即時永続化される。
@@ -588,6 +658,13 @@ impl App {
 
     fn next_tab(&mut self) {
         self.current_tab = self.current_tab.next();
+        self.detail_scroll = 0;
+    }
+
+    /// Issue #74: h キーで前のタブへ移動。`next_tab` と対になる。
+    /// `detail_scroll` はタブ間で意味が異なるため遷移時にリセットする。
+    fn previous_tab(&mut self) {
+        self.current_tab = self.current_tab.previous();
         self.detail_scroll = 0;
     }
 
@@ -638,19 +715,12 @@ impl App {
         }
     }
 
-    fn page_up(&mut self) {
-        if self.is_collection_dictionary() {
-            self.dictionary_scroll = self.dictionary_scroll.saturating_sub(10);
-        }
-    }
-
-    fn page_down(&mut self) {
-        if self.is_collection_dictionary() {
-            self.dictionary_scroll = self.dictionary_scroll.saturating_add(10);
-        }
-    }
-
     fn handle_enter(&mut self) -> Result<()> {
+        // Issue #74: Settings タブでは Enter で言語切替。旧 ←/→ の役割を Enter に集約。
+        if self.current_tab == Tab::Settings {
+            self.toggle_language();
+            return Ok(());
+        }
         match self.current_tab {
             Tab::Achievements if self.current_section_index() == 0 => {
                 let achievable = self.game_state.achievement_manager.get_achievable();
@@ -1134,47 +1204,55 @@ impl App {
             return;
         }
 
-        // Trailing tail shared by every tab: Tab/1-6 + s + q.
+        // Trailing tail shared by every tab: h/l + 1-6 + q.
+        // Issue #72/#74: 矢印キー・PageUp/PageDown・Tab キー廃止。
         let tail = |spans: &mut Vec<Span<'static>>| {
-            spans.extend(key_dark("Tab/1-6", crate::i18n::t("help.tab", lang)));
-            spans.extend(key_dark("s", crate::i18n::t("help.save", lang)));
+            spans.extend(key_dark("h/l", crate::i18n::t("help.tab", lang)));
+            spans.extend(key_dark("1-6", crate::i18n::t("help.tab_jump", lang)));
             spans.extend(key_dark("q", crate::i18n::t("help.quit", lang)));
         };
 
+        // Issue #74 follow-up: J/K セクション切替は複数セクションを持つ全タブで有効。
+        // Settings は単一セクションなので出さない。
+        let has_multi_sections = self.current_sections().len() > 1;
+
         let mut spans: Vec<Span<'static>> = Vec::new();
-        spans.extend(key_rare("j/k", crate::i18n::t("help.left_pane", lang)));
 
         match self.current_tab {
             Tab::Collection if self.current_section_index() == 1 => {
-                spans.extend(key_dark("↑/↓", crate::i18n::t("help.category_move", lang)));
-                spans.extend(key_dark(
-                    "PgUp/PgDn",
-                    crate::i18n::t("help.noun_scroll", lang),
-                ));
+                spans.extend(key_dark("j/k", crate::i18n::t("help.category_move", lang)));
+                spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
                 spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
                 spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
                 tail(&mut spans);
             }
             Tab::Collection if self.current_section_index() == 0 => {
-                spans.extend(key_dark("↑/↓", crate::i18n::t("help.scroll", lang)));
+                spans.extend(key_dark("j/k", crate::i18n::t("help.scroll", lang)));
+                spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
                 spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
                 spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
                 tail(&mut spans);
             }
             Tab::Achievements if self.current_section_index() == 0 => {
                 spans.extend(key_dark(
-                    "↑/↓",
+                    "j/k",
                     crate::i18n::t("help.achievement_select", lang),
                 ));
+                if has_multi_sections {
+                    spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
+                }
                 spans.extend(key_epic("Enter", crate::i18n::t("help.claim_reward", lang)));
                 spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
                 tail(&mut spans);
             }
             Tab::Synthesis => {
                 spans.extend(key_dark(
-                    "↑/↓",
+                    "j/k",
                     crate::i18n::t("help.candidate_select", lang),
                 ));
+                if has_multi_sections {
+                    spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
+                }
                 spans.extend(key_epic(
                     "Enter",
                     crate::i18n::t("help.synthesize_now", lang),
@@ -1184,11 +1262,14 @@ impl App {
                 tail(&mut spans);
             }
             Tab::Settings => {
-                spans.extend(key_rare("←/→", crate::i18n::t("help.lang_switch", lang)));
+                spans.extend(key_rare("Enter", crate::i18n::t("help.lang_switch", lang)));
                 tail(&mut spans);
             }
             _ => {
-                spans.extend(key_dark("↑/↓", crate::i18n::t("help.detail_scroll", lang)));
+                spans.extend(key_dark("j/k", crate::i18n::t("help.detail_scroll", lang)));
+                if has_multi_sections {
+                    spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
+                }
                 spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
                 tail(&mut spans);
             }
@@ -1273,8 +1354,9 @@ impl App {
 
     /// Issue #63: Settings タブの描画。現状は言語切替 1 項目のみ。
     ///
-    /// `←/→` で言語をトグルし、現在の選択を太字で表示する。永続化は
-    /// `handle_key` 側で行うので、ここでは表示だけに専念する。
+    /// `Enter` で言語をトグルし、現在の選択を太字で表示する (Issue #74 で
+    /// 旧 `←/→` から `Enter` に変更)。永続化は `handle_key` 側で行うので、
+    /// ここでは表示だけに専念する。
     fn render_settings_section(&self, f: &mut Frame<'_>, area: Rect) {
         let lang = self.game_state.language;
         let block = focused_block(crate::i18n::t("block.settings", lang));
@@ -3176,7 +3258,7 @@ impl App {
                 self.render_first_ingredient_selection(f, content_chunks[0]);
 
                 let help = Paragraph::new(
-                    "← Select first ingredient\n\nUse ↑↓ to navigate\nPress Enter to select",
+                    "← Select first ingredient\n\nUse j/k to navigate\nPress Enter to select",
                 )
                 .block(unfocused_block(crate::i18n::t(
                     "block.help",
@@ -3733,51 +3815,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_page_down_advances_dictionary_scroll() {
-        let mut app = empty_app();
-        enter_dictionary_mode(&mut app);
-        let before = app.dictionary_scroll;
-
-        let quit = app
-            .handle_key(KeyCode::PageDown)
-            .expect("handle_key should succeed");
-        assert!(!quit);
-
-        assert_eq!(app.dictionary_scroll, before + 10, "PgDn で +10");
-    }
-
-    #[test]
-    fn test_page_up_saturates_at_zero() {
-        let mut app = empty_app();
-        enter_dictionary_mode(&mut app);
-        app.dictionary_scroll = 3;
-
-        let quit = app
-            .handle_key(KeyCode::PageUp)
-            .expect("handle_key should succeed");
-        assert!(!quit);
-
-        assert_eq!(app.dictionary_scroll, 0, "scroll=3 で PgUp なら 0 で飽和");
-    }
-
-    #[test]
-    fn test_page_keys_no_op_outside_dictionary() {
-        let mut app = empty_app();
-        app.set_tab(Tab::Synthesis);
-        app.dictionary_scroll = 5;
-        assert!(!app.is_collection_dictionary());
-
-        let quit = app
-            .handle_key(KeyCode::PageDown)
-            .expect("handle_key should succeed");
-        assert!(!quit);
-
-        assert_eq!(
-            app.dictionary_scroll, 5,
-            "図鑑モード外では PgDn は dictionary_scroll を変えない"
-        );
-    }
+    // Issue #72: PageUp / PageDown ハンドラは廃止された。図鑑モードの縦スクロール 10
+    // 単位移動は将来必要になったら別キー (例: Ctrl-d/u) で再導入する。
+    // 旧 test_page_down_advances_dictionary_scroll / test_page_up_saturates_at_zero /
+    // test_page_keys_no_op_outside_dictionary は機能廃止に伴い削除。
 
     #[test]
     fn test_pad_display_ascii_only() {
@@ -4173,25 +4214,24 @@ mod tests {
         );
     }
 
-    /// G-1: On the Settings tab, Left toggles En → Ja.
+    /// G-1: On the Settings tab, Enter toggles En → Ja (Issue #74 で ←/→ から変更)。
     #[test]
-    fn settings_tab_left_arrow_toggles_language() {
+    fn settings_tab_enter_toggles_language_en_to_ja() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
         app.game_state.language = crate::i18n::Language::En;
-        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
         assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
     }
 
-    /// G-2: On the Settings tab, Right also toggles (same semantics as Left
-    /// because the picker only has two values).
+    /// G-2: Enter from Ja toggles back to En (two-value picker).
     #[test]
-    fn settings_tab_right_arrow_toggles_language() {
+    fn settings_tab_enter_toggles_language_ja_to_en() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
-        app.game_state.language = crate::i18n::Language::En;
-        app.handle_key(KeyCode::Right).unwrap();
-        assert_eq!(app.game_state.language, crate::i18n::Language::Ja);
+        app.game_state.language = crate::i18n::Language::Ja;
+        app.handle_key(KeyCode::Enter).unwrap();
+        assert_eq!(app.game_state.language, crate::i18n::Language::En);
     }
 
     /// G-3: Toggling the language raises the shared `dirty` flag so the main
@@ -4200,34 +4240,33 @@ mod tests {
     fn settings_tab_toggle_sets_dirty_flag() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
-        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
         assert!(
             app.dirty,
             "language toggle should set the shared dirty flag"
         );
     }
 
-    /// G-5: On non-Settings tabs, Left/Right do not change language nor set
-    /// the `dirty` flag.
+    /// G-5: On non-Settings tabs, Enter does not toggle language nor set
+    /// the `dirty` flag (Dashboard では Enter は no-op に近い)。
     #[test]
-    fn non_settings_tab_left_right_does_not_toggle() {
+    fn non_settings_tab_enter_does_not_toggle_language() {
         let mut app = empty_app();
         app.set_tab(Tab::Dashboard);
         let before = app.game_state.language;
-        app.handle_key(KeyCode::Left).unwrap();
-        app.handle_key(KeyCode::Right).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
         assert_eq!(app.game_state.language, before, "language must not change");
         assert!(!app.dirty, "dirty must stay false off Settings");
     }
 
-    /// G-6: Two toggles on Settings round-trip back to the original language.
+    /// G-6: Two Enter toggles on Settings round-trip back to the original language.
     #[test]
-    fn settings_tab_left_then_right_returns_to_original_language() {
+    fn settings_tab_two_enters_round_trip_language() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
         let before = app.game_state.language;
-        app.handle_key(KeyCode::Left).unwrap();
-        app.handle_key(KeyCode::Right).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
         assert_eq!(app.game_state.language, before);
     }
 
@@ -4237,13 +4276,13 @@ mod tests {
     fn settings_tab_repeated_toggle_keeps_dirty_until_consumed() {
         let mut app = empty_app();
         app.set_tab(Tab::Settings);
-        app.handle_key(KeyCode::Left).unwrap();
-        app.handle_key(KeyCode::Right).unwrap();
-        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
         assert!(app.dirty, "three toggles → dirty still true");
         // Simulate the main-loop save consuming the flag.
         app.dirty = false;
-        app.handle_key(KeyCode::Right).unwrap();
+        app.handle_key(KeyCode::Enter).unwrap();
         assert!(app.dirty, "next toggle re-arms dirty");
     }
 
@@ -4403,11 +4442,14 @@ mod tests {
 
         // 数字キーで遷移
         app.handle_key(KeyCode::Char('2')).unwrap();
-        // Tab キーで next_tab
-        app.handle_key(KeyCode::Tab).unwrap();
+        // Issue #72/#74: l キー (vim 風 next_tab)
+        app.handle_key(KeyCode::Char('l')).unwrap();
+        // h キーで previous_tab
+        app.handle_key(KeyCode::Char('h')).unwrap();
         // 直接 API でも
         app.set_tab(Tab::Synthesis);
         app.next_tab();
+        app.previous_tab();
 
         assert!(!app.dirty, "タブ切替系は dirty を立てない");
     }
@@ -4444,5 +4486,277 @@ mod tests {
             "`s` キーで Saved! トーストが出ない"
         );
         assert!(!app.dirty, "`s` キーは dirty も立てない");
+    }
+
+    // ── Issue #72 / #74: vim 風キーマップへの移行 ─────────────────────────
+
+    /// `Tab::previous` は wrap-around する: Dashboard (先頭) → Settings (末尾)。
+    #[test]
+    fn tab_previous_wraps_from_dashboard_to_settings() {
+        assert_eq!(Tab::Dashboard.previous(), Tab::Settings);
+    }
+
+    /// `Tab::previous` の対称性: Collection → Dashboard。
+    #[test]
+    fn tab_previous_collection_to_dashboard() {
+        assert_eq!(Tab::Collection.previous(), Tab::Dashboard);
+    }
+
+    /// `next` と `previous` は逆操作なので往復で元に戻る。
+    #[test]
+    fn tab_next_then_previous_is_identity() {
+        for tab in [
+            Tab::Dashboard,
+            Tab::Collection,
+            Tab::Achievements,
+            Tab::Stats,
+            Tab::Synthesis,
+            Tab::Settings,
+        ] {
+            assert_eq!(tab.next().previous(), tab);
+            assert_eq!(tab.previous().next(), tab);
+        }
+    }
+
+    /// `l` キーで次タブへ移動する (vim 風)。
+    #[test]
+    fn l_key_moves_to_next_tab() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.handle_key(KeyCode::Char('l')).unwrap();
+        assert_eq!(app.current_tab, Tab::Collection);
+    }
+
+    /// `h` キーで前タブへ移動する (vim 風)。Dashboard で h なら wrap して Settings へ。
+    #[test]
+    fn h_key_moves_to_previous_tab_with_wrap() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.handle_key(KeyCode::Char('h')).unwrap();
+        assert_eq!(app.current_tab, Tab::Settings);
+    }
+
+    /// `j` キーで詳細ペインを下スクロール (旧 ↓ の置換)。
+    #[test]
+    fn j_key_scrolls_detail_down() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        let before = app.detail_scroll;
+        app.handle_key(KeyCode::Char('j')).unwrap();
+        assert_eq!(app.detail_scroll, before + 1);
+    }
+
+    /// `k` キーで詳細ペインを上スクロール (旧 ↑ の置換)。0 で飽和。
+    #[test]
+    fn k_key_scrolls_detail_up_and_saturates() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 3;
+        app.handle_key(KeyCode::Char('k')).unwrap();
+        assert_eq!(app.detail_scroll, 2);
+        // 0 まで降りたら飽和
+        app.detail_scroll = 0;
+        app.handle_key(KeyCode::Char('k')).unwrap();
+        assert_eq!(app.detail_scroll, 0);
+    }
+
+    /// Collection タブの図鑑モードで `j` キーはカテゴリを下移動する
+    /// (旧 ↓ の挙動を継承)。
+    #[test]
+    fn j_key_in_dictionary_advances_category() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        assert_eq!(app.dictionary_category_index, 0);
+        app.handle_key(KeyCode::Char('j')).unwrap();
+        assert_eq!(app.dictionary_category_index, 1);
+    }
+
+    /// Collection タブで `J` (Shift+j) はセクションを次へ切り替える。
+    #[test]
+    fn shift_j_switches_collection_section() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        assert_eq!(app.current_section_index(), 0);
+        app.handle_key(KeyCode::Char('J')).unwrap();
+        assert_eq!(app.current_section_index(), 1);
+    }
+
+    /// Collection タブで `K` (Shift+k) はセクションを前へ切り替える。
+    #[test]
+    fn shift_k_switches_collection_section_back() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Collection);
+        app.section_indices[Tab::Collection.index()] = 1;
+        app.handle_key(KeyCode::Char('K')).unwrap();
+        assert_eq!(app.current_section_index(), 0);
+    }
+
+    /// Issue #74 follow-up: Dashboard で `J` を押すとセクションが次へ進む。
+    #[test]
+    fn shift_j_advances_section_on_dashboard() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        assert_eq!(app.current_section_index(), 0);
+        app.handle_key(KeyCode::Char('J')).unwrap();
+        assert_eq!(
+            app.section_indices[Tab::Dashboard.index()],
+            1,
+            "Dashboard でも J はセクションを次へ進める"
+        );
+    }
+
+    /// Issue #74 follow-up: Achievements で `J` を押すとセクションが次へ進む。
+    #[test]
+    fn shift_j_advances_section_on_achievements() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Achievements);
+        assert_eq!(app.current_section_index(), 0);
+        app.handle_key(KeyCode::Char('J')).unwrap();
+        assert_eq!(
+            app.section_indices[Tab::Achievements.index()],
+            1,
+            "Achievements でも J はセクションを次へ進める"
+        );
+    }
+
+    /// Issue #74 follow-up: Stats で `K` を押すとセクションが前へ戻る (or 飽和して 0)。
+    #[test]
+    fn shift_k_retreats_section_on_stats() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Stats);
+        app.section_indices[Tab::Stats.index()] = 2;
+        app.handle_key(KeyCode::Char('K')).unwrap();
+        assert_eq!(
+            app.section_indices[Tab::Stats.index()],
+            1,
+            "Stats でも K はセクションを前へ戻す"
+        );
+        // 0 まで戻して、もう一度 K を押しても飽和して 0 のまま
+        app.section_indices[Tab::Stats.index()] = 0;
+        app.handle_key(KeyCode::Char('K')).unwrap();
+        assert_eq!(app.section_indices[Tab::Stats.index()], 0);
+    }
+
+    /// Issue #72: 矢印キー (Up/Down/Left/Right) は廃止。Dashboard で押しても
+    /// detail_scroll は変わらない。
+    #[test]
+    fn arrow_keys_are_no_op_after_72() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 5;
+        app.handle_key(KeyCode::Up).unwrap();
+        app.handle_key(KeyCode::Down).unwrap();
+        app.handle_key(KeyCode::Left).unwrap();
+        app.handle_key(KeyCode::Right).unwrap();
+        assert_eq!(app.detail_scroll, 5, "矢印キーは廃止済みなので no-op");
+    }
+
+    /// Issue #72: PageUp / PageDown は廃止。図鑑モードでも dictionary_scroll を
+    /// 変えない。
+    #[test]
+    fn page_keys_are_no_op_after_72() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        app.dictionary_scroll = 5;
+        app.handle_key(KeyCode::PageUp).unwrap();
+        app.handle_key(KeyCode::PageDown).unwrap();
+        assert_eq!(
+            app.dictionary_scroll, 5,
+            "PageUp/PageDown は廃止済みなので no-op"
+        );
+    }
+
+    /// Issue #74 follow-up: `gg` は Dashboard で detail_scroll を先頭に戻す。
+    #[test]
+    fn gg_jumps_to_top_from_middle_in_dashboard() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 5;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(app.pending_g, "1 回目の g で pending_g が立つ");
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(!app.pending_g, "2 回目の g で pending_g はクリア");
+        assert_eq!(app.detail_scroll, 0, "gg で detail_scroll が先頭に戻る");
+    }
+
+    /// Issue #74 follow-up: 図鑑モードでも `gg` は dictionary_scroll を先頭に戻す。
+    #[test]
+    fn gg_jumps_to_top_in_dictionary_mode() {
+        let mut app = empty_app();
+        enter_dictionary_mode(&mut app);
+        app.dictionary_scroll = 10;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert_eq!(
+            app.dictionary_scroll, 0,
+            "図鑑モードで gg は dictionary_scroll を先頭に戻す"
+        );
+    }
+
+    /// Issue #74 follow-up: `g` を 1 回押した後に別のキーを押すと pending_g は
+    /// クリアされ、次の単独 `g` では先頭ジャンプしない。
+    #[test]
+    fn g_then_other_key_cancels_pending_g() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 5;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(app.pending_g);
+        // 別のキー (j) で pending_g がクリアされる
+        app.handle_key(KeyCode::Char('j')).unwrap();
+        assert!(!app.pending_g, "j を押すと pending_g はクリアされる");
+        // この時点で detail_scroll は j のぶん +1 (5 -> 6)
+        assert_eq!(app.detail_scroll, 6);
+        // 次の単独 g では pending_g が立つだけで先頭ジャンプはしない
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert!(app.pending_g);
+        assert_eq!(
+            app.detail_scroll, 6,
+            "単独の g では先頭ジャンプしない (2 回目の g が必要)"
+        );
+    }
+
+    /// Issue #74 follow-up: `G` (Shift+g) は単独で末尾相当の値にジャンプ。
+    /// 末尾値は usize::MAX / 2 で、render 側のクランプに任せる方式。
+    #[test]
+    fn shift_g_jumps_to_bottom() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.detail_scroll = 0;
+        app.handle_key(KeyCode::Char('G')).unwrap();
+        assert_eq!(
+            app.detail_scroll,
+            usize::MAX / 2,
+            "G は末尾相当 (usize::MAX/2) を入れて render 側クランプに任せる"
+        );
+    }
+
+    /// Issue #74 follow-up: Synthesis SelectingSecond でも `gg` は
+    /// synthesis_scroll を先頭に戻す。
+    #[test]
+    fn gg_works_in_synthesis_selecting_second() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Synthesis);
+        app.synthesis_state = SynthesisUIState::SelectingSecond;
+        app.synthesis_scroll = 7;
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        app.handle_key(KeyCode::Char('g')).unwrap();
+        assert_eq!(
+            app.synthesis_scroll, 0,
+            "Synthesis SelectingSecond で gg は synthesis_scroll を先頭に戻す"
+        );
+    }
+
+    /// Issue #72: KeyCode::Tab は廃止。タブ移動は h/l と 1-6 に限定。
+    #[test]
+    fn tab_key_no_longer_switches_tabs() {
+        let mut app = empty_app();
+        app.set_tab(Tab::Dashboard);
+        app.handle_key(KeyCode::Tab).unwrap();
+        assert_eq!(
+            app.current_tab,
+            Tab::Dashboard,
+            "Tab キーは廃止済みなのでタブを変えない"
+        );
     }
 }
