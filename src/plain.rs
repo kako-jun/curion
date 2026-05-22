@@ -106,7 +106,11 @@ pub fn run_plain_mode(profile_manager: &ProfileManager, args: &[String]) -> Resu
             let b_noun = b.noun.clone();
 
             use crate::synthesis::SynthesisAttemptResult;
-            match game_state.synthesis_manager.try_synthesize(vec![a, b])? {
+            let lang = game_state.language;
+            match game_state
+                .synthesis_manager
+                .try_synthesize_lang(vec![a, b], lang)?
+            {
                 SynthesisAttemptResult::Success {
                     curion,
                     recipe_name,
