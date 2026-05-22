@@ -3615,31 +3615,46 @@ impl App {
                 // Issue #37: 進捗行。「進捗: 2/2 ✓」または「進捗: 1/2 (あと N 種)」。
                 // Unknown は仕様上「存在しか分からない」ので進捗は出さず、空行とのトレードに
                 // しないため進捗が 0/total の場合のみ常時 1 行で表示する。
-                let progress_line =
-                    if effective_visibility == crate::synthesis::RecipeVisibility::Unknown {
-                        // Unknown は進捗を出さない (材料の正体がバレるため)
-                        Line::from("")
+                let progress_line = if effective_visibility
+                    == crate::synthesis::RecipeVisibility::Unknown
+                {
+                    // Unknown は進捗を出さない (材料の正体がバレるため)
+                    Line::from("")
+                } else {
+                    let progress_text = if progress.all_satisfied {
+                        match self.game_state.language {
+                            crate::i18n::Language::Ja => {
+                                format!("    進捗: {}/{}  ✓", progress.satisfied, progress.total)
+                            }
+                            crate::i18n::Language::En => format!(
+                                "    Progress: {}/{}  ✓",
+                                progress.satisfied, progress.total
+                            ),
+                        }
                     } else {
-                        let progress_text = if progress.all_satisfied {
-                            format!("    進捗: {}/{}  ✓", progress.satisfied, progress.total)
-                        } else {
-                            // Issue #37: 残数算出は SynthesisRecipe::remaining_categories に集約。
-                            let remaining = recipe.remaining_categories(collection);
-                            format!(
+                        // Issue #37: 残数算出は SynthesisRecipe::remaining_categories に集約。
+                        let remaining = recipe.remaining_categories(collection);
+                        match self.game_state.language {
+                            crate::i18n::Language::Ja => format!(
                                 "    進捗: {}/{} (あと {} 種)",
                                 progress.satisfied, progress.total, remaining
-                            )
-                        };
-                        let progress_color = if progress.all_satisfied {
-                            COLOR_SUCCESS
-                        } else {
-                            COLOR_LABEL
-                        };
-                        Line::from(Span::styled(
-                            progress_text,
-                            Style::default().fg(progress_color),
-                        ))
+                            ),
+                            crate::i18n::Language::En => format!(
+                                "    Progress: {}/{} ({} more)",
+                                progress.satisfied, progress.total, remaining
+                            ),
+                        }
                     };
+                    let progress_color = if progress.all_satisfied {
+                        COLOR_SUCCESS
+                    } else {
+                        COLOR_LABEL
+                    };
+                    Line::from(Span::styled(
+                        progress_text,
+                        Style::default().fg(progress_color),
+                    ))
+                };
 
                 // 説明 + 式 (Unknown は description も隠す)
                 let body_line = match effective_visibility {
