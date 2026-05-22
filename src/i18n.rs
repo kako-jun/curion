@@ -208,6 +208,8 @@ fn build_dict() -> HashMap<&'static str, [&'static str; 2]> {
     m.insert("help.filter", ["filter", "絞り込み"]);
     m.insert("help.generate", ["generate", "生成"]);
     m.insert("help.tab", ["tab", "タブ"]);
+    m.insert("help.tab_jump", ["jump", "タブ指定"]);
+    m.insert("help.section_switch", ["section", "セクション切替"]);
     m.insert("help.save", ["save", "保存"]);
     m.insert("help.quit", ["quit", "終了"]);
     m.insert("help.achievement_select", ["select", "実績選択"]);
