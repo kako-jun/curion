@@ -437,7 +437,15 @@ impl SynthesisManager {
         self.discovered_recipes.insert(recipe_id, true);
     }
 
-    /// 合成を試みる
+    /// 合成を試みる (旧 API)。
+    ///
+    /// 既定で `Language::Ja` を返すため、多言語対応コードでは
+    /// [`try_synthesize_lang`](Self::try_synthesize_lang) を使うこと。
+    #[deprecated(
+        since = "0.4.0",
+        note = "Use try_synthesize_lang. This wrapper defaults to Language::Ja and will be removed."
+    )]
+    #[allow(dead_code)]
     pub fn try_synthesize(&mut self, ingredients: Vec<Curion>) -> Result<SynthesisAttemptResult> {
         self.try_synthesize_lang(ingredients, Language::Ja)
     }
