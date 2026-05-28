@@ -16,6 +16,60 @@ use chrono::{DateTime, Utc};
 /// クールダウン満了までの時間 (時間単位)。
 pub const FULL_HOURS: f64 = 4.0;
 
+// ── Issue #78: 手動生成クールダウン / 自動ドロー ────────────────────────────
+
+/// 手動生成（Space キー）のクールダウン秒数。3 分。
+pub const MANUAL_GENERATE_COOLDOWN_SECS: i64 = 180;
+
+/// 自動ドローのインターバル秒数。1 時間。
+pub const AUTO_DRAW_INTERVAL_SECS: i64 = 3600;
+
+/// 手動生成が可能かどうかを返す。
+///
+/// - `last_at = None`（初回）→ 生成可能
+/// - 前回生成から [`MANUAL_GENERATE_COOLDOWN_SECS`] 秒以上経過 → 生成可能
+/// - それ以外 → 生成不可
+pub fn can_generate_manually(last_at: Option<DateTime<Utc>>, now: DateTime<Utc>) -> bool {
+    match last_at {
+        None => true,
+        Some(t) => (now - t).num_seconds() >= MANUAL_GENERATE_COOLDOWN_SECS,
+    }
+}
+
+/// 手動生成の残り秒数（0 なら生成可能）。
+pub fn generate_remaining_seconds(last_at: Option<DateTime<Utc>>, now: DateTime<Utc>) -> i64 {
+    match last_at {
+        None => 0,
+        Some(t) => {
+            let elapsed = (now - t).num_seconds().max(0);
+            (MANUAL_GENERATE_COOLDOWN_SECS - elapsed).max(0)
+        }
+    }
+}
+
+/// 自動ドローが何回分溜まっているかを返す（上限なし）。
+///
+/// `last_at = None`（初回・旧セーブ）→ 0 回（起動時に大量ドローする体験は避ける）。
+/// `last_at = Some(t)` → `(now - t) / AUTO_DRAW_INTERVAL_SECS` の商を返す。
+pub fn pending_auto_draws(last_at: Option<DateTime<Utc>>, now: DateTime<Utc>) -> u32 {
+    match last_at {
+        None => 0,
+        Some(t) => {
+            let elapsed = (now - t).num_seconds().max(0);
+            (elapsed / AUTO_DRAW_INTERVAL_SECS) as u32
+        }
+    }
+}
+
+/// n 番目（0 始まり）の自動ドローが行われた「はずの時刻」を返す。
+///
+/// `last_at + (n+1) * AUTO_DRAW_INTERVAL_SECS` 秒後の時刻。
+/// ログに「14:00 ○○ を入手」のように積まれ、プレイヤーが遡って気づけるようにする。
+pub fn auto_draw_timestamp(last_at: DateTime<Utc>, n: u32) -> DateTime<Utc> {
+    last_at
+        + chrono::Duration::seconds(AUTO_DRAW_INTERVAL_SECS * (n as i64 + 1))
+}
+
 /// クールダウン進捗を計算する。
 ///
 /// - 戻り値は `0.0..=1.0` に clamp 済み

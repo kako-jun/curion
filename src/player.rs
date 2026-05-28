@@ -184,6 +184,22 @@ pub struct Player {
     #[serde(default)]
     pub last_collection_at: Option<DateTime<Utc>>,
 
+    /// Issue #78: 手動生成（Space キー）の最終実行時刻。
+    ///
+    /// `generate_curion` 成功時に更新される。
+    /// `None`（初回・旧セーブ）はクールダウンなし（即生成可能）扱い。
+    /// 旧セーブには無いため `#[serde(default)]` (= None で復元)。
+    #[serde(default)]
+    pub last_manual_generate_at: Option<DateTime<Utc>>,
+
+    /// Issue #78: 自動ドロー（1 時間インターバル）の最終ドロー時刻。
+    ///
+    /// 起動時に `pending_auto_draws` を計算し、溜まった分を一括適用した後に更新。
+    /// `None`（初回・旧セーブ）は自動ドローを発生させない（初回大量ドロー防止）。
+    /// 旧セーブには無いため `#[serde(default)]` (= None で復元)。
+    #[serde(default)]
+    pub last_auto_draw_at: Option<DateTime<Utc>>,
+
     /// SAN 値 (正気度) (Issue #29)
     ///
     /// 0.0〜100.0 の `f64`。初期値 100.0。
@@ -303,6 +319,8 @@ impl Player {
             max_combo: 0,
             total_acquisitions: 0,
             last_collection_at: None,
+            last_manual_generate_at: None,
+            last_auto_draw_at: None,
             san: SAN_MAX,
             equipment: EquipmentSlot::default(),
         }
