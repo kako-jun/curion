@@ -51,7 +51,7 @@ The noun database exposes `NounDatabase::flavor_for(noun_name, lang)` which retu
 
 Phase 3b also unified the `flavor_en` vocabulary: occurrences of `"interest"` used in the sense of "curiosity" were rewritten to `curiosity` across `abstracts.json` (52), `animals.json` (59), and `foods.json` (2) to align with the repository name `curion` (= curiosity). English idioms such as `point of interest` were left untouched, but none existed in the dataset.
 
-The JA `flavor` strings are intentionally left unchanged in this phase. JA narration uses both "興味" and "好奇" with stylistic intent (per-category tone, as established in Phase 2 of #65), and consolidating them would alter prose rhythm without a player-visible benefit. A separate follow-up may revisit JA wording if a future content audit identifies inconsistencies that hurt readability.
+ The JA `flavor` strings were intentionally left unchanged in Phase 3b. However, Issue #83 (Phase 3 polish) established a definitive policy: all JA `flavor` strings now use "好奇" (or "好奇心") uniformly, replacing "興味" throughout all noun JSON files (`animals.json`, `elements.json`, `objects.json`, `colors.json`, `abstracts.json`, `phenomena.json`, `concepts.json`, `foods.json`, `plants.json`). This aligns the JA narration with the repository name `curion` (= 好奇心). In the same pass, the EN `flavor_en` for 猿 (monkey, `animals.json:120`) was rewritten to eliminate a doubled "curiosity": "as though curiosity itself were personified" → "as though wonder itself had taken form".
 
 ### Phase 4 (Issue #71): Content i18n
 

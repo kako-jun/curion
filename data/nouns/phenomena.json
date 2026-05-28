@@ -4,7 +4,7 @@
     "reading": "あさ",
     "english": "morning",
     "weight": 1.0,
-    "flavor": "世界が再起動する瞬間に立ち昇る、希望の興味の粒子。最初の光が全てを書き直す。",
+    "flavor": "世界が再起動する瞬間に立ち昇る、希望の好奇の粒子。最初の光が全てを書き直す。",
     "flavor_en": "A particle of hope rising at the very instant the world reboots. The first light rewrites everything from the start."
   },
   {
@@ -12,7 +12,7 @@
     "reading": "ひる",
     "english": "noon",
     "weight": 1.0,
-    "flavor": "陰影が短くなる、活動の興味を宿す粒子。世界が最も明瞭に観測できる時間帯。",
+    "flavor": "陰影が短くなる、活動の好奇を宿す粒子。世界が最も明瞭に観測できる時間帯。",
     "flavor_en": "A particle of activity where every shadow grows short. The hour at which the world may be observed at its clearest."
   },
   {
@@ -20,7 +20,7 @@
     "reading": "ゆう",
     "english": "evening",
     "weight": 1.0,
-    "flavor": "境界を金色に染める、郷愁の興味を宿す粒子。一日の終わりにだけ宿る独特の質感。",
+    "flavor": "境界を金色に染める、郷愁の好奇を宿す粒子。一日の終わりにだけ宿る独特の質感。",
     "flavor_en": "A particle of nostalgia, dyeing every boundary in gold. A texture that dwells only at the closing of the day."
   },
   {
@@ -28,7 +28,7 @@
     "reading": "よる",
     "english": "night",
     "weight": 1.0,
-    "flavor": "活動の音が静まり想念が立ち上がる、内省の興味の粒子。眠りと夢の入り口となる。",
+    "flavor": "活動の音が静まり想念が立ち上がる、内省の好奇の粒子。眠りと夢の入り口となる。",
     "flavor_en": "A particle of introspection, where the noise of action quiets and thought begins to rise. It becomes the threshold of sleep and dream."
   },
   {
@@ -36,7 +36,7 @@
     "reading": "はる",
     "english": "spring",
     "weight": 1.0,
-    "flavor": "凍えていた可能性が芽吹く、再生の興味の粒子。気温と一緒に心も解凍されていく。",
+    "flavor": "凍えていた可能性が芽吹く、再生の好奇の粒子。気温と一緒に心も解凍されていく。",
     "flavor_en": "A particle of renewal where frozen possibilities sprout anew. As temperature rises, the heart too begins to thaw."
   },
   {
@@ -44,7 +44,7 @@
     "reading": "なつ",
     "english": "summer",
     "weight": 1.0,
-    "flavor": "命が最大出力で謳歌する、爆発の興味の粒子。汗と影と入道雲が記憶を濃く焼く。",
+    "flavor": "命が最大出力で謳歌する、爆発の好奇の粒子。汗と影と入道雲が記憶を濃く焼く。",
     "flavor_en": "A particle of detonation where life sings at maximum output. Sweat, shadow, and thunderhead burn memory deep."
   },
   {
@@ -52,7 +52,7 @@
     "reading": "あき",
     "english": "autumn",
     "weight": 1.0,
-    "flavor": "豊穣と離別が同居する、内省の興味を宿す粒子。葉の色が時間の経過を可視化する。",
+    "flavor": "豊穣と離別が同居する、内省の好奇を宿す粒子。葉の色が時間の経過を可視化する。",
     "flavor_en": "A particle of introspection where harvest and parting share a single house. The color of leaves makes the passage of time visible."
   },
   {
@@ -60,7 +60,7 @@
     "reading": "ふゆ",
     "english": "winter",
     "weight": 1.0,
-    "flavor": "全てが内側へ向かう、静寂の興味を宿す粒子。眠ることでしか進めぬ深さがある。",
+    "flavor": "全てが内側へ向かう、静寂の好奇を宿す粒子。眠ることでしか進めぬ深さがある。",
     "flavor_en": "A particle of stillness, turning all things inward. There exists a depth one can reach only by sleeping."
   },
   {
@@ -68,7 +68,7 @@
     "reading": "あらし",
     "english": "storm",
     "weight": 0.7,
-    "flavor": "天が暴れる、解放の興味を宿す粒子。秩序を一度壊して新たな秩序を呼び寄せる。",
+    "flavor": "天が暴れる、解放の好奇を宿す粒子。秩序を一度壊して新たな秩序を呼び寄せる。",
     "flavor_en": "A particle of release, the heavens cast into fury. Order is shattered once so that a new order may be summoned."
   },
   {
@@ -76,7 +76,7 @@
     "reading": "なぎ",
     "english": "calm",
     "weight": 0.8,
-    "flavor": "風も波も止まる、緊張の興味を宿す粒子。完全な静けさは何かの予感に似ている。",
+    "flavor": "風も波も止まる、緊張の好奇を宿す粒子。完全な静けさは何かの予感に似ている。",
     "flavor_en": "A particle of tension where wind and wave both cease. A perfect stillness resembles the omen of something yet to come."
   },
   {
@@ -84,7 +84,7 @@
     "reading": "しお",
     "english": "tide",
     "weight": 0.9,
-    "flavor": "月の引力で海が呼吸する、周期の興味を宿す粒子。満ちては引く律動が命を運ぶ。",
+    "flavor": "月の引力で海が呼吸する、周期の好奇を宿す粒子。満ちては引く律動が命を運ぶ。",
     "flavor_en": "A particle of cycle where the sea breathes by the pull of the moon. The rhythm of filling and withdrawing ferries life along."
   },
   {
@@ -92,7 +92,7 @@
     "reading": "なみ",
     "english": "wave",
     "weight": 1.0,
-    "flavor": "繰り返しでありながら同じものは一つもない、揺らぎの興味の粒子。岸を磨き続ける。",
+    "flavor": "繰り返しでありながら同じものは一つもない、揺らぎの好奇の粒子。岸を磨き続ける。",
     "flavor_en": "A particle of fluctuation, repeating endlessly yet never the same twice. It polishes the shore without rest."
   },
   {
@@ -100,7 +100,7 @@
     "reading": "うず",
     "english": "whirlpool",
     "weight": 0.6,
-    "flavor": "中心へ引き寄せる、求心の興味を宿す粒子。流れの中の特異点として記憶される。",
+    "flavor": "中心へ引き寄せる、求心の好奇を宿す粒子。流れの中の特異点として記憶される。",
     "flavor_en": "A centripetal particle that draws all things toward its center. It is remembered as a singularity within the flow."
   },
   {
@@ -108,7 +108,7 @@
     "reading": "けむり",
     "english": "smoke",
     "weight": 1.0,
-    "flavor": "燃え尽きた後にだけ立ち昇る、痕跡の興味の粒子。消えながら何かを伝え続ける。",
+    "flavor": "燃え尽きた後にだけ立ち昇る、痕跡の好奇の粒子。消えながら何かを伝え続ける。",
     "flavor_en": "A particle of trace, rising only after the fire has spent itself. Even as it vanishes, it continues to convey something."
   },
   {
@@ -116,7 +116,7 @@
     "reading": "ほのお",
     "english": "flame",
     "weight": 0.8,
-    "flavor": "形を持たぬまま踊る、変質の興味を宿す粒子。同じ色を二度と再現できない芸術。",
+    "flavor": "形を持たぬまま踊る、変質の好奇を宿す粒子。同じ色を二度と再現できない芸術。",
     "flavor_en": "A particle of transformation, dancing without form of its own. An art whose color can never be reproduced twice."
   },
   {
@@ -124,7 +124,7 @@
     "reading": "つゆ",
     "english": "dew",
     "weight": 1.0,
-    "flavor": "葉先に世界を一滴で映す、儚さの興味の粒子。朝日が昇るまでの限定芸術となる。",
+    "flavor": "葉先に世界を一滴で映す、儚さの好奇の粒子。朝日が昇るまでの限定芸術となる。",
     "flavor_en": "A particle of transience, reflecting the entire world in a single drop at the leaf's tip. A limited art that lasts only until sunrise."
   },
   {
@@ -132,7 +132,7 @@
     "reading": "しも",
     "english": "frost",
     "weight": 0.9,
-    "flavor": "夜の冷気が地表に描く、結晶の興味を宿す粒子。歩けば崩れる繊細な美の建築。",
+    "flavor": "夜の冷気が地表に描く、結晶の好奇を宿す粒子。歩けば崩れる繊細な美の建築。",
     "flavor_en": "A particle of crystallization, sketched upon the ground by the cold of night. A delicate architecture of beauty that crumbles at a step."
   },
   {
@@ -140,7 +140,7 @@
     "reading": "ひょう",
     "english": "hail",
     "weight": 0.5,
-    "flavor": "天から降る氷の弾丸、衝撃の興味を宿す粒子。空が固体を放つという驚きの現象。",
+    "flavor": "天から降る氷の弾丸、衝撃の好奇を宿す粒子。空が固体を放つという驚きの現象。",
     "flavor_en": "A particle of impact, bullets of ice cast down from the heavens. The astonishing phenomenon of the sky releasing solid matter."
   },
   {
@@ -148,7 +148,7 @@
     "reading": "らいめい",
     "english": "thunder",
     "weight": 0.6,
-    "flavor": "光の後に遅れて届く、轟きの興味を宿す粒子。距離を音速で測らせる古い時計。",
+    "flavor": "光の後に遅れて届く、轟きの好奇を宿す粒子。距離を音速で測らせる古い時計。",
     "flavor_en": "A particle of roar, arriving belatedly after the flash. An ancient clock that lets one measure distance by the speed of sound."
   },
   {
@@ -156,7 +156,7 @@
     "reading": "じしん",
     "english": "earthquake",
     "weight": 0.4,
-    "flavor": "大地が震えて存在の前提を揺さぶる、根源の興味の粒子。立っている事実を問い直す。",
+    "flavor": "大地が震えて存在の前提を揺さぶる、根源の好奇の粒子。立っている事実を問い直す。",
     "flavor_en": "A primal particle, the earth trembling and shaking the premise of existence itself. It interrogates the very fact of standing upright."
   }
 ]
