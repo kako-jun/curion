@@ -4,7 +4,7 @@
     "reading": "ゆめ",
     "english": "dream",
     "weight": 1.0,
-    "flavor": "眠りの中で組み立てられる、もう一つの興味の粒子。覚めても余韻が一日を彩る。",
+    "flavor": "眠りの中で組み立てられる、もう一つの好奇の粒子。覚めても余韻が一日を彩る。",
     "flavor_en": "A particle of curiosity assembled within sleep; its afterglow tints the day even after waking."
   },
   {
@@ -12,7 +12,7 @@
     "reading": "ひかり",
     "english": "light",
     "weight": 1.0,
-    "flavor": "速度の限界に立つ、純粋な興味の粒子。届くこと自体が小さな奇跡を運んでいる。",
+    "flavor": "速度の限界に立つ、純粋な好奇の粒子。届くこと自体が小さな奇跡を運んでいる。",
     "flavor_en": "A pure particle of curiosity standing at the edge of velocity; its mere arrival carries a quiet miracle."
   },
   {
@@ -20,7 +20,7 @@
     "reading": "かげ",
     "english": "shadow",
     "weight": 1.0,
-    "flavor": "光があるから生まれる、対の興味を宿す粒子。輪郭をなぞって本体を浮き彫りにする。",
+    "flavor": "光があるから生まれる、対の好奇を宿す粒子。輪郭をなぞって本体を浮き彫りにする。",
     "flavor_en": "A particle housing the counter-curiosity born only because light exists; it traces outlines and reveals the body beneath."
   },
   {
@@ -28,7 +28,7 @@
     "reading": "かぜ",
     "english": "wind",
     "weight": 1.0,
-    "flavor": "形を持たぬまま全てを撫でる、自由な興味の粒子。吹けば思考の塵まで運んでいく。",
+    "flavor": "形を持たぬまま全てを撫でる、自由な好奇の粒子。吹けば思考の塵まで運んでいく。",
     "flavor_en": "A free particle of curiosity that caresses all things while holding no shape; when it blows, it carries away even the dust of thought."
   },
   {
@@ -36,7 +36,7 @@
     "reading": "くも",
     "english": "cloud",
     "weight": 1.0,
-    "flavor": "空に浮かぶ即興の彫刻、移ろいの興味を宿す粒子。同じ形は一秒として続かない。",
+    "flavor": "空に浮かぶ即興の彫刻、移ろいの好奇を宿す粒子。同じ形は一秒として続かない。",
     "flavor_en": "An improvised sculpture floating in the sky, a particle housing the curiosity of transience; no shape persists for even a single second."
   },
   {
@@ -44,7 +44,7 @@
     "reading": "あめ",
     "english": "rain",
     "weight": 1.0,
-    "flavor": "天が地を撫でる時の手触り、慰めの興味を宿す粒子。落ちる音だけで世界が静まる。",
+    "flavor": "天が地を撫でる時の手触り、慰めの好奇を宿す粒子。落ちる音だけで世界が静まる。",
     "flavor_en": "The texture of the heavens stroking the earth, a particle housing the curiosity of consolation; the world quiets at the mere sound of its descent."
   },
   {
@@ -52,7 +52,7 @@
     "reading": "ゆき",
     "english": "snow",
     "weight": 1.0,
-    "flavor": "六角形の沈黙が降り積もる、静寂の興味の粒子。音を吸い込んで世界を初期化する。",
+    "flavor": "六角形の沈黙が降り積もる、静寂の好奇の粒子。音を吸い込んで世界を初期化する。",
     "flavor_en": "A particle of silent curiosity in which hexagonal hush accumulates; it absorbs sound and resets the world."
   },
   {
@@ -60,7 +60,7 @@
     "reading": "きり",
     "english": "fog",
     "weight": 1.0,
-    "flavor": "視界を奪うことで観察を促す、逆説の興味を宿す粒子。輪郭の不在こそが想像を生む。",
+    "flavor": "視界を奪うことで観察を促す、逆説の好奇を宿す粒子。輪郭の不在こそが想像を生む。",
     "flavor_en": "A paradoxical particle of curiosity that invites observation by stealing sight; the absence of outline is precisely what gives birth to imagination."
   },
   {
@@ -68,7 +68,7 @@
     "reading": "にじ",
     "english": "rainbow",
     "weight": 0.7,
-    "flavor": "雨と光の和解の証、希望の興味を宿す粒子。橋として現れては静かに消えていく。",
+    "flavor": "雨と光の和解の証、希望の好奇を宿す粒子。橋として現れては静かに消えていく。",
     "flavor_en": "A witness to the reconciliation of rain and light, a particle housing the curiosity of hope; it appears as a bridge and quietly fades."
   },
   {
@@ -76,7 +76,7 @@
     "reading": "ほし",
     "english": "star",
     "weight": 1.0,
-    "flavor": "遥か昔の光が今届く、時差を抱えた興味の粒子。見える星のいくつかは既に失われている。",
+    "flavor": "遥か昔の光が今届く、時差を抱えた好奇の粒子。見える星のいくつかは既に失われている。",
     "flavor_en": "A particle of curiosity bearing a temporal lag, where ancient light arrives only now; several of the stars we see have already been lost."
   },
   {
@@ -84,7 +84,7 @@
     "reading": "つき",
     "english": "moon",
     "weight": 1.0,
-    "flavor": "夜の鏡となって地球を見守る、静謐な興味の粒子。満ち欠けで心の周期を導いてくる。",
+    "flavor": "夜の鏡となって地球を見守る、静謐な好奇の粒子。満ち欠けで心の周期を導いてくる。",
     "flavor_en": "A serene particle of curiosity that becomes the mirror of night and watches over the earth; its waxing and waning guide the cycles of the heart."
   },
   {
@@ -92,7 +92,7 @@
     "reading": "たいよう",
     "english": "sun",
     "weight": 1.0,
-    "flavor": "全ての始まりを灯す、原初の興味の粒子。直視できないほどの恩恵を毎朝届ける。",
+    "flavor": "全ての始まりを灯す、原初の好奇の粒子。直視できないほどの恩恵を毎朝届ける。",
     "flavor_en": "A primordial particle of curiosity that ignites every beginning; each morning it delivers a grace too great to gaze upon."
   },
   {
@@ -100,7 +100,7 @@
     "reading": "そら",
     "english": "sky",
     "weight": 1.0,
-    "flavor": "無限の容れ物として広がる、開放の興味の粒子。何もないからこそ全てを許容する。",
+    "flavor": "無限の容れ物として広がる、開放の好奇の粒子。何もないからこそ全てを許容する。",
     "flavor_en": "A particle of open curiosity spreading as an infinite vessel; precisely because it holds nothing, it permits everything."
   },
   {
@@ -108,7 +108,7 @@
     "reading": "うみ",
     "english": "sea",
     "weight": 1.0,
-    "flavor": "塩と命の揺り籠として広がる、深淵の興味の粒子。表面の波の下には別の宇宙がある。",
+    "flavor": "塩と命の揺り籠として広がる、深淵の好奇の粒子。表面の波の下には別の宇宙がある。",
     "flavor_en": "A particle of abyssal curiosity spreading as a cradle of salt and life; beneath its surface waves lies another universe."
   },
   {
@@ -116,7 +116,7 @@
     "reading": "やま",
     "english": "mountain",
     "weight": 1.0,
-    "flavor": "大地が天を目指した形、不動の興味を宿す粒子。仰ぐ者の心を一段引き上げてくれる。",
+    "flavor": "大地が天を目指した形、不動の好奇を宿す粒子。仰ぐ者の心を一段引き上げてくれる。",
     "flavor_en": "The form of the earth aspiring toward the heavens, a particle housing immovable curiosity; it raises by one degree the heart of whoever looks up."
   },
   {
@@ -124,7 +124,7 @@
     "reading": "かわ",
     "english": "river",
     "weight": 1.0,
-    "flavor": "終わりなく流れ続ける、変化の興味を宿す粒子。同じ水に二度と入れぬのが理となる。",
+    "flavor": "終わりなく流れ続ける、変化の好奇を宿す粒子。同じ水に二度と入れぬのが理となる。",
     "flavor_en": "A particle housing the curiosity of change that flows on without end; it is the law that one cannot step into the same water twice."
   },
   {
@@ -132,7 +132,7 @@
     "reading": "もり",
     "english": "forest",
     "weight": 1.0,
-    "flavor": "無数の生命が呼吸する、多声の興味を宿す粒子。一歩ごとに時間の進み方が変わる。",
+    "flavor": "無数の生命が呼吸する、多声の好奇を宿す粒子。一歩ごとに時間の進み方が変わる。",
     "flavor_en": "A polyphonic particle of curiosity where countless lives breathe in unison; with every step, the pace of time itself shifts."
   },
   {
@@ -140,7 +140,7 @@
     "reading": "みち",
     "english": "road",
     "weight": 1.0,
-    "flavor": "歩く者によって生まれる、可能性の興味の粒子。引き返す自由も含めて道と呼ぶ。",
+    "flavor": "歩く者によって生まれる、可能性の好奇の粒子。引き返す自由も含めて道と呼ぶ。",
     "flavor_en": "A particle of possible curiosity born of those who walk it; the freedom to turn back is also counted as part of the road."
   },
   {
@@ -148,7 +148,7 @@
     "reading": "はし",
     "english": "bridge",
     "weight": 1.0,
-    "flavor": "断絶を縫い直す、和解の興味を宿す粒子。架ける覚悟を持つ者だけが渡れる軌跡。",
+    "flavor": "断絶を縫い直す、和解の好奇を宿す粒子。架ける覚悟を持つ者だけが渡れる軌跡。",
     "flavor_en": "A particle housing the curiosity of reconciliation that re-stitches what has been severed; a trajectory only those resolved to build it may cross."
   },
   {
@@ -156,7 +156,7 @@
     "reading": "もん",
     "english": "gate",
     "weight": 0.9,
-    "flavor": "外と内を区切る、選択の興味を宿す粒子。くぐる前と後で世界の解像度が変わる。",
+    "flavor": "外と内を区切る、選択の好奇を宿す粒子。くぐる前と後で世界の解像度が変わる。",
     "flavor_en": "A particle housing the curiosity of choice that separates outside from in; the resolution of the world differs before and after one passes through."
   }
 ]
