@@ -16,6 +16,54 @@ use chrono::{DateTime, Utc};
 /// クールダウン満了までの時間 (時間単位)。
 pub const FULL_HOURS: f64 = 4.0;
 
+// ── Issue #78: 手動生成クールダウン / 自動ドロー ────────────────────────────
+
+/// 手動生成（Space キー）のクールダウン秒数。3 分。
+pub const MANUAL_GENERATE_COOLDOWN_SECS: i64 = 180;
+
+/// 自動ドローのインターバル秒数。1 時間。
+pub const AUTO_DRAW_INTERVAL_SECS: i64 = 3600;
+
+/// 手動生成が可能かどうかを返す。
+///
+/// - `last_at = None`（初回）→ 生成可能
+/// - 前回生成から [`MANUAL_GENERATE_COOLDOWN_SECS`] 秒以上経過 → 生成可能
+/// - それ以外 → 生成不可
+pub fn can_generate_manually(last_at: Option<DateTime<Utc>>, now: DateTime<Utc>) -> bool {
+    match last_at {
+        None => true,
+        Some(t) => (now - t).num_seconds() >= MANUAL_GENERATE_COOLDOWN_SECS,
+    }
+}
+
+/// 手動生成の残り秒数（0 なら生成可能）。
+pub fn generate_remaining_seconds(last_at: Option<DateTime<Utc>>, now: DateTime<Utc>) -> i64 {
+    match last_at {
+        None => 0,
+        Some(t) => {
+            let elapsed = (now - t).num_seconds().max(0);
+            (MANUAL_GENERATE_COOLDOWN_SECS - elapsed).max(0)
+        }
+    }
+}
+
+/// 自動ドローが何回分溜まっているかを返す（上限なし）。
+///
+/// `last_at` は `None` を取らない（呼び出し元で `if let Some` 済み）。
+/// `(now - last_at) / AUTO_DRAW_INTERVAL_SECS` の商を返す。
+pub fn pending_auto_draws(last_at: DateTime<Utc>, now: DateTime<Utc>) -> u32 {
+    let elapsed = (now - last_at).num_seconds().max(0);
+    (elapsed / AUTO_DRAW_INTERVAL_SECS) as u32
+}
+
+/// n 番目（0 始まり）の自動ドローが行われた「はずの時刻」を返す。
+///
+/// `last_at + (n+1) * AUTO_DRAW_INTERVAL_SECS` 秒後の時刻。
+/// ログに「14:00 ○○ を入手」のように積まれ、プレイヤーが遡って気づけるようにする。
+pub fn auto_draw_timestamp(last_at: DateTime<Utc>, n: u32) -> DateTime<Utc> {
+    last_at + chrono::Duration::seconds(AUTO_DRAW_INTERVAL_SECS * (n as i64 + 1))
+}
+
 /// クールダウン進捗を計算する。
 ///
 /// - 戻り値は `0.0..=1.0` に clamp 済み
@@ -128,6 +176,171 @@ mod tests {
         // 2026-05-16 12:00:00 UTC を起点に (時, 分) のオフセットを足す
         let base = Utc.with_ymd_and_hms(2026, 5, 16, 12, 0, 0).unwrap();
         base + chrono::Duration::hours(h) + chrono::Duration::minutes(m)
+    }
+
+    /// 秒単位のオフセットで DateTime を作るヘルパー
+    fn dt_secs(secs: i64) -> DateTime<Utc> {
+        let base = Utc.with_ymd_and_hms(2026, 5, 16, 12, 0, 0).unwrap();
+        base + chrono::Duration::seconds(secs)
+    }
+
+    // ── Issue #78: can_generate_manually ──────────────────────────────
+
+    /// B-1: elapsed=179 秒 → クールダウン中のため生成不可
+    #[test]
+    fn can_generate_manually_false_when_elapsed_is_179_secs() {
+        let last = dt_secs(0);
+        let now = dt_secs(179);
+        assert!(!can_generate_manually(Some(last), now));
+    }
+
+    /// B-2: elapsed=180 秒（境界値）→ クールダウン満了のため生成可能
+    #[test]
+    fn can_generate_manually_true_when_elapsed_is_exactly_cooldown() {
+        let last = dt_secs(0);
+        let now = dt_secs(180);
+        assert!(can_generate_manually(Some(last), now));
+    }
+
+    /// N-1: last_at=None → 初回起動は無条件で生成可能
+    #[test]
+    fn can_generate_manually_true_when_last_at_is_none() {
+        assert!(can_generate_manually(None, dt_secs(0)));
+    }
+
+    /// N-2: elapsed=180 → 生成可能（境界の再確認）
+    #[test]
+    fn can_generate_manually_true_when_elapsed_equals_cooldown_boundary() {
+        let last = dt_secs(0);
+        let now = dt_secs(MANUAL_GENERATE_COOLDOWN_SECS);
+        assert!(can_generate_manually(Some(last), now));
+    }
+
+    /// N-3: elapsed=181 → 境界を超えても生成可能
+    #[test]
+    fn can_generate_manually_true_when_elapsed_exceeds_cooldown() {
+        let last = dt_secs(0);
+        let now = dt_secs(MANUAL_GENERATE_COOLDOWN_SECS + 1);
+        assert!(can_generate_manually(Some(last), now));
+    }
+
+    // ── Issue #78: generate_remaining_seconds ────────────────────────
+
+    /// B-3: elapsed=179 → 残り 1 秒
+    #[test]
+    fn generate_remaining_seconds_is_1_when_elapsed_is_179() {
+        let last = dt_secs(0);
+        let now = dt_secs(179);
+        assert_eq!(generate_remaining_seconds(Some(last), now), 1);
+    }
+
+    /// B-4: elapsed=180 → 残り 0 秒（生成可能）
+    #[test]
+    fn generate_remaining_seconds_is_0_when_elapsed_equals_cooldown() {
+        let last = dt_secs(0);
+        let now = dt_secs(180);
+        assert_eq!(generate_remaining_seconds(Some(last), now), 0);
+    }
+
+    /// N-4: last_at=None → 残り 0 秒
+    #[test]
+    fn generate_remaining_seconds_is_0_when_last_at_is_none() {
+        assert_eq!(generate_remaining_seconds(None, dt_secs(0)), 0);
+    }
+
+    /// N-5: elapsed=60 → 残り 120 秒
+    #[test]
+    fn generate_remaining_seconds_is_120_when_elapsed_is_60() {
+        let last = dt_secs(0);
+        let now = dt_secs(60);
+        assert_eq!(generate_remaining_seconds(Some(last), now), 120);
+    }
+
+    /// N-6: elapsed=180 → 残り 0 秒（境界値）
+    #[test]
+    fn generate_remaining_seconds_is_0_when_elapsed_is_180() {
+        let last = dt_secs(0);
+        let now = dt_secs(180);
+        assert_eq!(generate_remaining_seconds(Some(last), now), 0);
+    }
+
+    /// K-1: now < last_at（クロックスキュー）→ MANUAL_GENERATE_COOLDOWN_SECS を返す
+    #[test]
+    fn generate_remaining_seconds_returns_full_cooldown_on_clock_skew() {
+        let last = dt_secs(100); // last_at が now より未来
+        let now = dt_secs(0);
+        assert_eq!(
+            generate_remaining_seconds(Some(last), now),
+            MANUAL_GENERATE_COOLDOWN_SECS
+        );
+    }
+
+    // ── Issue #78: pending_auto_draws ────────────────────────────────
+
+    /// B-5: elapsed=3599 → pending=0（インターバル未満）
+    #[test]
+    fn pending_auto_draws_is_0_when_elapsed_is_3599() {
+        let last = dt_secs(0);
+        let now = dt_secs(3599);
+        assert_eq!(pending_auto_draws(last, now), 0);
+    }
+
+    /// B-6: elapsed=3600 → pending=1（インターバルちょうど）
+    #[test]
+    fn pending_auto_draws_is_1_when_elapsed_is_exactly_one_interval() {
+        let last = dt_secs(0);
+        let now = dt_secs(3600);
+        assert_eq!(pending_auto_draws(last, now), 1);
+    }
+
+    /// B-7: elapsed=7199 → pending=1（2 インターバル未満）
+    #[test]
+    fn pending_auto_draws_is_1_when_elapsed_is_7199() {
+        let last = dt_secs(0);
+        let now = dt_secs(7199);
+        assert_eq!(pending_auto_draws(last, now), 1);
+    }
+
+    /// N-8: elapsed=3600 → pending=1
+    #[test]
+    fn pending_auto_draws_is_1_when_elapsed_is_one_interval() {
+        let last = dt_secs(0);
+        let now = dt_secs(AUTO_DRAW_INTERVAL_SECS);
+        assert_eq!(pending_auto_draws(last, now), 1);
+    }
+
+    /// N-9: elapsed=7200 → pending=2
+    #[test]
+    fn pending_auto_draws_is_2_when_elapsed_is_two_intervals() {
+        let last = dt_secs(0);
+        let now = dt_secs(AUTO_DRAW_INTERVAL_SECS * 2);
+        assert_eq!(pending_auto_draws(last, now), 2);
+    }
+
+    /// K-2: now < last_at（クロックスキュー）→ pending=0（負の elapsed は 0 扱い）
+    #[test]
+    fn pending_auto_draws_is_0_on_clock_skew() {
+        let last = dt_secs(1000); // last_at が now より未来
+        let now = dt_secs(0);
+        assert_eq!(pending_auto_draws(last, now), 0);
+    }
+
+    // ── Issue #78: auto_draw_timestamp ───────────────────────────────
+
+    /// B-8 / N-10: auto_draw_timestamp(last_at, n=0) = last_at + 3600秒
+    #[test]
+    fn auto_draw_timestamp_n0_is_last_at_plus_one_interval() {
+        let last = dt_secs(0);
+        let expected = dt_secs(AUTO_DRAW_INTERVAL_SECS);
+        assert_eq!(auto_draw_timestamp(last, 0), expected);
+    }
+
+    /// B-8 / N-11: auto_draw_timestamp(last_at, n=2) = last_at + 10800秒
+    #[test]
+    fn auto_draw_timestamp_n2_is_last_at_plus_three_intervals() {
+        let last = dt_secs(0);
+        let expected = dt_secs(AUTO_DRAW_INTERVAL_SECS * 3);
+        assert_eq!(auto_draw_timestamp(last, 2), expected);
     }
 
     #[test]

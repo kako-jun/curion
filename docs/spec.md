@@ -7,6 +7,22 @@
 - The UUID is hashed with SHA-256 to produce a deterministic 32-byte digest.
 - Digest bytes are sliced to determine curion attributes.
 
+### Manual Generation Cooldown (Issue #78)
+
+- **Cooldown**: 3 minutes (180 seconds) per manual generation.
+- **Field**: `last_manual_generate_at: Option<DateTime<Utc>>` — updated on each successful Space-key generation.
+- `None` (first launch or legacy save) means no cooldown; generation is immediately available.
+- While on cooldown, the footer hint shows remaining seconds (e.g. `Space  Generate (42s)`).
+
+### Auto-Draw System (Issue #78)
+
+- **Interval**: 1 hour (3600 seconds).
+- On each tick, the app checks how many 1-hour intervals have elapsed since `last_auto_draw_at`.
+- Each pending draw is applied with `acquired_at` set to the timestamp when it *would have* occurred (retroactive).
+- A log entry is appended for each auto-draw in the format `[HH:MM] <name> を入手`.
+- **Field**: `last_auto_draw_at: Option<DateTime<Utc>>` — updated to the latest drawn timestamp after processing.
+- `None` (first launch or legacy save) suppresses auto-draw entirely to avoid a large batch on first run.
+
 ## Curion Attributes
 
 Each curion has:
