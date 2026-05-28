@@ -16,7 +16,10 @@ use uuid::Uuid;
 
 use jiwa::{RevealHandle, RevealOpts, Rgb};
 
-use crate::cooldown::{cooldown_progress, current_rarity_probabilities, remaining_seconds};
+use crate::cooldown::{
+    auto_draw_timestamp, can_generate_manually, cooldown_progress, current_rarity_probabilities,
+    generate_remaining_seconds, pending_auto_draws, remaining_seconds,
+};
 use crate::curion::{Category, Curion, Rarity};
 use crate::evolution::{sort_progress_by_urgency, EvolutionDatabase};
 use crate::generator::CurionGenerator;
@@ -920,14 +923,33 @@ impl App {
     }
 
     pub fn generate_curion(&mut self) -> Result<()> {
+        let now = chrono::Utc::now();
+
+        // Issue #78: 手動生成は 3 分クールダウン（ストック上限 1 個）。
+        // クールダウン中の Space 押下は無視する。
+        if !can_generate_manually(self.game_state.player.last_manual_generate_at, now) {
+            return Ok(());
+        }
+
+        self.generate_curion_internal(now)?;
+
+        // Issue #78: 手動生成成功時に last_manual_generate_at を更新。
+        self.game_state.player.last_manual_generate_at = Some(now);
+
+        Ok(())
+    }
+
+    /// 内部生成処理（手動・自動ドロー共通）。
+    ///
+    /// `now` を引数で受け取り、自動ドロー時は「ドローされたはずの時刻」を渡せるようにする。
+    fn generate_curion_internal(&mut self, now: chrono::DateTime<chrono::Utc>) -> Result<()> {
         let guid = Uuid::new_v4();
         // Issue #25: 収集後 X 時間でレア確率が段階的に上昇する。
         // クールダウン満了時 (progress=1.0) に最大ボーナスでロールする。
-        let progress = cooldown_progress(
-            self.game_state.player.last_collection_at,
-            chrono::Utc::now(),
-        );
-        let curion = self.generator.generate_with_bonus(guid, progress)?;
+        let progress = cooldown_progress(self.game_state.player.last_collection_at, now);
+        let mut curion = self.generator.generate_with_bonus(guid, progress)?;
+        // 自動ドロー時は acquired_at をドローされたはずの時刻に上書き。
+        curion.acquired_at = now;
         let revealed_name = self.display_curion_name(&curion);
         self.game_state.add_curion(curion);
         self.latest_reveal = Some(RevealHandle::start(
@@ -982,9 +1004,27 @@ impl App {
 
     pub fn on_tick(&mut self) {
         if self.guid_timer.elapsed() >= self.guid_interval {
-            let _ = self.generate_curion();
+            // guid_timer による自動生成は手動クールダウンゲートをバイパスして直接呼ぶ。
+            let _ = self.generate_curion_internal(chrono::Utc::now());
         }
         self.game_state.player.add_play_time(1);
+
+        // Issue #78: 1 時間自動ドロー処理（tick ごとにチェック）。
+        // pending_auto_draws が 1 以上なら、ドローされたはずの時刻で順番に適用する。
+        let now = chrono::Utc::now();
+        if let Some(last_at) = self.game_state.player.last_auto_draw_at {
+            let count = pending_auto_draws(Some(last_at), now);
+            if count > 0 {
+                for i in 0..count {
+                    let draw_time = auto_draw_timestamp(last_at, i);
+                    let _ = self.generate_curion_internal(draw_time);
+                }
+                // last_auto_draw_at を最後のドロー時刻に更新。
+                let new_last = auto_draw_timestamp(last_at, count - 1);
+                self.game_state.player.last_auto_draw_at = Some(new_last);
+                self.dirty = true;
+            }
+        }
 
         if let Some((_, timestamp)) = self.save_message {
             if timestamp.elapsed() > self.save_message_duration {
@@ -1224,6 +1264,30 @@ impl App {
             ]
         };
 
+        // Issue #78: [Space] Generate ヒントをクールダウン状態で切替。
+        // 生成可能 → key_rare（青）、クールダウン中 → key_gray + 残り秒数表示。
+        let now_for_footer = chrono::Utc::now();
+        let remaining_secs = generate_remaining_seconds(
+            self.game_state.player.last_manual_generate_at,
+            now_for_footer,
+        );
+        let space_generate_spans: [Span<'static>; 2] = if remaining_secs == 0 {
+            key_rare("Space", crate::i18n::t("help.generate", lang))
+        } else {
+            let text = format!(
+                "{} ({}s)",
+                crate::i18n::t("help.generate", lang),
+                remaining_secs
+            );
+            [
+                Span::styled(
+                    " Space ".to_string(),
+                    Style::default().fg(Color::DarkGray).bg(Color::Gray),
+                ),
+                Span::styled(format!(" {text}  "), Style::default().fg(Color::DarkGray)),
+            ]
+        };
+
         // Issue #31: フィルタ入力中は専用ヘルプを出す
         if self.filter_mode {
             let mut spans: Vec<Span<'static>> = Vec::new();
@@ -1265,14 +1329,14 @@ impl App {
                 spans.extend(key_dark("j/k", crate::i18n::t("help.category_move", lang)));
                 spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
                 spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
-                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                spans.extend(space_generate_spans.clone());
                 tail(&mut spans);
             }
             Tab::Collection if self.current_section_index() == 0 => {
                 spans.extend(key_dark("j/k", crate::i18n::t("help.scroll", lang)));
                 spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
                 spans.extend(key_epic("/", crate::i18n::t("help.filter", lang)));
-                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                spans.extend(space_generate_spans.clone());
                 tail(&mut spans);
             }
             Tab::Achievements if self.current_section_index() == 0 => {
@@ -1284,7 +1348,7 @@ impl App {
                     spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
                 }
                 spans.extend(key_epic("Enter", crate::i18n::t("help.claim_reward", lang)));
-                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                spans.extend(space_generate_spans.clone());
                 tail(&mut spans);
             }
             Tab::Synthesis => {
@@ -1300,7 +1364,7 @@ impl App {
                     crate::i18n::t("help.synthesize_now", lang),
                 ));
                 spans.extend(key_gray("Esc", crate::i18n::t("help.back", lang)));
-                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                spans.extend(space_generate_spans.clone());
                 tail(&mut spans);
             }
             Tab::Settings => {
@@ -1312,7 +1376,7 @@ impl App {
                 if has_multi_sections {
                     spans.extend(key_rare("J/K", crate::i18n::t("help.section_switch", lang)));
                 }
-                spans.extend(key_rare("Space", crate::i18n::t("help.generate", lang)));
+                spans.extend(space_generate_spans.clone());
                 tail(&mut spans);
             }
         }

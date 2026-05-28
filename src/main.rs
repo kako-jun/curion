@@ -87,6 +87,14 @@ pub fn run_tui(profile_manager: &ProfileManager) -> Result<()> {
     let login_bonus = game_state.process_login();
     // Issue #30: 起動時に期限切れキュリオンを自動削除し、UI に通知メッセージを残す。
     let expired = game_state.prune_expired_curions(chrono::Utc::now());
+
+    // Issue #78: 自動ドロー基準時刻の初期化。
+    // last_auto_draw_at = None（初回・旧セーブ）の場合、大量ドローを防ぐため
+    // 現在時刻を基準時刻にセットする（これ以降からカウント開始）。
+    if game_state.player.last_auto_draw_at.is_none() {
+        game_state.player.last_auto_draw_at = Some(chrono::Utc::now());
+    }
+
     save_manager.save(&game_state)?;
 
     // Terminal setup
