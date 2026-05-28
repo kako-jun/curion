@@ -1013,11 +1013,19 @@ impl App {
         // pending_auto_draws が 1 以上なら、ドローされたはずの時刻で順番に適用する。
         let now = chrono::Utc::now();
         if let Some(last_at) = self.game_state.player.last_auto_draw_at {
-            let count = pending_auto_draws(Some(last_at), now);
+            let count = pending_auto_draws(last_at, now);
             if count > 0 {
                 for i in 0..count {
                     let draw_time = auto_draw_timestamp(last_at, i);
                     let _ = self.generate_curion_internal(draw_time);
+                    // Issue #78: 自動ドローのログ出力（手動生成と同じ形式）
+                    let local_time = draw_time.with_timezone(&chrono::Local);
+                    let time_str = local_time.format("%H:%M").to_string();
+                    if let Some(curion) = self.game_state.player.collection.last() {
+                        let name = self.display_curion_name(curion);
+                        let msg = format!("[{time_str}] {name} を入手");
+                        self.save_message = Some((msg, Instant::now()));
+                    }
                 }
                 // last_auto_draw_at を最後のドロー時刻に更新。
                 let new_last = auto_draw_timestamp(last_at, count - 1);
@@ -1266,10 +1274,10 @@ impl App {
 
         // Issue #78: [Space] Generate ヒントをクールダウン状態で切替。
         // 生成可能 → key_rare（青）、クールダウン中 → key_gray + 残り秒数表示。
-        let now_for_footer = chrono::Utc::now();
+        let now = chrono::Utc::now();
         let remaining_secs = generate_remaining_seconds(
             self.game_state.player.last_manual_generate_at,
-            now_for_footer,
+            now,
         );
         let space_generate_spans: [Span<'static>; 2] = if remaining_secs == 0 {
             key_rare("Space", crate::i18n::t("help.generate", lang))

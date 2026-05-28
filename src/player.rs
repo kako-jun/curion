@@ -389,7 +389,8 @@ impl Player {
         curion.acquisition_index = Some(self.total_acquisitions);
 
         // Issue #25: 最終収集時刻を更新 (レア出現予告クールダウンをリセット)
-        self.last_collection_at = Some(Utc::now());
+        // acquired_at を使うことで、自動ドロー時に渡されたドロー時刻と整合させる。
+        self.last_collection_at = Some(curion.acquired_at);
 
         // Issue #29: SAN 値をレアリティに応じて回復 (Common +0.5 〜 Legendary +15.0)
         self.san = apply_gain(self.san, san_gain_for_acquisition(curion.rarity));
@@ -1179,6 +1180,8 @@ mod tests {
         assert_eq!(player.guaranteed_tickets.common, 0);
         assert_eq!(player.guaranteed_tickets.rare, 0);
         assert_eq!(player.guaranteed_tickets.epic, 0);
+        assert_eq!(player.last_manual_generate_at, None);
+        assert_eq!(player.last_auto_draw_at, None);
     }
 
     // -----------------------------------------------------------------
